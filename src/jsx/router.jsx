@@ -6,7 +6,7 @@ import Intro from "./pages/intro";
 import Lock from "./pages/lock";
 import Otp1 from "./pages/otp-1";
 import Otp2 from "./pages/otp-2";
-import Price from "./pages/price";
+import Souls from "./pages/souls";
 import PriceDetails from "./pages/price-details";
 import Profile from "./pages/profile";
 import Reset from "./pages/reset";
@@ -20,9 +20,10 @@ import SettingsProfile from "./pages/settings-profile";
 import SettingsSecurity from "./pages/settings-security";
 import Signin from "./pages/signin";
 import Signup from "./pages/signup";
-import Trade from "./pages/trade";
+import Search from "./pages/search";
 import VerifyEmail from "./pages/verify-email";
 import Wallet from "./pages/wallet";
+import CardLibrary from "./pages/card-library";
 
 const Router = () => {
   return (
@@ -31,11 +32,12 @@ const Router = () => {
       <div id="main-wrapper">
         <Routes>
           <Route path="/" exact element={<Dashboard />} />
-          <Route path="trade" element={<Trade />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/wallet" element={<Wallet />} />
-          <Route path="/price" element={<Price />} />
+          <Route path="/souls" element={<Souls />} />
           <Route path="/demo" element={<Demo />} />
           <Route path="/intro" element={<Intro />} />
+          <Route path="/card-library" element={<CardLibrary />} />
           <Route path="/lock" element={<Lock />} />
           <Route path="/otp-1" element={<Otp1 />} />
           <Route path="/otp-2" element={<Otp2 />} />

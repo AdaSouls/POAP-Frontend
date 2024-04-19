@@ -3,7 +3,6 @@ import Dropdown from "react-bootstrap/Dropdown";
 import { Link } from "react-router-dom";
 
 import logo from "../../images/logo.png";
-import thumb from "../../images/profile/2.png";
 
 const Header = () => {
   const onClick = (value) => {
@@ -20,25 +19,10 @@ const Header = () => {
                 <div className="brand-logo">
                   <Link to={"/"}>
                     <img src={logo} alt="" />
-                    <span>Qash</span>
+                    <span>AdaSouls</span>
                   </Link>
-                </div>
-                <div className="search">
-                  <form onSubmit={(e) => e.preventDefault()}>
-                    <div className="input-group">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Search Here"
-                      />
-                      <span className="input-group-text">
-                        <i className="icofont-search"></i>
-                      </span>
-                    </div>
-                  </form>
-                </div>
+                </div>                
               </div>
-
               <div className="header-right">
                 <div className="dark-light-toggle" onClick={() => onClick()}>
                   <span className="dark">
@@ -114,7 +98,7 @@ const Header = () => {
                   </Dropdown.Menu>
                 </Dropdown>
 
-                <Dropdown className="profile_log">
+                {/* <Dropdown className="profile_log">
                   <Dropdown.Toggle>
                     <span className="thumb">
                       <img src={thumb} alt="" width="30" />
@@ -165,7 +149,7 @@ const Header = () => {
                       <i className="icofont-logout"></i> Logout
                     </Link>
                   </Dropdown.Menu>
-                </Dropdown>
+                </Dropdown> */}
               </div>
             </div>
           </div>
