@@ -25,29 +25,29 @@ const Dashboard = () => {
             <div className="card-body card-classic-max-height">
               <h4>Welcome to<br></br><span>AdaSouls</span></h4>
               <ul>
-                <li>
-                  <Link to={"#"}>
-                    <span className="verified">
-                      <i className="icofont-check-alt"></i>
-                    </span>
-                    Cardano Wallet
-                  </Link>
+                <li>                  
+                  <span className="verified">
+                    <i className="icofont-check-alt"></i>
+                  </span>
+                  Cardano Wallet
+                  {/* <Link to={"#"}> */}
+                  {/* </Link> */}
                 </li>                
-                <li>
-                  <Link to={"#"}>
-                    <span className="not-verified">
-                      <i className="icofont-close-line"></i>
-                    </span>
-                    Ethereum Wallet
-                  </Link>
+                <li>                  
+                  <span className="not-verified">
+                    <i className="icofont-close-line"></i>
+                  </span>
+                  Ethereum Wallet
+                  {/* <Link to={"#"}> */}
+                  {/* </Link> */}
                 </li>
-                <li>
-                  <Link to={"#"}>
-                    <span className="not-verified">
-                      <i className="icofont-close-line"></i>
-                    </span>
-                    Role
-                  </Link>
+                <li>                  
+                  <span className="not-verified">
+                     <i className="icofont-close-line"></i>
+                  </span>
+                  Role
+                  {/* <Link to={"#"}> */}
+                  {/* </Link> */}
                 </li>
               </ul>
             </div>

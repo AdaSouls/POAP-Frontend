@@ -10,6 +10,7 @@ import qrImg from "../../images/qr.svg";
 import Layout from "../layout/layout";
 import { Slide } from 'react-slideshow-image';
 import 'react-slideshow-image/dist/styles.css';
+import eternlWallet from "../../images/wallets/eternl.jpg";
 
 const indicators = (index) => (<div className="indicator">{index + 1}</div>);
 
@@ -18,6 +19,24 @@ const CardLibrary = () => {
   const images = [
     bannerWelcome,
     bannerWelcome,
+  ];
+
+  const prices = [
+    { id: 1, title: "Bitcoin", icon: "BTC-alt", value: "11,785.10" },
+    { id: 2, title: "Ethereum", icon: "ETH-alt", value: "11,785.10" },
+    { id: 3, title: "Tether", icon: "USDT-alt", value: "11,785.10" },
+    { id: 4, title: "Ripple", icon: "XRP-alt", value: "11,785.10" },
+    { id: 5, title: "Litecoin", icon: "LTC-alt", value: "11,785.10" },
+    { id: 6, title: "Cardano", icon: "ADA-alt", value: "11,785.10" },
+    { id: 7, title: "EOS", icon: "EOS-alt", value: "11,785.10" },
+    { id: 8, title: "Monero", icon: "XMR-alt", value: "11,785.10" },
+    { id: 9, title: "Tezos", icon: "XTZ-alt", value: "11,785.10" },
+    { id: 10, title: "NEM", icon: "XEM-alt", value: "11,785.10" },
+    { id: 11, title: "NEO", icon: "NEO-alt", value: "11,785.10" },
+    { id: 12, title: "Dash", icon: "DASH-alt", value: "11,785.10" },
+    { id: 13, title: "Ethereum", icon: "ETC-alt", value: "11,785.10" },
+    { id: 14, title: "DigiByte", icon: "DGB-alt", value: "11,785.10" },
+    { id: 15, title: "Decred", icon: "DCR-alt", value: "11,785.10" },
   ];
 
   const [show, setShow] = useState(false);
@@ -37,6 +56,136 @@ const CardLibrary = () => {
 
   return (
     <Layout activeMenu={10}>
+      <div className="row">
+        {/* USER STATE CARD */}
+        <div className="col-xxl-3 col-xl-4 col-lg-4">
+          <div className="card welcome-profile card-classic">
+            <div className="card-body card-classic-max-height">
+              <h4>Welcome to<br></br><span>AdaSouls</span></h4>
+              <ul>
+                <li>
+                  <Link to={"#"}>
+                    <span className="verified">
+                      <i className="icofont-check-alt"></i>
+                    </span>
+                    Cardano Wallet
+                  </Link>
+                </li>                
+                <li>
+                  <Link to={"#"}>
+                    <span className="not-verified">
+                      <i className="icofont-close-line"></i>
+                    </span>
+                    Ethereum Wallet
+                  </Link>
+                </li>
+                <li>
+                  <Link to={"#"}>
+                    <span className="not-verified">
+                      <i className="icofont-close-line"></i>
+                    </span>
+                    Role
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div className="m-3">
+              <Link to={"#"} className="btn btn-gradient btn-block">
+                  Wallets
+              </Link>
+            </div>
+          </div>
+        </div>
+        {/* BANNER CARD */}
+        <div className="col-xxl-9 col-xl-8 col-lg-8">
+          <div className="card card-classic">
+            <div className="card-banner">
+              <Slide indicators={indicators} scale={1.4}>
+                <div className="each-slide-effect">
+                    <div style={{ 'backgroundImage': `url(${images[0]})` }}>                        
+                        <span>
+                          <img src={adaSolusLogoBanner}></img>
+                          <p><strong>AdaSouls</strong> is the first open platform to create <strong>Soulbound Tokens</strong> and <strong>POAPs</strong> in <strong>Cardano</strong></p>
+                        </span>
+                    </div>
+                </div>
+                <div className="each-slide-effect">
+                    <div style={{ 'backgroundImage': `url(${images[1]})` }}>
+                        <span>
+                          <img src={adaSolusLogoBanner}></img>
+                          <p><strong>AdaSouls</strong> is the first open platform to create <strong>Soulbound Tokens</strong> and <strong>POAPs</strong> in <strong>Cardano</strong></p>
+                        </span>
+                    </div>
+                </div>
+              </Slide>
+            </div>  
+          </div>
+        </div>
+      </div>
+      <div className="row">
+        <div className="col-xxl-6 col-xl-6 col-lg-12">
+          <div className="card card-small">
+            <div className="card-wallet">
+              <div className="card-body top-area d-flex">
+                <div className="d-flex align-items-center">
+                  <img
+                    className="mr-3 rounded-circle mr-0 mr-sm-3"
+                    src={eternlWallet}
+                    width="75"
+                    height="75"
+                    alt=""
+                  />
+                  <div className="media-body">
+                    <h4 className="mb-0">Eternl Wallet</h4>
+                    {/* <p className="mb-0">Text</p> */}
+                  </div>
+                </div>
+              </div>
+              <div className="bottom-area border-top align-content-center">
+                <div className="card-body d-flex justify-content-between">
+                  <div className="align-content-center wallet-status">
+                      <span className="verified">
+                        <i className="icofont-check-alt"></i>
+                      </span>
+                      Connected
+                  </div>
+                  <div>
+                    <Link to={"#"} className="btn btn-danger">
+                      Disconnect
+                    </Link>
+                  </div>                  
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-xxl-6 col-xl-6 col-lg-12">
+          <div className="card card-small">
+            <div className="card-wallet">
+              <div className="card-body top-area d-flex">
+                <p className="align-content-center m-0">
+                  Necessary to operate with POAP
+                </p>
+              </div>
+              <div className="bottom-area border-top align-content-center">
+                <div className="card-body d-flex justify-content-between">
+                  <div className="align-content-center wallet-status">                    
+                      <span className="not-verified">
+                        <i className="icofont-close-line"></i>
+                      </span>
+                      Desconnected                    
+                  </div>
+                  <div>
+                    <Link to={"#"} className="btn btn-gradient">
+                      Connect
+                    </Link>
+                  </div>                  
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>       
+      </div> 
       <div className="row">
         <div className="col-xxl-6 col-xl-6 col-lg-12">
           <div className="card">
@@ -127,8 +276,8 @@ const CardLibrary = () => {
         </div>
         {/* USER STATE CARD */}
         <div className="col-xxl-3 col-xl-6 col-lg-6">
-          <div className="card welcome-profile card-height-400">
-            <div className="card-body card-body-max-height-320">
+        <div className="card welcome-profile card-classic">
+            <div className="card-body card-classic-max-height">
               <h4>Welcome to<br></br><span>AdaSouls</span></h4>
               <ul>
                 <li>
@@ -138,7 +287,7 @@ const CardLibrary = () => {
                     </span>
                     Cardano Wallet
                   </Link>
-                </li>
+                </li>                
                 <li>
                   <Link to={"#"}>
                     <span className="not-verified">
@@ -157,8 +306,8 @@ const CardLibrary = () => {
                 </li>
               </ul>
             </div>
-            <div className="card-button">
-              <Link to={"#"} className="btn btn-gradient btn-block btn-bottom">
+            <div className="m-3">
+              <Link to={"#"} className="btn btn-gradient btn-block">
                   Wallets
               </Link>
             </div>
@@ -166,16 +315,16 @@ const CardLibrary = () => {
         </div>
         {/* FAQS CARD */}
         <div className="col-xxl-3 col-xl-6 col-lg-6">
-          <div className="card card-height-400">
+          <div className="card card-classic">
           
             <div className="card-header">
               <h4 className="card-title">FAQ´s </h4>
             </div>
-            <div className="card-body card-body-max-height-260">
+            <div className="card-body card-classic-max-height-title-button">
               <h4>Hola</h4>
-              <p>Texto de FAQs para redirigir a la pagina adecuada</p>      
+              <p>Texto de FAQs para redirigir a la pagina adecuada<br></br>Texto de FAQs para redirigir a la pagina adecuada<br></br>Texto de FAQs para redirigir a la pagina adecuada<br></br>Texto de FAQs para redirigir a la pagina adecuada<br></br>Texto de FAQs para redirigir a la pagina adecuada<br></br>Texto de FAQs para redirigir a la pagina adecuada<br></br>Texto de FAQs para redirigir a la pagina adecuada</p>      
             </div>
-            <div className="card-button">
+            <div className="m-3">
               <Link to={"#"} className="btn btn-secondary btn-block btn-bottom">
                   Go to FAQ's
               </Link>
@@ -1106,6 +1255,31 @@ const CardLibrary = () => {
             </div>
           </div>
         </div>
+      </div>
+      <div className="row">
+        {prices.map((price) => (
+          <div
+            key={price.id}
+            className="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6"
+          >
+            <div
+              className={`price-widget position-relative  bg-${price.icon
+                .split("-")[0]
+                .toLocaleLowerCase()}`}
+            >
+              <Link to={"/price-details"}>
+                <div className="price-content">
+                  <div className="icon-title">
+                    <i className={`cc ${price.icon}`}></i>
+                    <span>{price.title}</span>
+                  </div>
+                  <h5>$ {price.value}</h5>
+                </div>
+                <PriceArea />
+              </Link>
+            </div>
+          </div>
+        ))}
       </div>
     </Layout>
   );

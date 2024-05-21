@@ -1,6 +1,6 @@
 import React from "react";
 import Layout from "../layout/layout";
-import profile2 from "../../images/profile/2.png";
+import eternlWallet from "../../images/wallets/eternl.jpg";
 import { Link } from "react-router-dom";
 
 const Wallet = () => {
@@ -14,7 +14,7 @@ const Wallet = () => {
                 <div className="d-flex align-items-center">
                   <img
                     className="mr-3 rounded-circle mr-0 mr-sm-3"
-                    src={profile2}
+                    src={eternlWallet}
                     width="75"
                     height="75"
                     alt=""
@@ -27,16 +27,14 @@ const Wallet = () => {
               </div>
               <div className="bottom-area border-top align-content-center">
                 <div className="card-body d-flex justify-content-between">
-                  <div className="align-content-center">
-                    <Link to={"#"}>
+                  <div className="align-content-center wallet-status">
                       <span className="verified">
                         <i className="icofont-check-alt"></i>
                       </span>
                       Connected
-                    </Link>
                   </div>
                   <div>
-                    <Link to={"#"} className="btn btn-primary">
+                    <Link to={"#"} className="btn btn-danger btn-small">
                       Disconnect
                     </Link>
                   </div>                  
@@ -50,23 +48,19 @@ const Wallet = () => {
             <div className="card-wallet">
               <div className="card-body top-area d-flex">
                 <p className="align-content-center m-0">
-                  Earn free bitcoins in rewards by completing a learning mission
-                  daily or inviting friends to Qash.
-                  <Link to={"#"}>Learn more</Link>
+                  Necessary to operate with POAP
                 </p>
               </div>
               <div className="bottom-area border-top align-content-center">
                 <div className="card-body d-flex justify-content-between">
-                  <div className="align-content-center">
-                    <Link to={"#"}>
+                  <div className="align-content-center wallet-status">                    
                       <span className="not-verified">
                         <i className="icofont-close-line"></i>
                       </span>
-                      Desconnected
-                    </Link>
+                      Desconnected                    
                   </div>
                   <div>
-                    <Link to={"#"} className="btn btn-primary">
+                    <Link to={"#"} className="btn btn-gradient btn-small">
                       Connect
                     </Link>
                   </div>                  

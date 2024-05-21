@@ -1,53 +1,910 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import PriceArea from "../charts/price-area";
+import eternlWallet from "../../images/wallets/eternl.jpg";
+import threeDots from "../../icons/svg/three-dots.svg";
 import Layout from "../layout/layout";
 
-const Souls = () => {
-  const prices = [
-    { id: 1, title: "Bitcoin", icon: "BTC-alt", value: "11,785.10" },
-    { id: 2, title: "Ethereum", icon: "ETH-alt", value: "11,785.10" },
-    { id: 3, title: "Tether", icon: "USDT-alt", value: "11,785.10" },
-    { id: 4, title: "Ripple", icon: "XRP-alt", value: "11,785.10" },
-    { id: 5, title: "Litecoin", icon: "LTC-alt", value: "11,785.10" },
-    { id: 6, title: "Cardano", icon: "ADA-alt", value: "11,785.10" },
-    { id: 7, title: "EOS", icon: "EOS-alt", value: "11,785.10" },
-    { id: 8, title: "Monero", icon: "XMR-alt", value: "11,785.10" },
-    { id: 9, title: "Tezos", icon: "XTZ-alt", value: "11,785.10" },
-    { id: 10, title: "NEM", icon: "XEM-alt", value: "11,785.10" },
-    { id: 11, title: "NEO", icon: "NEO-alt", value: "11,785.10" },
-    { id: 12, title: "Dash", icon: "DASH-alt", value: "11,785.10" },
-    { id: 13, title: "Ethereum", icon: "ETC-alt", value: "11,785.10" },
-    { id: 14, title: "DigiByte", icon: "DGB-alt", value: "11,785.10" },
-    { id: 15, title: "Decred", icon: "DCR-alt", value: "11,785.10" },
-  ];
+const Souls = () => { 
 
   return (
     <Layout activeMenu={3}>
       <div className="row">
-        {prices.map((price) => (
-          <div
-            key={price.id}
-            className="col-xxl-4 col-xl-4 col-lg-6 col-md-6 col-sm-6"
-          >
-            <div
-              className={`price-widget position-relative  bg-${price.icon
-                .split("-")[0]
-                .toLocaleLowerCase()}`}
-            >
-              <Link to={"/price-details"}>
-                <div className="price-content">
-                  <div className="icon-title">
-                    <i className={`cc ${price.icon}`}></i>
-                    <span>{price.title}</span>
-                  </div>
-                  <h5>$ {price.value}</h5>
-                </div>
-                <PriceArea />
-              </Link>
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-create bg-soulbound card-classic">
+            <div className="card-body card-classic-max-height">
+              <h4>CREATE<span> SOULBOUND</span></h4>               
+              <div className="plus-button align-content-center">
+                <div></div><div></div>
+              </div>              
+            </div>
+            <div className="d-flex justify-content-between m-3">
+              <div className="align-content-center mt-4">                    
+                <span className="verified">
+                  <i className="icofont-check-alt"></i>
+                </span>                
+              </div>
+              <div className="align-content-center mt-4">
+                <Link to={"#"} className="btn btn-secondary btn-small btn-negative">
+                    Disconnect
+                </Link>
+              </div> 
             </div>
           </div>
-        ))}
+        </div>
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-classic">
+            <div className="card-header">
+              <h4 className="card-title">??????</h4>
+              <span>
+                <Link to={"#"} className="simple-link">
+                  See more
+                </Link>
+              </span>
+            </div>
+            <div className="card-body card-classic-max-height-title">
+            <div className="table-responsive">
+                <table className="table table-striped table-small responsive-table">
+                  <tbody>
+                    <tr>
+                      <td className="table-image">                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td className="table-press-icon">
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                      < Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-classic">
+            <div className="card-header">
+              <h4 className="card-title">??????</h4>
+              <span>
+                <Link to={"#"} className="simple-link">
+                  See more
+                </Link>
+              </span>
+            </div>
+            <div className="card-body card-classic-max-height-title">
+            <div className="table-responsive">
+                <table className="table table-striped table-small responsive-table">
+                  <tbody>
+                    <tr>
+                      <td className="table-image">                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td className="table-press-icon">
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                      < Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-classic">
+            <div className="card-header">
+              <h4 className="card-title">??????</h4>
+              <span>
+                <Link to={"#"} className="simple-link">
+                  See more
+                </Link>
+              </span>
+            </div>
+            <div className="card-body card-classic-max-height-title">
+            <div className="table-responsive">
+                <table className="table table-striped table-small responsive-table">
+                  <tbody>
+                    <tr>
+                      <td className="table-image">                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td className="table-press-icon">
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                      < Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-create bg-poap card-classic">
+            <div className="card-body card-classic-max-height">
+              <h4>CREATE<span> POAP</span></h4>               
+              <div className="plus-button align-content-center">
+                <div></div><div></div>
+              </div>              
+            </div>
+            <div className="d-flex justify-content-between m-3">
+              <div className="align-content-center mt-4">                    
+                <span className="not-verified">
+                  <i className="icofont-close-line"></i>
+                </span>                
+              </div>
+              <div className="align-content-center mt-4">
+                <Link to={"#"} className="btn btn-secondary btn-small btn-negative">
+                    Connect
+                </Link>
+              </div> 
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-classic">
+            <div className="card-header">
+              <h4 className="card-title">??????</h4>
+              <span>
+                <Link to={"#"} className="simple-link">
+                  See more
+                </Link>
+              </span>
+            </div>
+            <div className="card-body card-classic-max-height-title">
+            <div className="table-responsive">
+                <table className="table table-striped table-small responsive-table">
+                  <tbody>
+                    <tr>
+                      <td className="table-image">                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td className="table-press-icon">
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                      < Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-classic">
+            <div className="card-header">
+              <h4 className="card-title">??????</h4>
+              <span>
+                <Link to={"#"} className="simple-link">
+                  See more
+                </Link>
+              </span>
+            </div>
+            <div className="card-body card-classic-max-height-title">
+            <div className="table-responsive">
+                <table className="table table-striped table-small responsive-table">
+                  <tbody>
+                    <tr>
+                      <td className="table-image">                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td className="table-press-icon">
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                      < Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+          <div className="card card-classic">
+            <div className="card-header">
+              <h4 className="card-title">??????</h4>
+              <span>
+                <Link to={"#"} className="simple-link">
+                  See more
+                </Link>
+              </span>
+            </div>
+            <div className="card-body card-classic-max-height-title">
+            <div className="table-responsive">
+                <table className="table table-striped table-small responsive-table">
+                  <tbody>
+                    <tr>
+                      <td className="table-image">                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td className="table-press-icon">
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                      < Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>                      
+                        <img
+                          className="rounded-circle"
+                          src={eternlWallet}
+                          width="45"
+                          height="45"
+                          alt=""
+                        />
+                      </td>                      
+                      <td>
+                        Name
+                      </td>                      
+                      <td>
+                        <Link to={"#"} className="table-link">
+                          <img
+                            src={threeDots}
+                            width="20"
+                            height="40"
+                            alt=""
+                          />
+                        </Link>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+
       </div>
     </Layout>
   );
