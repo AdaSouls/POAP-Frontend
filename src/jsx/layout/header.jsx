@@ -97,59 +97,6 @@ const Header = () => {
                     </div>
                   </Dropdown.Menu>
                 </Dropdown>
-
-                {/* <Dropdown className="profile_log">
-                  <Dropdown.Toggle>
-                    <span className="thumb">
-                      <img src={thumb} alt="" width="30" />
-                    </span>
-                    <span className="arrow">
-                      <i className="icofont-angle-down"></i>
-                    </span>
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu className=" mt-4" align={"right"}>
-                    <div className="user-email">
-                      <div className="user">
-                        <span className="thumb">
-                          <img src={thumb} alt="" />
-                        </span>
-                        <div className="user-info">
-                          <h5>Jannatul Maowa</h5>
-                          <span>Qash.inc@gmail.com</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="user-balance">
-                      <div className="available">
-                        <p>Available</p>
-                        <span>0.00 BTC</span>
-                      </div>
-                      <div className="total">
-                        <p>Total</p>
-                        <span>0.00 USD</span>
-                      </div>
-                    </div>
-                    <Link to={"profile"} className="dropdown-item">
-                      <i className="icofont-ui-user"></i>Profile
-                    </Link>
-                    <Link to={"/wallet"} className="dropdown-item">
-                      <i className="icofont-wallet"></i>Wallet
-                    </Link>
-                    <Link to={"/settings-profile"} className="dropdown-item">
-                      <i className="icofont-ui-settings"></i> Setting
-                    </Link>
-                    <Link to={"/settings-activity"} className="dropdown-item">
-                      <i className="icofont-history"></i> Activity
-                    </Link>
-                    <Link to={"/lock"} className="dropdown-item">
-                      <i className="icofont-lock"></i>Lock
-                    </Link>
-                    <Link to={"/signin"} className="dropdown-item logout">
-                      <i className="icofont-logout"></i> Logout
-                    </Link>
-                  </Dropdown.Menu>
-                </Dropdown> */}
               </div>
             </div>
           </div>

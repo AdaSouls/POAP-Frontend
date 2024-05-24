@@ -2,8 +2,25 @@ import React from "react";
 import Layout from "../layout/layout";
 import eternlWallet from "../../images/wallets/eternl.jpg";
 import { Link } from "react-router-dom";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 
 const Wallet = () => {
+
+  const state = useDrawer();
+  const dispatch = useDrawerDispatch();
+
+  const showCardanoWallet = () => {
+    dispatch({
+      type: 'SHOW_CARDANO_WALLET'
+    });
+  };  
+
+  const showEthereumWallet = () => {
+    dispatch({
+      type: 'SHOW_ETHEREUM_WALLET'
+    });
+  };  
+
   return (
     <Layout activeMenu={4}>
       <div className="row">
@@ -34,9 +51,12 @@ const Wallet = () => {
                       Connected
                   </div>
                   <div>
-                    <Link to={"#"} className="btn btn-danger btn-small">
+                    <button
+                      className="btn btn-danger btn-small"
+                      onClick={showCardanoWallet}
+                    >
                       Disconnect
-                    </Link>
+                    </button>
                   </div>                  
                 </div>
               </div>
@@ -60,9 +80,12 @@ const Wallet = () => {
                       Desconnected                    
                   </div>
                   <div>
-                    <Link to={"#"} className="btn btn-gradient btn-small">
+                    <button
+                      className="btn btn-gradient btn-small"
+                      onClick={showEthereumWallet}
+                    >
                       Connect
-                    </Link>
+                    </button>
                   </div>                  
                 </div>
               </div>

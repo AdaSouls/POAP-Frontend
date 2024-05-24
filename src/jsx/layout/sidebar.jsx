@@ -36,11 +36,7 @@ const Sidebar = ({ activeMenu }) => {
               </Link>
             </li>
           ))}
-
-          
         </ul>
-
-       
       </div>
     </div>
   );

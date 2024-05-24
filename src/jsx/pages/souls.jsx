@@ -3,8 +3,36 @@ import { Link } from "react-router-dom";
 import eternlWallet from "../../images/wallets/eternl.jpg";
 import threeDots from "../../icons/svg/three-dots.svg";
 import Layout from "../layout/layout";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 
 const Souls = () => { 
+
+  const state = useDrawer();
+  const dispatch = useDrawerDispatch();
+
+  const createPoap = () => {
+    dispatch({
+      type: 'CREATE_POAP'
+    });
+  };  
+
+  const createSoul = () => {
+    dispatch({
+      type: 'CREATE_SOUL'
+    });
+  };  
+
+  const showCardanoWallet = () => {
+    dispatch({
+      type: 'SHOW_CARDANO_WALLET'
+    });
+  };  
+
+  const showEthereumWallet = () => {
+    dispatch({
+      type: 'SHOW_ETHEREUM_WALLET'
+    });
+  };  
 
   return (
     <Layout activeMenu={3}>
@@ -12,9 +40,12 @@ const Souls = () => {
 
         <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
           <div className="card card-create bg-soulbound card-classic">
-            <div className="card-body card-classic-max-height">
+            <div
+              className="card-body card-classic-max-height"
+              onClick={createSoul}
+            >
               <h4>CREATE<span> SOULBOUND</span></h4>               
-              <div className="plus-button align-content-center">
+              <div className="plus-button align-content-center" >
                 <div></div><div></div>
               </div>              
             </div>
@@ -459,7 +490,10 @@ const Souls = () => {
 
         <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
           <div className="card card-create bg-poap card-classic">
-            <div className="card-body card-classic-max-height">
+            <div
+              className="card-body card-classic-max-height"
+              onClick={createPoap}
+            >
               <h4>CREATE<span> POAP</span></h4>               
               <div className="plus-button align-content-center">
                 <div></div><div></div>

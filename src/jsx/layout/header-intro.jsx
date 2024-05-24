@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-
 import logo from '../../images/logo.png'
 
 
@@ -14,8 +13,8 @@ const HeaderIntro = () => {
                             <nav class="navbar">
                                 <div class="brand-logo">
                                     <Link to={"/"}>
-                                        <img src={logo} alt="" />
-                                        <span>Qash</span>
+                                    <img src={logo} alt="" />
+                                    <span>AdaSouls</span>
                                     </Link>
                                 </div>
                                 <Link to={"/signin"} class="btn btn-success">Sign in</Link>

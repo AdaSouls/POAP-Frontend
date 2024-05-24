@@ -150,9 +150,12 @@ const CardLibrary = () => {
                       Connected
                   </div>
                   <div>
-                    <Link to={"#"} className="btn btn-danger">
+                    <button
+                      className="btn btn-danger btn-small"
+                      // onClick={showCardanoWallet}
+                    >
                       Disconnect
-                    </Link>
+                    </button>
                   </div>                  
                 </div>
               </div>
@@ -176,15 +179,18 @@ const CardLibrary = () => {
                       Desconnected                    
                   </div>
                   <div>
-                    <Link to={"#"} className="btn btn-gradient">
+                    <button
+                      className="btn btn-gradient btn-small"
+                      // onClick={showEthereumWallet}
+                    >
                       Connect
-                    </Link>
+                    </button>
                   </div>                  
                 </div>
               </div>
             </div>
           </div>
-        </div>       
+        </div>        
       </div> 
       <div className="row">
         <div className="col-xxl-6 col-xl-6 col-lg-12">

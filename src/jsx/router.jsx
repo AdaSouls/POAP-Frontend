@@ -24,11 +24,15 @@ import Search from "./pages/search";
 import VerifyEmail from "./pages/verify-email";
 import Wallet from "./pages/wallet";
 import CardLibrary from "./pages/card-library";
+import { Drawer } from "./drawer/drawer";
 
 const Router = () => {
   return (
     <BrowserRouter>
-      {/* <BrowserRouter> */}
+      
+        <Drawer/>  
+    
+      {/* <BrowserRouter> */}      
       <div id="main-wrapper">
         <Routes>
           <Route path="/" exact element={<Dashboard />} />

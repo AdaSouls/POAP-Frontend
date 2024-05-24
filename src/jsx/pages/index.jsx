@@ -1,5 +1,6 @@
 import React from "react";
 import PerfectScrollbar from "react-perfect-scrollbar";
+import { useContext } from "react";
 import { Link } from "react-router-dom";
 import bannerWelcome from "../../images/banner/banner-welcome.jpg";
 import adaSolusLogoBanner from "../../images/banner/adasouls-logo-banner.png";
@@ -17,7 +18,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <Layout activeMenu={1}>
+    <Layout activeMenu={1}>     
       <div className="row">
         {/* USER STATE CARD */}
         <div className="col-xxl-3 col-xl-4 col-lg-4">
@@ -52,9 +53,13 @@ const Dashboard = () => {
               </ul>
             </div>
             <div className="m-3">
-              <Link to={"#"} className="btn btn-gradient btn-block">
-                  Wallets
-              </Link>
+              <button
+                className="btn btn-gradient btn-block"
+                // onClick={showCart}
+              >
+                Wallets
+              </button>
+              
             </div>
           </div>
         </div>
