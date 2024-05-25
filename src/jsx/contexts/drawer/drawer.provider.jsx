@@ -1,16 +1,27 @@
-import react, { createContext, useContext, useReducer } from 'react';
+import react, { createContext, useCallback, useContext, useReducer } from 'react';
+import useCardano from './useCardano';
 
 const DrawerContext = createContext(null);
 const DrawerDispatchContext = createContext(null);
 
 export function DrawerProvider({ children }) {
+  const cardanoState = useCardano();
+
+  const initialState = {  
+    cardano: cardanoState,
+    showCardanoWallet: false,
+    showEthereumWallet: false,
+    createSoul: false,
+    createPoap: false,
+    open: false,
+    items: []
+  };
+
   const [state, dispatch] = useReducer(
     drawerReducer,
     initialState
   );
 
-  console.log(state);
-  
   return (
     <DrawerContext.Provider value={state}>
       <DrawerDispatchContext.Provider value={dispatch}>
@@ -31,6 +42,14 @@ export function useDrawerDispatch() {
 
 function drawerReducer(state, action) {
   switch (action.type) {
+    case 'UPDATE_CARDANO_WALLET':
+      return { 
+        ...state, 
+        cardano: {
+          ...state.cardano,
+          wallet: action.payload
+        }
+      };
     case 'SHOW_CARDANO_WALLET':
       return {
         ...state,
@@ -80,12 +99,3 @@ function drawerReducer(state, action) {
       return state;
   }
 }
-
-const initialState = {  
-  showCardanoWallet: false,
-  showEthereumWallet: false,
-  createSoul: false,
-  createPoap: false,
-  open: false,
-  items: []
-};
