@@ -1,7 +1,7 @@
 import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromText, UTxO, TxSigned, C } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
 import * as CBOR from "cbor-js";
 import blueprint from "./plutus.json";
-import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadata } from "./types";
+import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadata, ClaimRedeemer } from "./types";
 
 export function strToBuffer(hexString: string) {
     // ensure even number of characters
@@ -282,13 +282,13 @@ export const buildCollectionContracts = (mint_script: string, redeem_script: str
 }
 
 
-export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signerKey: string, lockAddress: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<TxSigned> => {
+export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signerKey: string, lockAddress: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<{ txSigned: TxSigned, mintUtxo: UTxO}> => {
     const lovelace = 1_000_000;
     const assetName = `${policyId}${fromText(tokenName)}`;
     const msg = fromText("Issued");
     const minter: MintRedeemer = { Mint: { msg } };
     const mintRedeemer = Data.to(minter, MintRedeemer);
-    console.log('Redeemer:', mintRedeemer);
+    // console.log('Redeemer:', mintRedeemer);
 
 
     const data = Data.fromJson({
@@ -312,7 +312,7 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
     }
 
     const datum = Data.to(d, DatumMetadata);
-    console.log('Datum', datum);
+    // console.log('Datum', datum);
     const validTo = Date.now() + (60 * 60 * 24 * 1000); // 1 day
 
     const tx = await lucid
@@ -340,8 +340,96 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
         .validTo(validTo)
         .complete();
     const txSigned = await tx.sign().complete();
-    return txSigned;
+    const lovelaceOut = findLockedLovelace(lockAddress, txSigned.txSigned.body().outputs());
+    const mintUtxo: UTxO = {
+        address: lockAddress,
+        txHash: txSigned.toHash(),
+        outputIndex: 0,
+        assets: { lovelace: lovelaceOut, [assetName]: BigInt(1) },
+        datum
+    } 
+    return { txSigned, mintUtxo };
     // console.log('Tx Id:', txHash);
     // const success = await lucid.awaitTx(txHash);
     // console.log('Success?', success);
+}
+
+export const claimToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, lockAddress: string, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<{ txSigned: TxSigned, claimUtxo: UTxO}> => {
+    const lovelace = 1_000_000;
+    const assetName = `${policyId}${fromText(tokenName)}`;
+    const msg = fromText("Claimed");
+
+    const data = Data.fromJson({
+        [policyId]: {
+            [tokenName]: {
+                name: tokenName,
+                ...metadata
+            }
+        }
+    });
+
+    const d: DatumMetadata = {
+        policyId: policyHash,
+        beneficiary,
+        status: msg,
+        metadata: {
+            data,
+            version: BigInt(1),
+            extra: null
+        }
+    }
+
+    const datum = Data.to(d, DatumMetadata);
+    // console.log('Datum', datum);
+    const claimer: ClaimRedeemer = "ClaimToken";
+    const claimRedeemer = Data.to(claimer, ClaimRedeemer);
+
+    const validTo = Date.now() + (60 * 60 * 24 * 1000); // 1 day
+
+    const tx = await lucid
+    .newTx()
+    .collectFrom([utxo, tokenUtxo], claimRedeemer)
+    .addSignerKey(beneficiary)
+    // consume script
+    .attachSpendingValidator(redeem)
+    .payToContract(
+        lockAddress,
+        {
+            inline: datum,
+        },
+        {
+            lovelace: BigInt(lovelace),
+            [assetName]: BigInt(1)
+        }
+    )
+    .validTo(validTo)
+    .complete();
+    const txSigned = await tx.sign().complete();
+    const lovelaceOut = findLockedLovelace(lockAddress, txSigned.txSigned.body().outputs());
+    const claimUtxo: UTxO = {
+        address: lockAddress,
+        txHash: txSigned.toHash(),
+        outputIndex: 0,
+        assets: { lovelace: lovelaceOut, [assetName]: Number(1) },
+        datum
+    } 
+    return { txSigned, claimUtxo };
+}
+
+export const findLockedLovelace = (lockAddress: string, outputs: C.TransactionOutputs): number | undefined => {
+    const length = outputs.len();
+    for (let i = 0; i < length; i++) {
+        const output = outputs.get(i);
+        const address = output.address();
+        try {
+            const bech32Addr = address.to_bech32();
+            if (bech32Addr == lockAddress) {
+                const lovelace = output.amount().coin().to_str();
+                return Number(lovelace);
+            }
+        } catch (error) {
+            
+        }
+    }
+    return undefined;
 }

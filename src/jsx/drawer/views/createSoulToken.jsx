@@ -8,6 +8,7 @@ import { update } from '../../../services/collection.service';
 export default function CreateSoulToken() {
   const { cardano: { wallet }, collection } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const navigate = useNavigate();
   const location = useLocation();
 
   const [name, setName] = useState('');
@@ -21,7 +22,7 @@ export default function CreateSoulToken() {
     });
   };  
 
-  const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -36,13 +37,13 @@ export default function CreateSoulToken() {
     const beneficiary = wallet.utils.getAddressDetails(address).paymentCredential.hash;
     const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
     const _metadata = JSON.parse(metadata || '{}')
-    const txSigned = await mintToken(name, _metadata, policyId, policyHash, beneficiary, signerKey, lockAddress, mint, utxo, provider);
+    const { txSigned, mintUtxo } = await mintToken(name, _metadata, policyId, policyHash, beneficiary, signerKey, lockAddress, mint, utxo, provider);
     console.log(txSigned.toString());
     const txId = await txSigned.submit();
     const success = await provider.awaitTx(txId);
     console.log('Success?', success);
     const tokens = collection.tokens;
-    tokens.push({ id: txId, beneficiary: address, name, metadata: _metadata });
+    tokens.push({ id: txId, mintUtxo, beneficiary: address, name, metadata: _metadata });
     update(id, { tokens });
     closeDrawer();
     navigate(location.pathname, { replace: true });

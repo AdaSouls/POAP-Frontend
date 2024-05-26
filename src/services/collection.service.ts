@@ -26,6 +26,19 @@ export async function update(id: string, data: any) {
     }
 }
 
+export async function updateToken(id: string, tokenId: string, data: any) {
+    const collection = await get(id);
+    if (collection) {
+        const index = collection.tokens.findIndex((t: any) => t.id == tokenId);
+        collection.tokens[index] = {
+            ...collection.tokens[index],
+            ...data
+        }
+        const collections = (await getAll()).map(c => c.id != id ? c : collection);
+        localStorage.setItem(key, JSON.stringify(collections));
+    }
+}
+
 export async function remove(id: string) {
     const collection = await get(id);
     if (collection) {

@@ -26,6 +26,7 @@ import Wallet from "./pages/wallet";
 import CardLibrary from "./pages/card-library";
 import { Drawer } from "./drawer/drawer";
 import Collection from "./pages/collection-details";
+import SoulboundClaim from "./pages/soulbound-claim";
 
 const Router = () => {
   return (
@@ -67,6 +68,7 @@ const Router = () => {
           <Route path="/signup" element={<Signup />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/collections/:id" element={<Collection />} />
+          <Route path="/soulbounds-claim" element={<SoulboundClaim />} />
         </Routes>
       </div>
     </BrowserRouter>
