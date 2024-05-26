@@ -416,6 +416,34 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
     return { txSigned, claimUtxo };
 }
 
+export const burnToken = async (tokenName: string, policy: Policy, policyId: string, signerKey: string, mint: MintingPolicy, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<TxSigned> => {
+    const assetName = `${policyId}${fromText(tokenName)}`;
+
+    const minter: MintRedeemer = "Burn";
+    const mintRedeemer = Data.to(minter, MintRedeemer);
+    const claimer: ClaimRedeemer = { BurnToken: { policy } };
+    const claimRedeemer = Data.to(claimer, ClaimRedeemer);
+
+    const validTo = Date.now() + (60 * 60 * 24 * 1000); // 1 day
+    const tx = await lucid
+        .newTx()
+        .collectFrom([utxo, tokenUtxo], claimRedeemer)
+        // use the mint validator
+        .attachMintingPolicy(mint)
+        // burn 1 of the asset
+        .mintAssets(
+            { [assetName]: BigInt(-1) },
+            // this redeemer is the first argument
+            mintRedeemer
+        )
+        .attachSpendingValidator(redeem)
+        .addSignerKey(signerKey)
+        .validTo(validTo)
+        .complete();
+    const txSigned = await tx.sign().complete();
+    return txSigned;
+}
+
 export const findLockedLovelace = (lockAddress: string, outputs: C.TransactionOutputs): number | undefined => {
     const length = outputs.len();
     for (let i = 0; i < length; i++) {

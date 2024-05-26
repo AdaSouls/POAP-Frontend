@@ -37,7 +37,6 @@ const Souls = () => {
 
   useEffect(() => {
     async function fetchData() {
-      console.log('Fetch for wallet', wallet);
       if (!wallet) {
         setCollections([]);
       } else {

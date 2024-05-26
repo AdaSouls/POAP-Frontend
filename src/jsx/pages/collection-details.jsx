@@ -1,15 +1,18 @@
-import { Link, useParams } from "react-router-dom";
-import { get } from "../../services/collection.service";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { get, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import eternlWallet from "../../images/wallets/eternl.jpg";
 import threeDots from "../../icons/svg/three-dots.svg";
 import { useEffect, useState } from "react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import { burnToken } from "../../utils/util";
 
 const Collection = () => {
     const { id } = useParams();
-    const { cardano } = useDrawer();
+    const { cardano: { wallet } } = useDrawer();
     const dispatch = useDrawerDispatch();
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const [collection, setCollection] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -28,11 +31,32 @@ const Collection = () => {
         });
     };
 
+    const burnSoulToken = async (token) => {
+        const provider = wallet.provider;
+        const addr = wallet.address;
+    
+        const { id, policy, policyId, redeem, mint } = collection;
+        const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
+        const utxo = (await provider.wallet.getUtxos())[0];
+        const tokenUtxo = token.claimUtxo || token.mintUtxo;
+        const txSigned = await burnToken(token.name, policy, policyId, signerKey, mint, redeem, tokenUtxo, utxo, provider);
+        console.log(txSigned.toString());
+        const txId = await txSigned.submit();
+        const success = await provider.awaitTx(txId);
+        console.log('Success?', success);
+        await updateToken(id, token.id, { burnTx: txId });
+        navigate(location.pathname, { replace: true });
+    }
+
     useEffect(() => {
         const fetchData = async () => {
           try {
-            const data = await get(id);
-            setCollection(data);
+            if (!wallet) {
+                setCollection(null);
+            } else {
+                const data = await get(id, wallet.address);
+                setCollection(data);
+            }
           } catch (err) {
             setError(err);
           } finally {
@@ -41,13 +65,13 @@ const Collection = () => {
         };
     
         fetchData();
-      }, [id]);
+      }, [id, wallet]);
 
     return (
         <Layout>
             { loading && (<p>Loading...</p>) }
             { error && (<p>Error loading collection: {error.message}</p>) }
-            { collection && (
+            { !loading && (
                 <div className="row">
                       <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
                         <div className="card card-create bg-soulbound card-classic">
@@ -61,71 +85,75 @@ const Collection = () => {
                             </div>              
                           </div>
                           <div className="d-flex justify-content-between m-3">
-                            { cardano.wallet && (
                                 <div className="align-content-center mt-4">                    
                                 <span className="verified">
-                                    <i className="icofont-check-alt"></i>
+                                { wallet && <i className="icofont-check-alt"></i> }
+                                { !wallet && <i className="icofont-close-line"></i> }
                                 </span>     
                                 </div>
-                            )}
                             <div className="align-content-center mt-4">
-                                { !cardano.wallet && (
-                                    <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button>
-                                ) }
+                                { !wallet && <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button> }
+                                { wallet && <button  className="btn btn-danger btn-small" onClick={showCardanoWallet}>Change Wallet</button> }
                             </div> 
                           </div>
                         </div>
                       </div>
-              
+
                       <div className="col-xxl-9 col-xl-8 col-lg-6 col-md-6">
                         <div className="card card-classic">
-                          <div className="card-header">
-                            <h4 className="card-title">{collection.name}</h4>
-                            <span>
-                              <Link to={"#"} className="simple-link">
-                                See more
-                              </Link>
-                            </span>
-                          </div>
-                          <div className="card-body card-classic-max-height-title">
-                          <div className="table-responsive">
-                              <table className="table table-striped table-small responsive-table">
-                                <tbody>
-                                {collection.tokens.map(t => {
-                                      return (
-                                        <tr key={t.id} >
-                                          <td className="table-image">                      
-                                            <img
-                                              className="rounded-circle"
-                                              src={eternlWallet}
-                                              width="45"
-                                              height="45"
-                                              alt=""
-                                            />
-                                          </td>                      
-                                          <td>
-                                            <div className="d-flex flex-column">
-                                                <span>{t.name}</span>
-                                                <span>{t.id}</span>
-                                            </div> 
-                                          </td>                      
-                                          <td className="table-press-icon">
-                                            <Link to="#" className="table-link">
-                                              <img
-                                                src={threeDots}
-                                                width="20"
-                                                height="40"
-                                                alt=""
-                                              />
-                                            </Link>
-                                          </td>
-                                        </tr>
-                                      )
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
+                            { collection && (
+                                <>
+                                <div className="card-header">
+                                    <h4 className="card-title">{collection.name}</h4>
+                                    <span>
+                                    <Link to={"#"} className="simple-link">
+                                        See more
+                                    </Link>
+                                    </span>
+                                </div>
+                                <div className="card-body card-classic-max-height-title">
+                                    <div className="table-responsive">
+                                        <table className="table table-striped table-small responsive-table">
+                                            <tbody>
+                                            {collection.tokens.map(t => {
+                                                return (
+                                                    <tr key={t.id} >
+                                                    <td className="table-image">                      
+                                                        <img
+                                                        className="rounded-circle"
+                                                        src={eternlWallet}
+                                                        width="45"
+                                                        height="45"
+                                                        alt=""
+                                                        />
+                                                    </td>                      
+                                                    <td>
+                                                        <div className="d-flex flex-column">
+                                                            <span>{t.name}</span>
+                                                            <span>Mint Tx: {t.id}</span>
+                                                            <span>Claim Tx: {t.claimUtxo?.txHash || ''}</span>
+                                                            <span>Burn Tx: { t.burnTx || '' }</span>
+                                                        </div> 
+                                                    </td>                      
+                                                    <td className="table-press-icon">
+                                                        <Link to="#" className="table-link" onClick={() => burnSoulToken(t)}>
+                                                        <img
+                                                            src={threeDots}
+                                                            width="20"
+                                                            height="40"
+                                                            alt=""
+                                                        />
+                                                        </Link>
+                                                    </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                </>
+                            ) }
                         </div>
                       </div>
                     </div>

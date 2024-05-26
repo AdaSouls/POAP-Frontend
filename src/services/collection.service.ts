@@ -5,9 +5,9 @@ export async function getAll(owner: string) {
     return collections.filter(c => c.owner == owner);
 }
 
-export async function get(id: string) {
+export async function get(id: string, owner?: string) {
     const collections: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-    return collections.find(c => c.id == id);
+    return collections.find(c => c.id == id && (!owner || c.owner == owner));
 }
 
 export async function insert(payload: any) {
@@ -51,7 +51,7 @@ export async function getClaimableTokens(beneficiary: string) {
     const collections: any[] = JSON.parse(localStorage.getItem(key) || '[]');
     return collections.flatMap(c => 
         c.tokens.some((t: any) => t.beneficiary == beneficiary) 
-        ? c.tokens.filter((t: any) => !t.claimUtxo).map((t:any) => ({...t, collection: c})) 
+        ? c.tokens.filter((t: any) => !t.burnTx && !t.claimUtxo).map((t:any) => ({...t, collection: c})) 
         : []
     );
 }
