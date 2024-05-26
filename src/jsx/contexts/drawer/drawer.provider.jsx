@@ -96,7 +96,8 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: true,
         createPoap: false,
-        open: true
+        open: true,
+        collection: action.payload
       };
     case 'CREATE_POAP':
       return {

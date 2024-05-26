@@ -4,6 +4,7 @@ export type AppliedValidators = {
     mint: MintingPolicy;
     redeem: SpendingValidator;
     policyId: string;
+    policyHash: string;
     lockAddress: string;
 };
 

@@ -1,7 +1,7 @@
-import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
+import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromText, UTxO, TxSigned, C } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
 import * as CBOR from "cbor-js";
 import blueprint from "./plutus.json";
-import { AppliedValidators, Policy, Mint, Credential } from "./types";
+import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadata } from "./types";
 
 export function strToBuffer(hexString: string) {
     // ensure even number of characters
@@ -212,7 +212,7 @@ export const readValidators = () => {
 export const buildPolicy = (type: string, args: any) => {
     // TODO: build differnt policy based on type arg
     switch (type) {
-        case 'sig':
+        case 'all':
             const policy: Policy = {
                 type: 'All',
                 scripts: [
@@ -240,6 +240,11 @@ export const generateRandomNonce = (length = 32) => {
     return Array.from(array, byte => ('0' + byte.toString(16)).slice(-2)).join('');
 };
 
+export function hashPolicy(policy: Policy): string {
+    const cborData = Data.to(policy, Policy);
+    return toHex(C.hash_blake2b256(fromHex(cborData)));
+}
+
 export const buildCollectionContracts = (mint_script: string, redeem_script: string, utils: Lucid.Utils, policy: Policy, nonce?: string): AppliedValidators => {
     const redeem: SpendingValidator = {
         type: "PlutusV2",
@@ -265,11 +270,78 @@ export const buildCollectionContracts = (mint_script: string, redeem_script: str
     };
 
     const policyId = utils.validatorToScriptHash(mint);
+    const policyHash = hashPolicy(policy);
 
     return {
         mint,
         redeem,
         policyId,
+        policyHash,
         lockAddress
     };
+}
+
+
+export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signerKey: string, lockAddress: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<TxSigned> => {
+    const lovelace = 1_000_000;
+    const assetName = `${policyId}${fromText(tokenName)}`;
+    const msg = fromText("Issued");
+    const minter: MintRedeemer = { Mint: { msg } };
+    const mintRedeemer = Data.to(minter, MintRedeemer);
+    console.log('Redeemer:', mintRedeemer);
+
+
+    const data = Data.fromJson({
+        [policyId]: {
+            [tokenName]: {
+                name: tokenName,
+                ...metadata
+            }
+        }
+    })
+
+    const d: DatumMetadata = {
+        policyId: policyHash,
+        beneficiary,
+        status: msg,
+        metadata: {
+            data,
+            version: BigInt(1),
+            extra: null
+        }
+    }
+
+    const datum = Data.to(d, DatumMetadata);
+    console.log('Datum', datum);
+    const validTo = Date.now() + (60 * 60 * 24 * 1000); // 1 day
+
+    const tx = await lucid
+        .newTx()
+        .collectFrom([utxo])
+        // use the mint validator
+        .attachMintingPolicy(mint)
+        // mint 1 of the asset
+        .mintAssets(
+            { [assetName]: BigInt(1) },
+            // this redeemer is the first argument
+            mintRedeemer
+        )
+        .payToContract(
+            lockAddress,
+            {
+                inline: datum,
+            },
+            {
+                lovelace: BigInt(lovelace),
+                [assetName]: BigInt(1)
+            }
+        )
+        .addSignerKey(signerKey)
+        .validTo(validTo)
+        .complete();
+    const txSigned = await tx.sign().complete();
+    return txSigned;
+    // console.log('Tx Id:', txHash);
+    // const success = await lucid.awaitTx(txHash);
+    // console.log('Success?', success);
 }

@@ -9,6 +9,8 @@ import { buildCollectionContracts, buildPolicy, generateNonce, readValidators } 
 import { insert } from '../../../services/collection.service';
 
 export default function CreateSoul() {
+  const { cardano: { wallet } } = useDrawer();
+  const dispatch = useDrawerDispatch();
 
   const [event, setEvent] = useState(false);
   const [streamer, setStreamer] = useState(false);
@@ -30,8 +32,7 @@ export default function CreateSoul() {
     }
   }; 
 
-  const { cardano: { wallet } } = useDrawer();
-  const dispatch = useDrawerDispatch();
+
 
   const closeDrawer = () => {
     dispatch({
@@ -50,10 +51,10 @@ export default function CreateSoul() {
     const addr = wallet.address;
 
     const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
-    const policy = buildPolicy('sig', { signerKey });
+    const policy = buildPolicy('all', { signerKey });
 
     const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { id } = await insert({ name, ...collection, tokens: []});
+    const { id } = await insert({ name, ...collection, policy, tokens: []});
     closeDrawer();
     navigate(`/collections/${id}`);
   };

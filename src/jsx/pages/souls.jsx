@@ -8,7 +8,7 @@ import { getAll } from "../../services/collection.service";
 
 const Souls = () => { 
   const [collections, setCollections] = useState([]);
-  const state = useDrawer();
+  const { cardano } = useDrawer();
   const dispatch = useDrawerDispatch();
 
   const createPoap = () => {
@@ -59,15 +59,17 @@ const Souls = () => {
               </div>              
             </div>
             <div className="d-flex justify-content-between m-3">
-              <div className="align-content-center mt-4">                    
-                <span className="verified">
-                  <i className="icofont-check-alt"></i>
-                </span>                
-              </div>
+              { cardano.wallet && (
+                  <div className="align-content-center mt-4">                    
+                  <span className="verified">
+                      <i className="icofont-check-alt"></i>
+                  </span>     
+                  </div>
+              )}
               <div className="align-content-center mt-4">
-                <Link to={"#"} className="btn btn-secondary btn-small btn-negative">
-                    Disconnect
-                </Link>
+                  { !cardano.wallet && (
+                      <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button>
+                  ) }
               </div> 
             </div>
           </div>
@@ -76,7 +78,7 @@ const Souls = () => {
         <div className="col-xxl-9 col-xl-8 col-lg-6 col-md-6">
           <div className="card card-classic">
             <div className="card-header">
-              <h4 className="card-title">??????</h4>
+              <h4 className="card-title">Collections</h4>
               <span>
                 <Link to={"#"} className="simple-link">
                   See more

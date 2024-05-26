@@ -18,7 +18,8 @@ const Collection = () => {
 
     const createSoulToken = () => {
         dispatch({
-          type: 'CREATE_SOUL_TOKEN'
+          type: 'CREATE_SOUL_TOKEN',
+          payload: collection
         });
     }; 
 
@@ -61,13 +62,13 @@ const Collection = () => {
                             </div>              
                           </div>
                           <div className="d-flex justify-content-between m-3">
-                          { cardano.wallet && (
-                            <div className="align-content-center mt-4">                    
-                              <span className="verified">
-                                <i className="icofont-check-alt"></i>
-                              </span>     
-                            </div>
-                          )}
+                            { cardano.wallet && (
+                                <div className="align-content-center mt-4">                    
+                                <span className="verified">
+                                    <i className="icofont-check-alt"></i>
+                                </span>     
+                                </div>
+                            )}
                             <div className="align-content-center mt-4">
                                 { !cardano.wallet && (
                                     <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button>
@@ -104,7 +105,10 @@ const Collection = () => {
                                             />
                                           </td>                      
                                           <td>
-                                            {t.name}
+                                            <div className="d-flex flex-column">
+                                                <span>{t.name}</span>
+                                                <span>{t.id}</span>
+                                            </div> 
                                           </td>                      
                                           <td className="table-press-icon">
                                             <Link to="#" className="table-link">

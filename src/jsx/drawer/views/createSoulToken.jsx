@@ -1,34 +1,19 @@
 import { useState } from 'react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import { useNavigate } from 'react-router-dom';
-import { Button } from 'react-bootstrap';
-import { buildCollectionContracts, buildPolicy, generateNonce, readValidators } from '../../../utils/util';
-import { insert } from '../../../services/collection.service';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Button, Form } from 'react-bootstrap';
+import { mintToken } from '../../../utils/util';
+import { update } from '../../../services/collection.service';
 
 export default function CreateSoulToken() {
-
-  const [event, setEvent] = useState(false);
-  const [streamer, setStreamer] = useState(false);
-  const [name, setName] = useState('');
-
-  const toggleEvent = () => {
-    if (!event){
-      setEvent(true)
-    } else {
-      setEvent(false)
-    }
-  }; 
-  
-  const toggleStreamer = () => {
-    if (!streamer){
-      setStreamer(true)
-    } else {
-      setStreamer(false)
-    }
-  }; 
-
-  const { cardano: { wallet } } = useDrawer();
+  const { cardano: { wallet }, collection } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const location = useLocation();
+
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [metadata, setMetadata] = useState('');
+
 
   const closeDrawer = () => {
     dispatch({
@@ -40,19 +25,27 @@ export default function CreateSoulToken() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Create collection SC
-    const validators = readValidators();
-    console.log('Validators', validators);
-
+    // mint token
+    const provider = wallet.provider;
     const addr = wallet.address;
 
+    const { id, policyId, policyHash, lockAddress, mint } = collection;
+    
+    const utxo = (await provider.wallet.getUtxos())[0];
+    
+    const beneficiary = wallet.utils.getAddressDetails(address).paymentCredential.hash;
     const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
-    const policy = buildPolicy('sig', { signerKey });
-
-    const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { id } = await insert({ name, ...collection, tokens: []});
+    const _metadata = JSON.parse(metadata || '{}')
+    const txSigned = await mintToken(name, _metadata, policyId, policyHash, beneficiary, signerKey, lockAddress, mint, utxo, provider);
+    console.log(txSigned.toString());
+    const txId = await txSigned.submit();
+    const success = await provider.awaitTx(txId);
+    console.log('Success?', success);
+    const tokens = collection.tokens;
+    tokens.push({ id: txId, beneficiary: address, name, metadata: _metadata });
+    update(id, { tokens });
     closeDrawer();
-    navigate(`/collections/${id}`);
+    navigate(location.pathname, { replace: true });
   };
   
   return (
@@ -68,7 +61,7 @@ export default function CreateSoulToken() {
             <h4            
               className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
             >
-              Create SOUL
+              Create SOUL Token
             </h4>
           </div>          
         </div>      
@@ -94,85 +87,25 @@ export default function CreateSoulToken() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Symbol"
-                name="symbol"
+                placeholder="addr..."
+                name="address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
               />
             </div>
             <div className="col-12">
-              {/* <label className="form-label">Description</label> */}
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Description"
-                name="description"
+            <Form.Label>Metadata</Form.Label>
+              <Form.Control
+                as="textarea"
+                placeholder="{}"
+                style={{ height: '100px' }}
+                value={metadata}  onChange={(event) => setMetadata(event.target.value)}
               />
+            {/* <label>
+              Metadata:
+              <textarea value={metadata}  onChange={(event) => setMetadata(event.target.value)} />
+            </label> */}
             </div>
-            <div className="col-12">
-              {/* <label className="form-label">Type</label> */}
-              <select className="form-select">
-                <option value="">Choose a Type...</option>
-                <option value="">Normal</option>
-              </select>
-            </div>
-            <hr className='col-12 my-4 mb-2'></hr>
-            <div className="col-10">
-              <h6
-                className="py-2"                
-              >
-                Is it for an event ?
-              </h6> 
-            </div>  
-            <div className="col-2">
-              <div className="form-check form-switch">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="flexSwitchCheckDefault"
-                  onClick={toggleEvent}
-                />                
-              </div>
-            </div> 
-            {event &&
-              <div className="col-12">
-                {/* <label className="form-label">Description</label> */}
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Description"
-                  name="description"
-                />
-              </div> 
-            }
-            
-            <hr className='col-12 my-3'></hr> 
-            <div className="col-10">
-              <h6
-                className="py-2"                
-              >
-                Are you streamer ?
-              </h6> 
-            </div>  
-            <div className="col-2">
-              <div className="form-check form-switch">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="flexSwitchCheckDefault"
-                  onClick={toggleStreamer}
-                />                
-              </div>
-            </div> 
-            {streamer &&
-              <div className="col-12">
-                {/* <label className="form-label">Description</label> */}
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Description"
-                  name="description"
-                />
-              </div> 
-            }
             <hr className='col-12 my-4 mt-3'></hr>                      
             <div className='drawer-footer'>
               <Button type="submit" className="btn btn-gradient btn-block">
