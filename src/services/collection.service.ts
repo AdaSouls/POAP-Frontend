@@ -1,8 +1,8 @@
 const key = "COLLECTIONS";
 
-export async function getAll() {
+export async function getAll(owner: string) {
     const collections: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-    return collections;
+    return collections.filter(c => c.owner == owner);
 }
 
 export async function get(id: string) {
@@ -21,7 +21,7 @@ export async function insert(payload: any) {
 export async function update(id: string, data: any) {
     const collection = await get(id);
     if (collection) {
-        const collections = (await getAll()).map(c => c.id != id ? c : ({ ...collection, ...data }))
+        const collections = (await getAll(collection.owner)).map(c => c.id != id ? c : ({ ...collection, ...data }))
         localStorage.setItem(key, JSON.stringify(collections));
     }
 }
@@ -34,7 +34,7 @@ export async function updateToken(id: string, tokenId: string, data: any) {
             ...collection.tokens[index],
             ...data
         }
-        const collections = (await getAll()).map(c => c.id != id ? c : collection);
+        const collections = (await getAll(collection.owner)).map(c => c.id != id ? c : collection);
         localStorage.setItem(key, JSON.stringify(collections));
     }
 }
@@ -42,7 +42,16 @@ export async function updateToken(id: string, tokenId: string, data: any) {
 export async function remove(id: string) {
     const collection = await get(id);
     if (collection) {
-        const collections = (await getAll()).filter(c => c.id != id)
+        const collections = (await getAll(collection.owner)).filter(c => c.id != id)
         localStorage.setItem(key, JSON.stringify(collections));
     }
+}
+
+export async function getClaimableTokens(beneficiary: string) {
+    const collections: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+    return collections.flatMap(c => 
+        c.tokens.some((t: any) => t.beneficiary == beneficiary) 
+        ? c.tokens.filter((t: any) => !t.claimUtxo).map((t:any) => ({...t, collection: c})) 
+        : []
+    );
 }

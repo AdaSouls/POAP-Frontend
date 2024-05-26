@@ -8,7 +8,7 @@ import { getAll } from "../../services/collection.service";
 
 const Souls = () => { 
   const [collections, setCollections] = useState([]);
-  const { cardano } = useDrawer();
+  const { cardano: { wallet } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
   const createPoap = () => {
@@ -37,11 +37,16 @@ const Souls = () => {
 
   useEffect(() => {
     async function fetchData() {
-      const _collections = await getAll();
-      setCollections(_collections);
+      console.log('Fetch for wallet', wallet);
+      if (!wallet) {
+        setCollections([]);
+      } else {
+        const _collections = await getAll(wallet.address);
+        setCollections(_collections);
+      }
     }
     fetchData()
-  }, [])
+  }, [wallet])
 
   return (
     <Layout activeMenu={3}>
@@ -59,17 +64,15 @@ const Souls = () => {
               </div>              
             </div>
             <div className="d-flex justify-content-between m-3">
-              { cardano.wallet && (
                   <div className="align-content-center mt-4">                    
                   <span className="verified">
-                      <i className="icofont-check-alt"></i>
+                    {wallet && <i className="icofont-check-alt"></i>}
+                    {!wallet && <i className="icofont-close-line"></i>}
                   </span>     
                   </div>
-              )}
               <div className="align-content-center mt-4">
-                  { !cardano.wallet && (
-                      <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button>
-                  ) }
+                  { !wallet && <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button> }
+                  { wallet && <button  className="btn btn-danger btn-small" onClick={showCardanoWallet}>Change Wallet</button> }
               </div> 
             </div>
           </div>

@@ -54,7 +54,7 @@ export default function CreateSoul() {
     const policy = buildPolicy('all', { signerKey });
 
     const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { id } = await insert({ name, ...collection, policy, tokens: []});
+    const { id } = await insert({ ...collection, name, owner: addr, policy, tokens: []});
     closeDrawer();
     navigate(`/collections/${id}`);
   };

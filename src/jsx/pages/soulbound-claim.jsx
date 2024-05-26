@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { getAll, updateToken } from "../../services/collection.service";
+import { getAll, getClaimableTokens, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import eternlWallet from "../../images/wallets/eternl.jpg";
 import threeDots from "../../icons/svg/three-dots.svg";
@@ -54,7 +54,7 @@ const SoulboundClaim = () => {
             if (!wallet) {
               setTokens([]);
             } else {
-              const tokens = (await getAll()).flatMap(c => c.tokens.some(t => t.beneficiary == wallet.address) ? c.tokens.filter(t => !t.claimUtxo).map(t => ({...t, collection: c})) : []);
+              const tokens = await getClaimableTokens(wallet.address);
               setTokens(tokens);
             }
           } catch (err) {
@@ -80,20 +80,15 @@ const SoulboundClaim = () => {
                             <h4>CLAIM<span> SOULBOUND Token</span></h4>               
                           </div>
                           <div className="d-flex justify-content-between m-3">
-                            { wallet && (
                                 <div className="align-content-center mt-4">                    
                                 <span className="verified">
-                                    <i className="icofont-check-alt"></i>
+                                    { wallet && <i className="icofont-check-alt"></i> }
+                                    { !wallet && <i className="icofont-close-line"></i> }
                                 </span>     
                                 </div>
-                            )}
                             <div className="align-content-center mt-4">
-                                { !wallet && (
-                                    <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button>
-                                ) }
-                                {  wallet && (
-                                  <button  className="btn btn-danger btn-small" onClick={showCardanoWallet}>Change Wallet</button>
-                                ) }
+                                { !wallet &&  <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button> }
+                                { wallet && <button  className="btn btn-danger btn-small" onClick={showCardanoWallet}>Change Wallet</button> }
                             </div> 
                           </div>
                         </div>
