@@ -1,11 +1,21 @@
 import react, { createContext, useCallback, useContext, useReducer } from 'react';
 import useCardano from './useCardano';
+import {
+  Blockfrost
+} from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js";
 
 const DrawerContext = createContext(null);
 const DrawerDispatchContext = createContext(null);
 
 export function DrawerProvider({ children }) {
-  const cardanoState = useCardano();
+  const cardanoState = useCardano(
+    {
+      network: "Preview", 
+      provider: new Blockfrost(
+          "https://cardano-preview.blockfrost.io/api/v0",
+          "preview1OQSKlQ6tb3WYBx9bqlz7kDFhuglmfvL"
+      )
+    });
 
   const initialState = {  
     cardano: cardanoState,

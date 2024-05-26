@@ -4,11 +4,15 @@ import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import eternlWallet from "../../../images/wallets/eternl.jpg";
 import { useNavigate } from 'react-router-dom';
+import { Button } from 'react-bootstrap';
+import { buildCollectionContracts, buildPolicy, generateNonce, readValidators } from '../../../utils/util';
+import { insert } from '../../../services/collection.service';
 
 export default function CreateSoul() {
 
   const [event, setEvent] = useState(false);
   const [streamer, setStreamer] = useState(false);
+  const [name, setName] = useState('');
 
   const toggleEvent = () => {
     if (!event){
@@ -26,7 +30,7 @@ export default function CreateSoul() {
     }
   }; 
 
-  const state = useDrawer();
+  const { cardano: { wallet } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
   const closeDrawer = () => {
@@ -36,9 +40,21 @@ export default function CreateSoul() {
   };  
 
   const navigate = useNavigate();
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/otp-2");
+
+    // Create collection SC
+    const validators = readValidators();
+    console.log('Validators', validators);
+
+    const addr = wallet.address;
+
+    const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
+    const policy = buildPolicy('sig', { signerKey });
+
+    const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
+    await insert({ name, ...collection});
+    // navigate("/otp-2");
   };
   
   return (
@@ -71,6 +87,8 @@ export default function CreateSoul() {
                 className="form-control"
                 placeholder="Name"
                 name="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
               />
             </div>
             <div className="col-12">
@@ -158,12 +176,12 @@ export default function CreateSoul() {
               </div> 
             }
             <hr className='col-12 my-4 mt-3'></hr>                      
+            <div className='drawer-footer'>
+              <Button type="submit" className="btn btn-gradient btn-block">
+                Create
+              </Button>
+            </div>
           </form>
-        </div>
-        <div className='drawer-footer'>
-          <Link to={"#"} className="btn btn-gradient btn-block">
-            Create
-          </Link>
         </div>
     </div>
   );
