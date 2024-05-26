@@ -1,14 +1,11 @@
-import React from 'react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import eternlWallet from "../../../images/wallets/eternl.jpg";
 import { useNavigate } from 'react-router-dom';
 import { Button } from 'react-bootstrap';
 import { buildCollectionContracts, buildPolicy, generateNonce, readValidators } from '../../../utils/util';
 import { insert } from '../../../services/collection.service';
 
-export default function CreateSoul() {
+export default function CreateSoulToken() {
 
   const [event, setEvent] = useState(false);
   const [streamer, setStreamer] = useState(false);

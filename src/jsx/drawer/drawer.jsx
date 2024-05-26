@@ -4,6 +4,7 @@ import CardanoWallet from './views/cardanoWallet.jsx';
 import EthereumWallet from './views/ethereumWallet.jsx';
 import CreateSoul from './views/createSoul.jsx';
 import CreatePoap from './views/createPoap.jsx';
+import CreateSoulToken from './views/createSoulToken.jsx';
 
 export const Drawer = () => {
 
@@ -22,6 +23,9 @@ export const Drawer = () => {
 
     if (state?.createSoul === true) {
       return <CreateSoul />;
+    }
+    if (state?.createSoulToken === true) {
+      return <CreateSoulToken />;
     }
 
     if (state?.createPoap === true) {

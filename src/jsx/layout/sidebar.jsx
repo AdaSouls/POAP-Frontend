@@ -15,7 +15,8 @@ const Sidebar = ({ activeMenu }) => {
     { id: 2, href: "/search", title: "Search", iconActive: searchIcon, iconInactive: searchIcon },
     { id: 3, href: "/souls", title: "Souls", iconActive: soulsIconActive, iconInactive: soulsIconInactive },
     { id: 4, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive },
-    { id: 5, href: "/settings-profile", title: "Settings", iconActive: settingsIcon, iconInactive: settingsIcon }
+    { id: 5, href: "/settings-profile", title: "Settings", iconActive: settingsIcon, iconInactive: settingsIcon },
+    { id: 6, href: "/soulbounds-claim", title: "Soulbound Claims", iconActive: homeIcon, iconInactive: homeIcon }
   ];
   return (
     <div className="sidebar">

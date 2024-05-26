@@ -25,6 +25,7 @@ import VerifyEmail from "./pages/verify-email";
 import Wallet from "./pages/wallet";
 import CardLibrary from "./pages/card-library";
 import { Drawer } from "./drawer/drawer";
+import Collection from "./pages/collection-details";
 
 const Router = () => {
   return (
@@ -65,6 +66,7 @@ const Router = () => {
           <Route path="/signin" element={<Signin />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/collections/:id" element={<Collection />} />
         </Routes>
       </div>
     </BrowserRouter>

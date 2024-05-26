@@ -22,6 +22,7 @@ export function DrawerProvider({ children }) {
     showCardanoWallet: false,
     showEthereumWallet: false,
     createSoul: false,
+    createSoulToken: false,
     createPoap: false,
     open: false,
     items: []
@@ -84,6 +85,16 @@ function drawerReducer(state, action) {
         showCardanoWallet: false,
         showEthereumWallet: false,
         createSoul: true,
+        createPoap: false,
+        open: true
+      };
+    case 'CREATE_SOUL_TOKEN':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: true,
         createPoap: false,
         open: true
       };
