@@ -290,7 +290,6 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
     const mintRedeemer = Data.to(minter, MintRedeemer);
     // console.log('Redeemer:', mintRedeemer);
 
-
     const data = Data.fromJson({
         [policyId]: {
             [tokenName]: {
@@ -313,7 +312,7 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
 
     const datum = Data.to(d, DatumMetadata);
     // console.log('Datum', datum);
-    const validTo = Date.now() + (60 * 60 * 24 * 1000); // 1 day
+    const validTo = Date.now() + (60 * 60 * 1000); // 1 hour
 
     const tx = await lucid
         .newTx()
@@ -345,7 +344,7 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
         address: lockAddress,
         txHash: txSigned.toHash(),
         outputIndex: 0,
-        assets: { lovelace: lovelaceOut, [assetName]: BigInt(1) },
+        assets: { lovelace: lovelaceOut, [assetName]: Number(1) },
         datum
     } 
     return { txSigned, mintUtxo };
@@ -384,7 +383,7 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
     const claimer: ClaimRedeemer = "ClaimToken";
     const claimRedeemer = Data.to(claimer, ClaimRedeemer);
 
-    const validTo = Date.now() + (60 * 60 * 24 * 1000); // 1 day
+    const validTo = Date.now() + (60 * 60 * 1000); // 1 hour
 
     const tx = await lucid
     .newTx()
@@ -424,7 +423,7 @@ export const burnToken = async (tokenName: string, policy: Policy, policyId: str
     const claimer: ClaimRedeemer = { BurnToken: { policy } };
     const claimRedeemer = Data.to(claimer, ClaimRedeemer);
 
-    const validTo = Date.now() + (60 * 60 * 24 * 1000); // 1 day
+    const validTo = Date.now() + (60 * 60 * 1000); // 1 hour
     const tx = await lucid
         .newTx()
         .collectFrom([utxo, tokenUtxo], claimRedeemer)
