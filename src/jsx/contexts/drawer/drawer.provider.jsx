@@ -10,10 +10,10 @@ const DrawerDispatchContext = createContext(null);
 export function DrawerProvider({ children }) {
   const cardanoState = useCardano(
     {
-      network: "Preview", 
+      network: process.env.REACT_APP_BLOCKFROST_NETWORK, 
       provider: new Blockfrost(
-          "https://cardano-preview.blockfrost.io/api/v0",
-          "preview1OQSKlQ6tb3WYBx9bqlz7kDFhuglmfvL"
+          process.env.REACT_APP_BLOCKFROST_URL,
+          process.env.REACT_APP_BLOCKFROST_PROJECT_ID
       )
     });
 

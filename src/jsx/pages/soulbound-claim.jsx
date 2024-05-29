@@ -17,13 +17,6 @@ const SoulboundClaim = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-
-    const closeDrawer = () => {
-      dispatch({
-        type: 'CLOSE_DRAWER'
-      });
-    };
-
     const claimSoulToken = async (token) => {
       const provider = wallet.provider;
       const addr = wallet.address;
@@ -34,12 +27,11 @@ const SoulboundClaim = () => {
       const utxo = (await provider.wallet.getUtxos())[0];
       const { txSigned, claimUtxo } = await claimToken(token.name, token.metadata, policyId, policyHash, beneficiary, lockAddress, redeem, token.mintUtxo, utxo, provider);
       console.log(txSigned.toString());
+      const updatedToken = await updateToken(id, token.id, { claimUtxo });
+      setTokens(tokens.map((t) => t.id != token.id ? t : {...token, ...updatedToken}))
       const txId = await txSigned.submit();
       const success = await provider.awaitTx(txId);
       console.log('Success?', success);
-      await updateToken(id, token.id, { claimUtxo });
-      closeDrawer();
-      navigate(location.pathname, { replace: true });
     }; 
 
     const showCardanoWallet = () => {
@@ -119,7 +111,8 @@ const SoulboundClaim = () => {
                                             <div className="d-flex flex-column">
                                                 <span>{t.collection.name}</span>
                                                 <span>{t.name}</span>
-                                                <span>{t.id}</span>
+                                                <span>Mint Tx: {t.id}</span>
+                                                <span>Claim Tx: {t.claimUtxo?.txHash || ''}</span>
                                             </div> 
                                           </td>                      
                                           <td className="table-press-icon">

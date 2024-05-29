@@ -1,8 +1,7 @@
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { get, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import eternlWallet from "../../images/wallets/eternl.jpg";
-import threeDots from "../../icons/svg/three-dots.svg";
 import { useEffect, useState } from "react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { burnToken } from "../../utils/util";
@@ -11,8 +10,6 @@ const Collection = () => {
     const { id } = useParams();
     const { cardano: { wallet } } = useDrawer();
     const dispatch = useDrawerDispatch();
-    const navigate = useNavigate();
-    const location = useLocation();
 
     const [collection, setCollection] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -41,11 +38,13 @@ const Collection = () => {
         const tokenUtxo = token.claimUtxo || token.mintUtxo;
         const txSigned = await burnToken(token.name, policy, policyId, signerKey, mint, redeem, tokenUtxo, utxo, provider);
         console.log(txSigned.toString());
-        const txId = await txSigned.submit();
+        const txId = txSigned.toHash();
+        await updateToken(id, token.id, { burnTx: txId });
+        const updatedCollection = await get(id, addr);
+        setCollection(updatedCollection);
+        await txSigned.submit();
         const success = await provider.awaitTx(txId);
         console.log('Success?', success);
-        await updateToken(id, token.id, { burnTx: txId });
-        navigate(location.pathname, { replace: true });
     }
 
     useEffect(() => {
@@ -136,14 +135,13 @@ const Collection = () => {
                                                         </div> 
                                                     </td>                      
                                                     <td className="table-press-icon">
+                                                      { !t.burnTx && (
                                                         <Link to="#" className="table-link" onClick={() => burnSoulToken(t)}>
-                                                        <img
-                                                            src={threeDots}
-                                                            width="20"
-                                                            height="40"
-                                                            alt=""
-                                                        />
+                                                        <span className="dark">
+                                                          <i className="icofont-trash"></i>
+                                                        </span>
                                                         </Link>
+                                                      ) }
                                                     </td>
                                                     </tr>
                                                 )

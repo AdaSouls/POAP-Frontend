@@ -36,6 +36,7 @@ export async function updateToken(id: string, tokenId: string, data: any) {
         }
         const collections = (await getAll(collection.owner)).map(c => c.id != id ? c : collection);
         localStorage.setItem(key, JSON.stringify(collections));
+        return collection.tokens[index];
     }
 }
 
