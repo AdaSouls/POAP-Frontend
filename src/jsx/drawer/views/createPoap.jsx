@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import eternlWallet from "../../../images/wallets/eternl.jpg";
-import { useState, useNavigate } from 'react';
+import { useState } from 'react';
 
 export default function CreatePoap() {
 
