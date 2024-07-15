@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, Form } from 'react-bootstrap';
 import { mintToken } from '../../../utils/util';
 import { update } from '../../../services/collection.service';
+import { addSoulbound } from '../../../services/token.service';
 
 export default function CreateSoulToken() {
   const { cardano: { wallet }, collection } = useDrawer();
@@ -30,23 +31,33 @@ export default function CreateSoulToken() {
     const provider = wallet.provider;
     const addr = wallet.address;
 
-    const { id, policyId, policyHash, lockAddress, mint } = collection;
-    
+    const { collectionId, policyId, policyHash, smartContract, mint, invited } = collection;
+    const stake = wallet.stake_address;
     const utxo = (await provider.wallet.getUtxos())[0];
     
     const beneficiary = wallet.utils.getAddressDetails(address).paymentCredential.hash;
     const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
     const _metadata = JSON.parse(metadata || '{}')
-    const { txSigned, mintUtxo } = await mintToken(name, _metadata, policyId, policyHash, beneficiary, signerKey, lockAddress, mint, utxo, provider);
-    console.log(txSigned.toString());
-    const txId = await txSigned.submit();
-    const success = await provider.awaitTx(txId);
-    console.log('Success?', success);
-    const tokens = collection.tokens;
-    tokens.push({ id: txId, mintUtxo, beneficiary: address, name, metadata: _metadata });
-    update(id, { tokens });
-    closeDrawer();
-    navigate(location.pathname, { replace: true });
+    try {
+      const signatures = invited.reduce((dict, sig) => ({...dict, [sig.keyHash]: sig.signature}), {});
+      const { txComplete, mintUtxo } = await mintToken(name, _metadata, policyId, policyHash, beneficiary, signatures, smartContract, mint, utxo, provider);
+      // console.log(txSigned.toString());
+      const txSigned = await txComplete.complete();
+      console.log('cbor', txSigned.toString());
+
+      const txHash = await txSigned.submit();
+      console.log('Tx Id:', txHash);
+      const success = await provider.awaitTx(txHash);
+      console.log('Success?', success);
+
+      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, name, metadata: _metadata });
+      collection.tokens.push(token);
+      closeDrawer();
+      navigate(location.pathname, { replace: true });
+      
+    } catch (error) {
+      console.log('Error', error);
+    }
   };
   
   return (

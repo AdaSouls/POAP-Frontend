@@ -1,7 +1,7 @@
-import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromText, UTxO, TxSigned, C } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
+import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromText, UTxO, TxSigned, TxComplete, C, M, SignedMessage } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
 import * as CBOR from "cbor-js";
 import blueprint from "./plutus.json";
-import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadata, ClaimRedeemer } from "./types";
+import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadata, ClaimRedeemer, SigStructure, CoseSignature, Signatures } from "./types";
 
 export function strToBuffer(hexString: string) {
     // ensure even number of characters
@@ -61,7 +61,7 @@ export function getSignersUtxos(CardanoWasm: any, utxos: any[]) {
         const addr = CardanoWasm.TransactionUnspentOutput.from_hex(utxo)
             .output()
             .address();
-        const key = getAddressPaymentKeyHash(CardanoWasm, addr);
+        const key = getAddressPaymentKeyHash(addr);
         if (key && !signers.has(key)) {
             signers.add(key);
         }
@@ -76,7 +76,7 @@ export function getSignersCollateral(CardanoWasm: any, _tx: string, collateralCa
     const candidates = collateralCandidates.reduce((map, c) => {
         const utxo = CardanoWasm.TransactionUnspentOutput.from_hex(c);
         const input = utxo.input();
-        const addr = getAddressPaymentKeyHash(CardanoWasm, utxo.output().address());
+        const addr = getAddressPaymentKeyHash(utxo.output().address());
         const id = `${input.transaction_id().to_hex()}#${input.index()}`;
         map.set(id, addr);
         return map;
@@ -151,16 +151,6 @@ export function rebuildTx(CardanoWasm: any, pTx: string, signature: string, need
     return Buffer.from(tx.to_bytes()).toString('hex');
 }
 
-export function getAddressPaymentKeyHash(CardanoWasm: any, address: any) {
-    try {
-        const addr = typeof address == 'string' ? CardanoWasm.Address.from_bech32(address) : address;
-        const baseAddr = CardanoWasm.BaseAddress.from_address(addr) || CardanoWasm.EnterpriseAddress.from_address(addr);
-        return baseAddr?.payment_cred()?.to_keyhash()?.to_hex();
-    } catch (err) {
-        return undefined;
-    }
-}
-
 export function getAddress(CardanoWasm: any, hex: string) {
     return CardanoWasm.Address.from_bytes(
         fromHex(hex)
@@ -209,20 +199,18 @@ export const readValidators = () => {
     };
 }
 
-export const buildPolicy = (type: string, args: any) => {
+export const buildPolicy = (type: string, args: { signers: string[] }) => {
     // TODO: build differnt policy based on type arg
     switch (type) {
         case 'all':
             const policy: Policy = {
                 type: 'All',
-                scripts: [
-                    {
-                        type: 'Sig',
-                        keyHash: args.signerKey,
-                        slot: null,
-                        require: null
-                    }
-                ],
+                scripts: args.signers.map(keyHash => ({
+                    type: 'Sig',
+                    keyHash: keyHash,
+                    slot: null,
+                    require: null
+                })),
                 keyHash: null,
                 slot: null,
                 require: null,
@@ -250,7 +238,7 @@ export const buildCollectionContracts = (mint_script: string, redeem_script: str
         type: "PlutusV2",
         script: applyDoubleCborEncoding(redeem_script)
     };
-    const lockAddress = utils.validatorToAddress(redeem);
+    const smartContract = utils.validatorToAddress(redeem);
     const scriptHash = utils.validatorToScriptHash(redeem);
     const credential: Credential = { ScriptCredential: [scriptHash] };
 
@@ -277,18 +265,23 @@ export const buildCollectionContracts = (mint_script: string, redeem_script: str
         redeem,
         policyId,
         policyHash,
-        lockAddress
+        smartContract
     };
 }
 
 
-export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signerKey: string, lockAddress: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<{ txSigned: TxSigned, mintUtxo: UTxO}> => {
+export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signatures: {[key: string]: string}, smartContract: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<{ txComplete: TxComplete, mintUtxo: UTxO }> => {
     const lovelace = 1_000_000;
     const assetName = `${policyId}${fromText(tokenName)}`;
     const msg = fromText("Issued");
-    const minter: MintRedeemer = { Mint: { msg } };
+    console.log('Signatures', signatures);
+    
+    const _signatures: Signatures = new Map(
+        Object.entries(signatures).map(([key, s]) => [key, Data.from(s, CoseSignature)])
+    )
+    const minter: MintRedeemer = { Mint: { msg, signatures: _signatures } };
     const mintRedeemer = Data.to(minter, MintRedeemer);
-    // console.log('Redeemer:', mintRedeemer);
+    console.log('Redeemer:', mintRedeemer);
 
     const data = Data.fromJson({
         [policyId]: {
@@ -313,7 +306,6 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
     const datum = Data.to(d, DatumMetadata);
     // console.log('Datum', datum);
     const validTo = Date.now() + (60 * 60 * 1000); // 1 hour
-
     const tx = await lucid
         .newTx()
         .collectFrom([utxo])
@@ -326,7 +318,7 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
             mintRedeemer
         )
         .payToContract(
-            lockAddress,
+            smartContract,
             {
                 inline: datum,
             },
@@ -335,25 +327,26 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
                 [assetName]: BigInt(1)
             }
         )
-        .addSignerKey(signerKey)
+        // .addSignerKey(signerKey)
         .validTo(validTo)
         .complete();
-    const txSigned = await tx.sign().complete();
-    const lovelaceOut = findLockedLovelace(lockAddress, txSigned.txSigned.body().outputs());
+    const txComplete = await tx.sign();
+    const lovelaceOut = findLockedLovelace(smartContract, txComplete.txComplete.body().outputs());
     const mintUtxo: UTxO = {
-        address: lockAddress,
-        txHash: txSigned.toHash(),
+        txCbor: txComplete.toString(),
+        txHash: txComplete.toHash(),
+        address: smartContract,
         outputIndex: 0,
         assets: { lovelace: lovelaceOut, [assetName]: Number(1) },
         datum
-    } 
-    return { txSigned, mintUtxo };
+    }
+    return { txComplete, mintUtxo };
     // console.log('Tx Id:', txHash);
     // const success = await lucid.awaitTx(txHash);
     // console.log('Success?', success);
 }
 
-export const claimToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, lockAddress: string, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<{ txSigned: TxSigned, claimUtxo: UTxO}> => {
+export const claimToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, smartContract: string, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<{ txSigned: TxSigned, claimUtxo: UTxO }> => {
     const lovelace = 1_000_000;
     const assetName = `${policyId}${fromText(tokenName)}`;
     const msg = fromText("Claimed");
@@ -386,32 +379,32 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
     const validTo = Date.now() + (60 * 60 * 1000); // 1 hour
 
     const tx = await lucid
-    .newTx()
-    .collectFrom([utxo, tokenUtxo], claimRedeemer)
-    .addSignerKey(beneficiary)
-    // consume script
-    .attachSpendingValidator(redeem)
-    .payToContract(
-        lockAddress,
-        {
-            inline: datum,
-        },
-        {
-            lovelace: BigInt(lovelace),
-            [assetName]: BigInt(1)
-        }
-    )
-    .validTo(validTo)
-    .complete();
+        .newTx()
+        .collectFrom([utxo, tokenUtxo], claimRedeemer)
+        .addSignerKey(beneficiary)
+        // consume script
+        .attachSpendingValidator(redeem)
+        .payToContract(
+            smartContract,
+            {
+                inline: datum,
+            },
+            {
+                lovelace: BigInt(lovelace),
+                [assetName]: BigInt(1)
+            }
+        )
+        .validTo(validTo)
+        .complete();
     const txSigned = await tx.sign().complete();
-    const lovelaceOut = findLockedLovelace(lockAddress, txSigned.txSigned.body().outputs());
+    const lovelaceOut = findLockedLovelace(smartContract, txSigned.txSigned.body().outputs());
     const claimUtxo: UTxO = {
-        address: lockAddress,
+        address: smartContract,
         txHash: txSigned.toHash(),
         outputIndex: 0,
         assets: { lovelace: lovelaceOut, [assetName]: Number(1) },
         datum
-    } 
+    }
     return { txSigned, claimUtxo };
 }
 
@@ -443,20 +436,86 @@ export const burnToken = async (tokenName: string, policy: Policy, policyId: str
     return txSigned;
 }
 
-export const findLockedLovelace = (lockAddress: string, outputs: C.TransactionOutputs): number | undefined => {
+export const findLockedLovelace = (smartContract: string, outputs: C.TransactionOutputs): number | undefined => {
     const length = outputs.len();
     for (let i = 0; i < length; i++) {
         const output = outputs.get(i);
         const address = output.address();
         try {
             const bech32Addr = address.to_bech32();
-            if (bech32Addr == lockAddress) {
+            if (bech32Addr == smartContract) {
                 const lovelace = output.amount().coin().to_str();
                 return Number(lovelace);
             }
         } catch (error) {
-            
+
         }
     }
     return undefined;
 }
+
+
+export const getStakeAddress = (address: string): string | null => {
+    try {
+        const addr = C.Address.from_bech32(address);
+        const baseAddr = C.BaseAddress.from_address(addr);
+        let stakeAddr = null;
+        if (baseAddr) {
+            const stakeCredential = baseAddr.stake_cred();
+            const reward = C.RewardAddress.new(addr.network_id(), stakeCredential);
+            stakeAddr = reward.to_address().to_bech32();
+        }
+        return stakeAddr;
+    } catch (err) {
+        console.log('Error (getStakeAddress):', err);
+        
+        return null;
+    }
+}
+
+
+export const getAddressPaymentKeyHash = (address: string | C.Address | any): string | null => {
+    try {
+        const addr = typeof address == 'string' ? C.Address.from_bech32(address) : address;
+        const baseAddr = C.BaseAddress.from_address(addr) || C.EnterpriseAddress.from_address(addr);
+        return baseAddr?.payment_cred()?.to_keyhash().to_hex();
+    } catch (err) {
+        console.log('Error (getAddressPaymentKeyHash):', err);
+        
+        return null;
+    }
+}
+
+
+export const getSigningMessage = (policyHash: string): string => {
+    return fromText("SIGN|") + policyHash;
+}
+
+export const buildSignature = (addr: string, message: string, signedMessage: SignedMessage): string => {
+    const cose = M.COSESign1.from_bytes(fromHex(signedMessage.signature));
+    const key = M.COSEKey.from_bytes(fromHex(signedMessage.key));
+    const pubKey = C.PublicKey.from_bytes(
+        key.header(M.Label.new_int(
+            M.Int.new_negative(
+                M.BigNum.from_str("2"),
+            ),
+        ))?.as_bytes()!,
+    )
+    const signature = C.Ed25519Signature.from_bytes(cose.signature()).to_hex();
+  
+    const sigStruct: SigStructure = {
+        context: fromText("Signature1"),
+        body_protected: toHex(cose.headers().protected().deserialized_headers().to_bytes()),
+        sign_protected: null,
+        external_aad: "",
+        payload: message
+    };
+  
+    const coseSig: CoseSignature = {
+        key: toHex(pubKey.as_bytes()),
+        address: addr,
+        sig_structure: sigStruct,
+        signature: signature
+    };
+    return Data.to(coseSig, CoseSignature);
+  }

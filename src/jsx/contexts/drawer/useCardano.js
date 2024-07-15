@@ -1,7 +1,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Lucid } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
-import { cborDecode } from "../../../utils/util";
+import { cborDecode, getStakeAddress } from "../../../utils/util";
 
 function useCardano({ network, provider }) {
     const [wallet, setCurrentWallet] = useState(null);
@@ -24,7 +24,8 @@ function useCardano({ network, provider }) {
             const lucid = await Lucid.new(provider, network);
             const lucidWallet = lucid.selectWallet(api);
             const address = await lucid.wallet.address();
-            const newWalletState = { ...wallet, provider: lucidWallet, utils: lucid.utils, api, balance, address };
+            const stake_address = getStakeAddress(address);
+            const newWalletState = { ...wallet, provider: lucidWallet, utils: lucid.utils, api, balance, address, stake_address };
             setCurrentWallet(newWalletState);
             return newWalletState;
         } catch (e) {
