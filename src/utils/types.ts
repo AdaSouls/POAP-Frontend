@@ -5,7 +5,7 @@ export type AppliedValidators = {
     redeem: SpendingValidator;
     policyId: string;
     policyHash: string;
-    lockAddress: string;
+    smartContract: string;
 };
 
 const ScriptType = Data.Enum([
@@ -51,8 +51,31 @@ const MintSchema = Data.Object({
 export type Mint = Data.Static<typeof MintSchema>;
 export const Mint = MintSchema as unknown as Mint;
 
+const SigStructureSchema = Data.Object({
+    context: Data.Bytes(),
+    body_protected: Data.Bytes(),
+    sign_protected: Data.Nullable(Data.Bytes()),
+    external_aad: Data.Nullable(Data.Bytes()),
+    payload: Data.Bytes()
+});
+export type SigStructure = Data.Static<typeof SigStructureSchema>;
+export const SigStructure = SigStructureSchema as unknown as SigStructure;
+
+const CoseSignatureSchema = Data.Object({
+    key: Data.Bytes(),
+    address: Data.Bytes(),
+    sig_structure: SigStructureSchema,
+    signature: Data.Bytes()
+})
+export type CoseSignature = Data.Static<typeof CoseSignatureSchema>;
+export const CoseSignature = CoseSignatureSchema as unknown as CoseSignature;
+
+const SignaturesSchema = Data.Map(Data.Bytes(), CoseSignatureSchema)
+export type Signatures = Data.Static<typeof SignaturesSchema>;
+export const Signatures = SignaturesSchema as unknown as Signatures;
+
 const MintRedeemerSchema = Data.Enum([
-    Data.Object({ Mint: Data.Object({ msg: Data.Bytes() }) }),
+    Data.Object({ Mint: Data.Object({ msg: Data.Bytes(), signatures: SignaturesSchema }) }),
     Data.Literal("Burn")
 ]);
 export type MintRedeemer = Data.Static<typeof MintRedeemerSchema>;
@@ -60,7 +83,7 @@ export const MintRedeemer = MintRedeemerSchema as unknown as MintRedeemer;
 
 const ClaimRedeemerSchema = Data.Enum([
     Data.Literal("ClaimToken"),
-    Data.Object({ BurnToken: Data.Object({ policy: PolicySchema }) })
+    Data.Object({ BurnToken: Data.Object({ policy: PolicySchema, signatures: SignaturesSchema }) })
 ]);
 export type ClaimRedeemer = Data.Static<typeof ClaimRedeemerSchema>;
 export const ClaimRedeemer = ClaimRedeemerSchema as unknown as ClaimRedeemer;

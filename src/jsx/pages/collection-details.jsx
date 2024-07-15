@@ -40,7 +40,7 @@ const Collection = () => {
         console.log(txSigned.toString());
         const txId = txSigned.toHash();
         await updateToken(id, token.id, { burnTx: txId });
-        const updatedCollection = await get(id, addr);
+        const updatedCollection = await get(id, wallet.stake_address);
         setCollection(updatedCollection);
         await txSigned.submit();
         const success = await provider.awaitTx(txId);
@@ -53,7 +53,7 @@ const Collection = () => {
             if (!wallet) {
                 setCollection(null);
             } else {
-                const data = await get(id, wallet.address);
+                const data = await get(id, wallet.stake_address);
                 setCollection(data);
             }
           } catch (err) {
@@ -116,7 +116,7 @@ const Collection = () => {
                                             <tbody>
                                             {collection.tokens.map(t => {
                                                 return (
-                                                    <tr key={t.id} >
+                                                    <tr key={t.soulboundId} >
                                                     <td className="table-image">                      
                                                         <img
                                                         className="rounded-circle"
@@ -129,7 +129,7 @@ const Collection = () => {
                                                     <td>
                                                         <div className="d-flex flex-column">
                                                             <span>{t.name}</span>
-                                                            <span>Mint Tx: {t.id}</span>
+                                                            <span>Mint Tx: {t.mintUtxo?.txHash || ''}</span>
                                                             <span>Claim Tx: {t.claimUtxo?.txHash || ''}</span>
                                                             <span>Burn Tx: { t.burnTx || '' }</span>
                                                         </div> 

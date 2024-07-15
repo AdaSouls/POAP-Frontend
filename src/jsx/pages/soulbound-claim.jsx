@@ -21,11 +21,11 @@ const SoulboundClaim = () => {
       const provider = wallet.provider;
       const addr = wallet.address;
   
-      const { id, policyId, policyHash, lockAddress, redeem } = token.collection;
+      const { id, policyId, policyHash, smartContract, redeem } = token.collection;
       const beneficiary = wallet.utils.getAddressDetails(token.beneficiary).paymentCredential.hash;
 
       const utxo = (await provider.wallet.getUtxos())[0];
-      const { txSigned, claimUtxo } = await claimToken(token.name, token.metadata, policyId, policyHash, beneficiary, lockAddress, redeem, token.mintUtxo, utxo, provider);
+      const { txSigned, claimUtxo } = await claimToken(token.name, token.metadata, policyId, policyHash, beneficiary, smartContract, redeem, token.mintUtxo, utxo, provider);
       console.log(txSigned.toString());
       const updatedToken = await updateToken(id, token.id, { claimUtxo });
       setTokens(tokens.map((t) => t.id != token.id ? t : {...token, ...updatedToken}))
