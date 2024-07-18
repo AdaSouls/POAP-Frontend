@@ -50,7 +50,7 @@ export default function CreateSoulToken() {
       const success = await provider.awaitTx(txHash);
       console.log('Success?', success);
 
-      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, name, metadata: _metadata });
+      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: addr, beneficiary_stake: stake, name, metadata: _metadata });
       collection.tokens.push(token);
       closeDrawer();
       navigate(location.pathname, { replace: true });

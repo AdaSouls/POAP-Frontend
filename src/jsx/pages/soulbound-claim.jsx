@@ -21,17 +21,22 @@ const SoulboundClaim = () => {
       const provider = wallet.provider;
       const addr = wallet.address;
   
-      const { id, policyId, policyHash, smartContract, redeem } = token.collection;
+      const { collectionId, policyId, policyHash, smartContract, redeem } = token.collection;
       const beneficiary = wallet.utils.getAddressDetails(token.beneficiary).paymentCredential.hash;
 
       const utxo = (await provider.wallet.getUtxos())[0];
-      const { txSigned, claimUtxo } = await claimToken(token.name, token.metadata, policyId, policyHash, beneficiary, smartContract, redeem, token.mintUtxo, utxo, provider);
-      console.log(txSigned.toString());
-      const updatedToken = await updateToken(id, token.id, { claimUtxo });
-      setTokens(tokens.map((t) => t.id != token.id ? t : {...token, ...updatedToken}))
-      const txId = await txSigned.submit();
-      const success = await provider.awaitTx(txId);
-      console.log('Success?', success);
+      try {
+        const { txSigned, claimUtxo } = await claimToken(token.name, token.metadata, policyId, policyHash, beneficiary, smartContract, redeem, token.mintUtxo, utxo, provider);
+        console.log('Tx Cbor:', txSigned.toString());
+        const updatedToken = await updateToken(collectionId, token.soulboundId, { claimUtxo });
+        setTokens(tokens.map((t) => t.soulboundId != token.soulboundId ? t : {...token, ...updatedToken}))
+        const txId = await txSigned.submit();
+        console.log('Tx Id:', txId);
+        const success = await provider.awaitTx(txId);
+        console.log('Success?', success);
+      } catch(err) {
+        console.log('Wallet submit tx error:', err);
+      }
     }; 
 
     const showCardanoWallet = () => {
@@ -46,8 +51,8 @@ const SoulboundClaim = () => {
             if (!wallet) {
               setTokens([]);
             } else {
-              const tokens = await getClaimableTokens(wallet.address);
-              setTokens(tokens);
+              const _tokens = await getClaimableTokens(wallet.stake_address);
+              setTokens(_tokens);
             }
           } catch (err) {
             setError(err);
@@ -79,7 +84,7 @@ const SoulboundClaim = () => {
                                 </span>     
                                 </div>
                             <div className="align-content-center mt-4">
-                                { !wallet &&  <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button> }
+                                { !wallet && <button className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button> }
                                 { wallet && <button  className="btn btn-danger btn-small" onClick={showCardanoWallet}>Change Wallet</button> }
                             </div> 
                           </div>
@@ -97,7 +102,7 @@ const SoulboundClaim = () => {
                                 <tbody>
                                 {tokens.map(t => {
                                       return (
-                                        <tr key={t.id} >
+                                        <tr key={t.soulboundId} >
                                           <td className="table-image">                      
                                             <img
                                               className="rounded-circle"
@@ -111,7 +116,7 @@ const SoulboundClaim = () => {
                                             <div className="d-flex flex-column">
                                                 <span>{t.collection.name}</span>
                                                 <span>{t.name}</span>
-                                                <span>Mint Tx: {t.id}</span>
+                                                <span>Mint Tx: {t.mintUtxo.txHash}</span>
                                                 <span>Claim Tx: {t.claimUtxo?.txHash || ''}</span>
                                             </div> 
                                           </td>                      
