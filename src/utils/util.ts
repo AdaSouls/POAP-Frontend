@@ -408,12 +408,15 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
     return { txSigned, claimUtxo };
 }
 
-export const burnToken = async (tokenName: string, policy: Policy, policyId: string, signerKey: string, mint: MintingPolicy, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<TxSigned> => {
+export const burnToken = async (tokenName: string, policy: Policy, policyId: string, signatures: {[key: string]: string}, mint: MintingPolicy, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<TxSigned> => {
     const assetName = `${policyId}${fromText(tokenName)}`;
 
+    const _signatures: Signatures = new Map(
+        Object.entries(signatures).map(([key, s]) => [key, Data.from(s, CoseSignature)])
+    )
     const minter: MintRedeemer = "Burn";
     const mintRedeemer = Data.to(minter, MintRedeemer);
-    const claimer: ClaimRedeemer = { BurnToken: { policy } };
+    const claimer: ClaimRedeemer = { BurnToken: { policy, signatures: _signatures } };
     const claimRedeemer = Data.to(claimer, ClaimRedeemer);
 
     const validTo = Date.now() + (60 * 60 * 1000); // 1 hour
@@ -429,7 +432,7 @@ export const burnToken = async (tokenName: string, policy: Policy, policyId: str
             mintRedeemer
         )
         .attachSpendingValidator(redeem)
-        .addSignerKey(signerKey)
+        // .addSignerKey(signerKey)
         .validTo(validTo)
         .complete();
     const txSigned = await tx.sign().complete();

@@ -31,18 +31,21 @@ const Collection = () => {
     const burnSoulToken = async (token) => {
         const provider = wallet.provider;
         const addr = wallet.address;
-    
-        const { id, policy, policyId, redeem, mint } = collection;
+
+        const { collectionId, policy, policyId, redeem, mint, invited } = collection;
         const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
         const utxo = (await provider.wallet.getUtxos())[0];
         const tokenUtxo = token.claimUtxo || token.mintUtxo;
-        const txSigned = await burnToken(token.name, policy, policyId, signerKey, mint, redeem, tokenUtxo, utxo, provider);
-        console.log(txSigned.toString());
+        const signatures = invited.reduce((dict, sig) => ({...dict, [sig.keyHash]: sig.signature}), {});
+        const txSigned = await burnToken(token.name, policy, policyId, signatures, mint, redeem, tokenUtxo, utxo, provider);
+        console.log('Tx Cbor:', txSigned.toString());
         const txId = txSigned.toHash();
-        await updateToken(id, token.id, { burnTx: txId });
-        const updatedCollection = await get(id, wallet.stake_address);
+        await updateToken(collectionId, token.soulboundId, { burnTx: txId });
+        const updatedCollection = await get(collectionId, wallet.stake_address);
         setCollection(updatedCollection);
+
         await txSigned.submit();
+        console.log('Tx Id:', txId);
         const success = await provider.awaitTx(txId);
         console.log('Success?', success);
     }
