@@ -3,7 +3,6 @@ import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provi
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, Form } from 'react-bootstrap';
 import { mintToken } from '../../../utils/util';
-import { update } from '../../../services/collection.service';
 import { addSoulbound } from '../../../services/token.service';
 
 export default function CreateSoulToken() {
@@ -29,14 +28,14 @@ export default function CreateSoulToken() {
 
     // mint token
     const provider = wallet.provider;
-    const addr = wallet.address;
 
     const { collectionId, policyId, policyHash, smartContract, mint, invited } = collection;
-    const stake = wallet.stake_address;
     const utxo = (await provider.wallet.getUtxos())[0];
     
-    const beneficiary = wallet.utils.getAddressDetails(address).paymentCredential.hash;
-    const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
+    const addressDetails = wallet.utils.getAddressDetails(address);
+    const beneficiary = addressDetails.paymentCredential.hash;
+    const stakeAddress = wallet.utils.credentialToRewardAddress(addressDetails.stakeCredential);
+
     const _metadata = JSON.parse(metadata || '{}')
     try {
       const signatures = invited.reduce((dict, sig) => ({...dict, [sig.keyHash]: sig.signature}), {});
@@ -50,7 +49,7 @@ export default function CreateSoulToken() {
       const success = await provider.awaitTx(txHash);
       console.log('Success?', success);
 
-      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: addr, beneficiary_stake: stake, name, metadata: _metadata });
+      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata });
       collection.tokens.push(token);
       closeDrawer();
       navigate(location.pathname, { replace: true });
