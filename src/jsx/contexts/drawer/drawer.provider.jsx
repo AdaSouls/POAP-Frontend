@@ -1,5 +1,6 @@
 import react, { createContext, useCallback, useContext, useReducer } from 'react';
 import useCardano from './useCardano';
+import useEthereum from './useEthereum';
 import {
   Blockfrost
 } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js";
@@ -15,10 +16,14 @@ export function DrawerProvider({ children }) {
           process.env.REACT_APP_BLOCKFROST_URL,
           process.env.REACT_APP_BLOCKFROST_PROJECT_ID
       )
-    });
+    }
+  );
+  
+  const ethereumState = useEthereum();
 
   const initialState = {  
     cardano: cardanoState,
+    ethereum: ethereumState,
     showCardanoWallet: false,
     showEthereumWallet: false,
     createSoul: false,
@@ -53,6 +58,14 @@ export function useDrawerDispatch() {
 
 function drawerReducer(state, action) {
   switch (action.type) {
+    case 'UPDATE_ETHEREUM_WALLET':
+      return { 
+        ...state, 
+        ethereum: {
+          ...state.ethereum,
+          provider: action.payload
+        }
+      };
     case 'UPDATE_CARDANO_WALLET':
       return { 
         ...state, 

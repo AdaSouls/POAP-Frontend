@@ -97,9 +97,11 @@ export default function CreateSoul() {
     const policy = buildPolicy('all', { signers: keys});
 
     const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited });
+    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited //aikenCourse
+       });
     closeDrawer();
-    navigate(`/collections/${collectionId}`);
+    // navigate(`/collection/${collectionId}`);
+    navigate(`/souls`);
   };
   
   return (
@@ -193,13 +195,13 @@ export default function CreateSoul() {
                 </Button>
               </div>
               )}
-            </div>
+            </div> 
             <hr className='col-12 my-4 mb-2'></hr>
             <div className="col-10">
               <h6
                 className="py-2"                
               >
-                Is it for an event ?
+                Is this for the Aiken Course?
               </h6> 
             </div>  
             <div className="col-2">
@@ -209,7 +211,7 @@ export default function CreateSoul() {
                   type="checkbox"
                   id="flexSwitchCheckDefault"
                   onClick={toggleEvent}
-                />                
+                />                  
               </div>
             </div> 
             {event &&
@@ -224,35 +226,7 @@ export default function CreateSoul() {
               </div> 
             }
             
-            <hr className='col-12 my-3'></hr> 
-            <div className="col-10">
-              <h6
-                className="py-2"                
-              >
-                Are you streamer ?
-              </h6> 
-            </div>  
-            <div className="col-2">
-              <div className="form-check form-switch">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="flexSwitchCheckDefault"
-                  onClick={toggleStreamer}
-                />                
-              </div>
-            </div> 
-            {streamer &&
-              <div className="col-12">
-                {/* <label className="form-label">Description</label> */}
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Description"
-                  name="description"
-                />
-              </div> 
-            }
+            <hr className='col-12 my-3'></hr>            
             <hr className='col-12 my-4 mt-3'></hr>                      
             <div className='drawer-footer'>
               <Button type="submit" className="btn btn-gradient btn-block">

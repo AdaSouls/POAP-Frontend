@@ -3,11 +3,15 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { DrawerProvider } from "./jsx/contexts/drawer/drawer.provider";
+import { Drawer } from "./jsx/drawer/drawer";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <DrawerProvider>
+      <App />
+    </DrawerProvider>  
   </React.StrictMode>
 );
 

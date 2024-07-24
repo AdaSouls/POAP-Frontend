@@ -70,10 +70,39 @@ const Collection = () => {
       }, [id, wallet]);
 
     return (
-        <Layout>
+      <Layout activeMenu={4}>
             { loading && (<p>Loading...</p>) }
             { error && (<p>Error loading collection: {error.message}</p>) }
             { !loading && (
+              <>
+                <div className="row">
+                  {/* CARDS HEADER */}
+                  <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
+                      <div className="card inner-header">
+                          <div className="d-flex justify-content-between m-3">
+                              <div className="inner-header-back">
+                                  <Link to="/souls" className="simple-link">
+                                      <i className="icofont-rounded-left"></i>   
+                                  </Link>                            
+                              </div>
+                              <div className="inner-header-title">
+                                  <h4>
+                                      <span className="text-uppercase">{collection.name+" "}</span>
+                                      Collection
+                                  </h4>
+                              </div>
+                              <div className="inner-header-buttons">
+                                  {/* <button onClick="/wallet" className="simple-link pr-3">
+                                      <i className="icofont-listing-box"></i>
+                                  </button>
+                                  <button onClick="/wallet" className="simple-link">
+                                      <i className="icofont-filter"></i>
+                                  </button>       */}
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+                </div>
                 <div className="row">
                       <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
                         <div className="card card-create bg-soulbound card-classic">
@@ -94,8 +123,7 @@ const Collection = () => {
                                 </span>     
                                 </div>
                             <div className="align-content-center mt-4">
-                                { !wallet && <button  className="btn btn-gradient btn-small" onClick={showCardanoWallet}>Connect</button> }
-                                { wallet && <button  className="btn btn-danger btn-small" onClick={showCardanoWallet}>Change Wallet</button> }
+
                             </div> 
                           </div>
                         </div>
@@ -158,7 +186,9 @@ const Collection = () => {
                         </div>
                       </div>
                     </div>
+                    </>
             )}
+            
         </Layout>
     )
 }

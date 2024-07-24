@@ -6,17 +6,21 @@ import soulsIconActive from "../../icons/menu/souls-active.png";
 import walletIconActive from "../../icons/menu/wallet-active.png";
 import soulsIconInactive from "../../icons/menu/souls-inactive.png";
 import walletIconInactive from "../../icons/menu/wallet-inactive.png";
-import settingsIcon from "../../icons/menu/settings.png";
+// import settingsIcon from "../../icons/menu/settings.png";
+import adaSoulsIcon from "../../icons/menu/ada-souls.png";
+import { useDrawer } from "../contexts/drawer/drawer.provider";
 
 const Sidebar = ({ activeMenu }) => {
-  const wallets = true;
+  const { cardano, ethereum } = useDrawer(); 
+  
   const menus = [
     { id: 1, href: "/", title: "Home", iconActive: homeIcon, iconInactive: homeIcon },
     { id: 2, href: "/search", title: "Search", iconActive: searchIcon, iconInactive: searchIcon },
-    { id: 3, href: "/souls", title: "Souls", iconActive: soulsIconActive, iconInactive: soulsIconInactive },
-    { id: 4, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive },
-    { id: 5, href: "/settings-profile", title: "Settings", iconActive: settingsIcon, iconInactive: settingsIcon },
-    { id: 6, href: "/soulbounds-claim", title: "Soulbound Claims", iconActive: homeIcon, iconInactive: homeIcon }
+    { id: 3, href: "/soulbounds-claim", title: "Soulbound Claims", iconActive: adaSoulsIcon, iconInactive: adaSoulsIcon },
+    { id: 4, href: "/souls", title: "Souls", iconActive: soulsIconActive, iconInactive: soulsIconInactive },
+    { id: 5, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive }
+    // { id: 6, href: "/settings-profile", title: "Settings", iconActive: settingsIcon, iconInactive: settingsIcon }
+    
   ];
   return (
     <div className="sidebar">
@@ -31,7 +35,7 @@ const Sidebar = ({ activeMenu }) => {
                 className={activeMenu === item.id ? "active" : ""}
               >
                 <span>
-                  <img src={wallets ? item.iconActive : item.iconInactive}></img>
+                <img src={cardano.wallet || ethereum.provider ? item.iconActive : item.iconInactive}></img>
                   {/* <i className={item.icon}></i> */}
                 </span>
               </Link>

@@ -11,6 +11,7 @@
     "apexcharts": "^3.47.0",
     "cbor-js": "^0.1.0",
     "comma-number": "^2.1.0",
+    "ethers": "^6.13.1",
     "millify": "^4.0.0",
     "react": "^18.2.0",
     "react-apexcharts": "^1.4.1",

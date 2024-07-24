@@ -66,12 +66,16 @@
     rgba(255, 255, 255, 0.15),
     rgba(255, 255, 255, 0)
   );
-  --bs-gradient-soulbound: linear-gradient(
+  --bs-event:#7C6AAD;
+  --bs-stream-event: #76C2C3;
+  --bs-collection-normal:#5CA4DA;
+  --bs-collection-multisig: #7C6AAD;
+  --bs-gradient-poap: linear-gradient(
     0deg,
     #5EA1D8,
     #824F99
   );
-  --bs-gradient-poap: linear-gradient(
+  --bs-gradient-soulbound: linear-gradient(
     0deg,    
     #74BFC5,
     #5EA1D8
@@ -507,6 +511,19 @@ summary {
 
 progress {
   vertical-align: baseline;
+}
+
+.under-construct img{
+  width: 420px !important;
+  height: 300px !important;
+  padding: 0px;
+  margin: 0 auto;
+  margin-top: 150px !important;
+}
+
+.under-construct h5{
+  text-align: center;
+  
 }
 
 [hidden] {
@@ -3224,6 +3241,80 @@ fieldset:disabled .btn {
   border-color: #556ee6;
 }
 
+.btn-gradient-purple {
+  color: #000;
+  background: linear-gradient(90deg, var(--bs-adasouls-two) 0%, var(--bs-adasouls-three) 100%);
+  transition: 0.5s;
+  border: 1px solid #5CA4DA;
+}
+
+.btn-gradient-purple:hover {
+  color: #000;
+  filter: brightness(1.2);
+  transition: 0.5s;
+  border: 1px solid #76C2C3;
+}
+
+.btn-check:focus + .btn-gradient-purple,
+.btn-gradient-purple:focus {
+  color: #000;
+  background-color: #768aeb;
+  border-color: #6b81e9;
+  box-shadow: 0 0 0 0.25rem rgba(72, 94, 196, 0.5);
+}
+
+.btn-check:checked + .btn-gradient-purple,
+.btn-check:active + .btn-gradient-purple,
+.btn-gradient-purple:active,
+.btn-gradient-purple.active,
+.show > .btn-gradient-purple.dropdown-toggle {
+  color: #000;
+  background-color: #8194ed;
+  border-color: #6b81e9;
+}
+
+.btn-check:checked + .btn-gradient-purple:focus,
+.btn-check:active + .btn-gradient-purple:focus,
+.btn-gradient-purple:active:focus,
+.btn-gradient-purple.active:focus,
+.show > .btn-gradient-purple.dropdown-toggle:focus {
+  box-shadow: 0 0 0 0.25rem rgba(72, 94, 196, 0.5);
+}
+
+.btn-gradient-purple:disabled,
+.btn-gradient-purple.disabled {
+  color: #000;
+  background-color: #556ee6;
+  border-color: #556ee6;
+}
+
+.btn-white {
+  color: #5CA4DA !important;
+  background: #fff;
+  transition: 0.5s;
+  border: 1px solid #5CA4DA;
+}
+
+.btn-white:hover {
+  color: #5CA4DA !important;
+  filter: brightness(1.2);
+  transition: 0.5s;
+  border: 1px solid #76C2C3;
+}
+
+.btn-non {
+  color: #a5a5a5 !important;
+  background: rgb(211, 211, 211);
+  border: 1px solid #e1e1e1;
+  cursor:not-allowed !important;
+}
+
+.btn-non:hover {
+  color: #a5a5a5 !important;
+  background: rgb(211, 211, 211);
+  border: 1px solid #e1e1e1;
+}
+
 .btn-secondary {
   color: #000;
   background-color: #74788d;
@@ -4804,12 +4895,76 @@ fieldset:disabled .btn {
   border-radius: 0.25rem;
 }
 
+.inner-header{
+  height: 50px;  
+}
+
+.inner-header .simple-link{
+  color: var(--bs-gray);
+}
+
+.inner-header i{
+  font-size: 1.5em;
+}
+
 .card-classic{
   height: 400px;
 }
 
 .card-small{
   height: 230px;
+}
+
+.card-button{
+  height: 80px;
+  overflow: hidden;
+  border: 1px solid #fff;
+}
+
+.card-button.selected{
+ border: 1px solid #000;
+}
+
+.card-button.connected{
+  height: 170px;
+}
+
+.card-button .top-area{
+  height: 80px;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.wallet-circle {
+  box-shadow: 0px 0px 10px rgb(220, 220, 220);
+}
+
+.card-button .bottom-area{
+  height: 60px;
+}
+
+.card-button .wallet-status {
+  color: #c6c6c6
+}
+
+.card-button .wallet-status span{
+  margin-right: 20px;
+  background-color: #fff;
+  padding: 5px 8px;
+  border-radius: 100px;
+  color: #fff;
+}
+
+.card-button .wallet-status span.verified {
+  background-color: #34c38f;
+}
+
+.card-button .wallet-status span.not-verified {
+  background-color: #f46a6a;
+}
+
+.card-button .wallet-status span.alert-verified {
+  background-color: #dc8c11;
 }
 
 .card-classic-max-height{
@@ -4948,6 +5103,16 @@ fieldset:disabled .btn {
   background-color: #f46a6a;
 }
 
+.card-wallet .wallet-status span.alert-verified {
+  background-color: #dc8c11;
+}
+
+.wallet-non-connected{
+  display: block;
+  height: 150px;
+  width: 150px;
+  margin: 55px auto;
+}
 
 .search{
   margin-bottom: 2rem;
@@ -8084,6 +8249,34 @@ fieldset:disabled .btn {
   background: var(--bs-gradient-poap) !important;
 }
 
+.bg-event{
+  background: var(--bs-event) !important;
+  background-image: url(../images/collections/eventBg.png) !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.bg-stream-event{
+  background: var(--bs-stream-event) !important;
+  background-image: url(../images/collections/streamEventBg.png) !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.bg-collection-normal{
+  background: var(--bs-collection-normal) !important;
+  background-image: url(../images/collections/collectionNormalBg.png) !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.bg-collection-multisig{
+  background: var(--bs-collection-multisig) !important;
+  background-image: url(../images/collections/collectionMultisig.png) !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
 .text-wrap {
   white-space: normal !important;
 }
@@ -8155,6 +8348,10 @@ fieldset:disabled .btn {
 
 .rounded-circle {
   border-radius: 50% !important;
+}
+
+.border-1{
+  border: 1px solid #DADADA;
 }
 
 .rounded-pill {
@@ -12486,7 +12683,8 @@ strong {
   align-items: center;
   border-bottom: 1px solid #f1f1f1;
   background: transparent;
-  padding: 20px;
+  padding: 0px 20px;
+  min-height: 65px;
 }
 
 .card-title {
@@ -12624,6 +12822,10 @@ button,
   padding: 4px 20px;
 }
 
+.btn-icon{
+  padding: 2px;
+}
+
 .btn-negative{
   background: var(--bs-white);
   border: none;
@@ -12638,6 +12840,9 @@ button,
 .simple-link{
   text-decoration: none;
   color: var(--bs-primary);
+  padding: 0;
+  border: none;
+  background: none;
 }
 
 .simple-link:hover{
@@ -12751,20 +12956,6 @@ button:active,
   cursor: pointer;
 }
 
-.card-create .card-body:hover .plus-button div:nth-child(1){
-  height: 5px;
-  margin-top: -1px;
-  box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.6);
-  transition: 0.1s;
-}
-.card-create .card-body:hover .plus-button div:nth-child(2){
-  height: 5px;
-  margin-top: -5px;
-  box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.6);
-  transition: 0.1s;
-}
-
-
 .card-create .card-body h4,
 .card-create .card-body .h4 {
   color: #fff;
@@ -12781,8 +12972,13 @@ button:active,
   margin-top: 150px;
 }
 
+.card-create .card-body .axis-button{
+  margin-top: 150px;
+  rotate: 45deg;
+}
 
-.card-create .card-body .plus-button div:nth-child(1){
+
+.card-create .card-body .plus-button div:nth-child(1), .card-create .card-body .axis-button div:nth-child(1){
   width: 80px;
   height: 3px;
   background-color: #fff;
@@ -12793,7 +12989,7 @@ button:active,
   transition: 0.1s;
 }
 
-.card-create .card-body .plus-button div:nth-child(2){
+.card-create .card-body .plus-button div:nth-child(2), .card-create .card-body .axis-button div:nth-child(2){
   width: 80px;
   height: 3px;
   background-color: #fff;
@@ -12802,6 +12998,19 @@ button:active,
   margin-top: -3px;
   border-radius: 10px;
   box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.0);
+  transition: 0.1s;
+}
+
+.card-create .card-body:hover .plus-button div:nth-child(1){
+  height: 5px;
+  margin-top: -1px;
+  box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.6);
+  transition: 0.1s;
+}
+.card-create .card-body:hover .plus-button div:nth-child(2){
+  height: 5px;
+  margin-top: -5px;
+  box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.6);
   transition: 0.1s;
 }
 
@@ -12815,6 +13024,33 @@ button:active,
   color: var(--bs-adasouls-three);
   font-weight: 800;
 }
+
+.card-collection{
+  overflow: hidden;
+}
+
+.card-collection p{
+  color: #fff;
+  margin-bottom: 0px;
+}
+
+.card-collection .rounded-circle{
+  border: 2px solid #DADADA;
+  background-color: #fff;
+}
+
+.card-collection .card-body h4,
+.card-collection .card-body .h4 {
+  color: #fff;
+  margin-top: 10px;
+  font-size: 18px;
+}
+
+.card-collection .card-body h4 span,
+.card-collection .card-body .h4 span{
+  font-weight: 800;
+}
+
 
 .welcome-profile {
   background: #7C6AAD !important;
@@ -12888,6 +13124,10 @@ button:active,
 
 .welcome-profile .card-body ul li span.not-verified {
   color: #f46a6a;
+}
+
+.welcome-profile .card-body ul li span.alert-verified {
+  color: #dc8c11;
 }
 
 .trade-form p {

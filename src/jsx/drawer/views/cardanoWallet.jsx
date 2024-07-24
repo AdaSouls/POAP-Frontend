@@ -1,14 +1,14 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { wallets } from '../../../utils/wallets';
-import eternlWallet from "../../../images/wallets/eternl.jpg";
 import { Button } from 'react-bootstrap';
 
 export default function CardanoWallet() {
 
   const { cardano } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const [ selectedWallet, setSelectedWallet ] = useState("");
 
 
   const onSelectWallet = async (wallet) => {
@@ -50,53 +50,68 @@ export default function CardanoWallet() {
           </div>          
         </div>      
         <div className="drawer-body">
-          { cardano.wallet && (
-            <div className="card card-small">
-              <div className="card-wallet">
-                <div className="card-body top-area d-flex">
-                  <div className="d-flex align-items-center">
-                    <img
-                      className="mr-3 rounded-circle mr-0 mr-sm-3"
-                      src={cardano.wallet.icon}
-                      width="75"
-                      height="75"
-                      alt=""
-                    />
-                    <div className="media-body">
-                      <h4 className="mb-0">{cardano.wallet.code}</h4>
-                      {/* <p className="mb-0">Text</p> */}
-                    </div>
-                  </div>
-                </div>
-                <div className="bottom-area border-top align-content-center">
-                  <div className="card-body d-flex justify-content-between">
-                    <div className="align-content-center wallet-status">
-                      <span className="verified">
-                        <i className="icofont-check-alt"></i>
-                      </span>
-                      Connected
-                    </div>
-                    <div></div>                  
-                  </div>
-                </div>
-              </div>
-             </div>
-          )}
           <div style={{ display: 'flex', 'flexDirection': 'column' }}>
               {supportedWallets(wallets).map(w => {
                   return (
-                      <Button variant="dark" className='mb-2' key={w.code} onClick={() => onSelectWallet(w)}>
-                          {w.code}
-                      </Button>
+                    <div className={"card card-button"+(selectedWallet.code == w.code ? " selected" : "")+( cardano.wallet ? (cardano.wallet.code == w.code ? " connected" : "") : ("") )}>
+                                 
+                      <div className="card-body top-area d-flex" onClick={() => setSelectedWallet(w)}>
+                        <div className="d-flex align-items-center">
+                          <img
+                            className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
+                            src={w.icon}
+                            width="60"
+                            height="60"
+                            alt=""
+                          /> 
+                          <div className="media-body">
+                            <h4 className="mb-0">{w.code}</h4>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bottom-area border-top align-content-center">
+                        <div className="card-body d-flex justify-content-between">
+                          <div className="align-content-center wallet-status">
+                            <span className="verified">
+                              <i className="icofont-check-alt"></i>
+                            </span>
+                            { cardano.wallet && ( w.icon == cardano.wallet.icon && "Connected" )}
+                          </div>
+                          <div></div>                  
+                        </div>
+                      </div>              
+                    </div>
                   )
               })}
             </div>
         </div>
-        { cardano.wallet && (
+        { selectedWallet.code ? (
+            cardano.wallet ? (
+              cardano.wallet.code == selectedWallet.code ? (
+                <div className='drawer-footer d-flex flex-column'>
+                  <button className="btn btn-danger" onClick={() => onSelectWallet(null)}>
+                    Disconnect
+                  </button>
+                </div>  
+              ) : (
+                <div className='drawer-footer d-flex flex-column'>
+                  <button className="btn btn-gradient" onClick={() => { onSelectWallet(selectedWallet); }}>
+                    Connect
+                  </button>
+                </div>
+              )         
+            ) : (
+              <div className='drawer-footer d-flex flex-column'>
+                  <button className="btn btn-gradient" onClick={() => onSelectWallet(selectedWallet)}>
+                    Connect
+                  </button>
+                </div>
+            )
+          ) : (
           <div className='drawer-footer d-flex flex-column'>
-            <Button variant="danger" onClick={() => onSelectWallet(null)}>
-              Disconnect
-            </Button>
+            <button className="btn btn-non">
+              Select Wallet
+            </button>
           </div>
         )}
     </div>
