@@ -6,6 +6,7 @@ import CreateSoul from './views/createSoul.jsx';
 import CreatePoap from './views/createPoap.jsx';
 import CreateSoulToken from './views/createSoulToken.jsx';
 import CheckCollection from './views/checkCollection.jsx';
+import ViewToken from './views/viewToken.jsx';
 
 export const Drawer = () => {
 
@@ -35,6 +36,10 @@ export const Drawer = () => {
 
     if (state?.checkCollection === true) {
       return <CheckCollection />;
+    }
+
+    if (state?.viewToken === true) {
+      return <ViewToken />;
     }
 
   };  

@@ -4969,34 +4969,43 @@ fieldset:disabled .btn {
 }
 
 .card-token .top-area{
-  height: 160px;
+  height: 155px;
+  border-radius: 5px;
 }
 
 .card-token .bottom-area{
-  height: 20px;
+  height: 75px;
 }
 
-.card-token .wallet-status {
+.card-token-select .cursor-pointer{
+  cursor: pointer;
+}
+
+.card-token-select .cursor-pointer:hover{
+  box-shadow: 0px 0px 15px rgba(0,0,0,0.2);
+  border-radius: 5px;
+}
+
+.card-token .token-status {
   color: #c6c6c6
 }
 
-.card-token .wallet-status span{
-  margin-right: 20px;
+.card-token .token-status span{
   background-color: #fff;
   padding: 5px 8px;
   border-radius: 100px;
   color: #fff;
 }
 
-.card-token .wallet-status span.verified {
+.card-token .token-status span.verified {
   background-color: #34c38f;
 }
 
-.card-token .wallet-status span.not-verified {
+.card-token .token-status span.not-verified {
   background-color: #f46a6a;
 }
 
-.card-token .wallet-status span.alert-verified {
+.card-token .token-status span.alert-verified {
   background-color: #dc8c11;
 }
 

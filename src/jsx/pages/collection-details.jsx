@@ -14,6 +14,7 @@ import collectionAikenMultisigIcon from "../../images/svg/collection-aiken-multi
 import collectionOwnerIcon from "../../icons/svg/collection-owner.svg";
 import collectionInvitedIcon from "../../icons/svg/collection-invited.svg";
 
+
 const Collection = () => {
     const { id } = useParams();
     const { cardano: { wallet } } = useDrawer();
@@ -28,6 +29,11 @@ const Collection = () => {
           type: 'CREATE_SOUL_TOKEN',
           payload: collection
         });
+    }; 
+
+    const viewToken = ( token ) => {
+      const getToken = token;
+      dispatch({ type: 'VIEW_TOKEN', payload: getToken });
     }; 
 
     const showCardanoWallet = () => {
@@ -200,13 +206,14 @@ const Collection = () => {
                   { collection && (
                       collection.tokens.map(t => {
                         return (
-                          <div key={t.soulboundId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
+                          <div key={t.soulboundId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12 card-token-select">
                             <div className="card card-small">
                               <div className="card-token">
-                                <div className="card-body top-area d-flex">
+                            
+                                <div className="card-body top-area d-flex cursor-pointer" onClick={()=>viewToken(t)}>
                                   <div className="d-flex align-items-center">
                                     <img
-                                      className="mr-3 rounded-circle mr-0 mr-sm-3"
+                                      className="mr-3 rounded-circle mr-0 mr-sm-3 border-1"
                                       src={collectionAikenMultisigIcon}
                                       width="100"
                                       height="100"
@@ -219,24 +226,44 @@ const Collection = () => {
                                   </div>
                                 </div>
                                 <div className="bottom-area border-top align-content-center">
-                                  <div className="card-body d-flex justify-content-end">
-                                      { t.burnTx && (
-                                        
-                                        <p>Burned</p>
-                                        
-                                      ) }
-                                    <div className="align-content-center px-2">
-                                    { t.claimUtxo ? (
-                                        
-                                        <p>Claimed</p>
-                                        
-                                      ):(
-                                        <p>not Claimed</p> 
-                                      ) }
-                                    </div> 
-                                    <div className="align-content-center px-2">
+                                  <div className="card-body d-flex justify-content-between">
+                                    <div className="d-flex justify-content-start">
+                                      <div className="align-content-center token-status mr-1">
+                                        { t.burnTx ? (                                        
+                                          <span className="not-verified">
+                                            <i className="icofont-close-line" title="Burned"></i>
+                                          </span>
+                                        ) :(
+                                          <span className="verified">
+                                            <i className="icofont-check-alt" title="Active"></i>
+                                          </span>                                        
+                                        )}
+                                      </div>
+                                      <div className="align-content-center token-status">
+                                      { t.claimUtxo ? ( 
+                                            <img
+                                              title="Not claimed"
+                                              className="btn-secondary p-1 rounded-circle"
+                                              src={ collectionOwnerIcon }
+                                              width="30"
+                                              height="30"
+                                              alt=""
+                                            />                                                                                
+                                        ):(                                          
+                                            <img
+                                            title="Claimed"
+                                              className="btn-primary p-1 rounded-circle"
+                                              src={ collectionOwnerIcon }
+                                              width="30"
+                                              height="30"
+                                              alt=""
+                                            />                                          
+                                        ) }
+                                      </div> 
+                                    </div>
+                                    <div className="align-content-center">
                                       { !t.burnTx && (
-                                        <button className="btn btn-danger btn-small" onClick={() => burnSoulToken(t)}>
+                                        <button className="btn btn-danger btn-small float-right" onClick={() => burnSoulToken(t)}>
                                         Burn
                                         </button>
                                       ) }
