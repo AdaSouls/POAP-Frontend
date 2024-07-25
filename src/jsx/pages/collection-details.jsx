@@ -118,7 +118,7 @@ const Collection = () => {
                         className="card-body card-classic-max-height"
                         onClick={createSoulToken}
                       >
-                        <h4>CREATE<span> SOULBOUND Token</span></h4>               
+                        <h4>CREATE <span>SOULBOUND TOKEN</span></h4>               
                         <div className="plus-button align-content-center" >
                           <div></div><div></div>
                         </div>              

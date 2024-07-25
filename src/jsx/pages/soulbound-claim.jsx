@@ -74,7 +74,7 @@ const SoulboundClaim = () => {
                           <div
                             className="card-body card-classic-max-height"
                           >
-                            <h4>CLAIM<span> SOULBOUND Token</span></h4>               
+                            <h4>CLAIM <span>SOULBOUND TOKEN</span></h4>               
                           </div>
                           <div className="d-flex justify-content-between m-3">
                                 <div className="align-content-center mt-4">                    

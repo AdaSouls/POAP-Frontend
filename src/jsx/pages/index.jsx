@@ -30,7 +30,7 @@ const Dashboard = () => {
               <h4>Welcome to<br></br><span>AdaSouls</span></h4>
               <br></br>
               <p>
-                We are a multichain platform. Connect your Cardano wallet to interact with SOULS and your Ethereum wallet to interact with POAP.
+                We are a multichain platform. Connect your Cardano wallet to interact with SOUL and your Ethereum wallet to interact with POAP.
               </p>
               <ul>
                 <li>                  

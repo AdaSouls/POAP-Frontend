@@ -68,7 +68,7 @@ const Wallet = () => {
                 <>
                 <div className="card-body top-area d-flex">
                   <p className="align-content-center m-0">
-                    Necessary to operate with Soulbound
+                    Required to interact with SOUL
                   </p>
                 </div>
                 <div className="bottom-area border-top align-content-center">
@@ -159,7 +159,7 @@ const Wallet = () => {
                 <>
                 <div className="card-body top-area d-flex">
                   <p className="align-content-center m-0">
-                    Necessary to operate with POAP
+                    Required to interact with POAP
                   </p>
                 </div>
                 <div className="bottom-area border-top align-content-center">

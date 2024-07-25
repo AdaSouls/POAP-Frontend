@@ -126,7 +126,7 @@ const Collections = () => {
           <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
             <div className="card card-create bg-soulbound card-classic">
               <div className="card-body card-classic-max-height" onClick={wallet ? createSoul : console.log("alert! wallect connect")} >
-                <h4>CREATE<span> SOUL COLLECTION</span></h4>               
+                <h4>CREATE <span> SOUL COLLECTION</span></h4>               
                 <div className={(wallet ? "plus-button" : "axis-button")+" align-content-center"} >
                   <div></div><div></div>
                 </div>              

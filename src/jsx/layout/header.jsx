@@ -23,7 +23,7 @@ const Header = () => {
                   </Link>
                 </div>                
               </div>
-              <div className="header-right">
+{/*               <div className="header-right">
                 <div className="dark-light-toggle" onClick={() => onClick()}>
                   <span className="dark">
                     <i className="icofont-moon"></i>
@@ -97,7 +97,7 @@ const Header = () => {
                     </div>
                   </Dropdown.Menu>
                 </Dropdown>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
