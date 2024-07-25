@@ -70,6 +70,8 @@
   --bs-stream-event: #76C2C3;
   --bs-collection-normal:#5CA4DA;
   --bs-collection-multisig: #7C6AAD;
+  --bs-collection-aiken-normal:#6D6D6D;
+  --bs-collection-aiken-multisig: #282B2D;
   --bs-gradient-poap: linear-gradient(
     0deg,
     #5EA1D8,
@@ -518,7 +520,6 @@ progress {
   height: 300px !important;
   padding: 0px;
   margin: 0 auto;
-  margin-top: 150px !important;
 }
 
 .under-construct h5{
@@ -4967,6 +4968,38 @@ fieldset:disabled .btn {
   background-color: #dc8c11;
 }
 
+.card-token .top-area{
+  height: 160px;
+}
+
+.card-token .bottom-area{
+  height: 20px;
+}
+
+.card-token .wallet-status {
+  color: #c6c6c6
+}
+
+.card-token .wallet-status span{
+  margin-right: 20px;
+  background-color: #fff;
+  padding: 5px 8px;
+  border-radius: 100px;
+  color: #fff;
+}
+
+.card-token .wallet-status span.verified {
+  background-color: #34c38f;
+}
+
+.card-token .wallet-status span.not-verified {
+  background-color: #f46a6a;
+}
+
+.card-token .wallet-status span.alert-verified {
+  background-color: #dc8c11;
+}
+
 .card-classic-max-height{
   max-height: 324px;
 }
@@ -7805,6 +7838,18 @@ fieldset:disabled .btn {
   margin-top: 3rem !important;
 }
 
+.mt-6 {
+  margin-top: 4.5rem !important;
+}
+
+.mt-7 {
+  margin-top: 6rem !important;
+}
+
+.mt-8 {
+  margin-top: 7.5rem !important;
+}
+
 .mt-auto {
   margin-top: auto !important;
 }
@@ -8251,28 +8296,42 @@ fieldset:disabled .btn {
 
 .bg-event{
   background: var(--bs-event) !important;
-  background-image: url(../images/collections/eventBg.png) !important;
+  background-image: url(../images/collections/event-bg.png) !important;
   background-position: center !important;
   background-size: cover !important;
 }
 
 .bg-stream-event{
   background: var(--bs-stream-event) !important;
-  background-image: url(../images/collections/streamEventBg.png) !important;
+  background-image: url(../images/collections/stream-event-bg.png) !important;
   background-position: center !important;
   background-size: cover !important;
 }
 
 .bg-collection-normal{
   background: var(--bs-collection-normal) !important;
-  background-image: url(../images/collections/collectionNormalBg.png) !important;
+  background-image: url(../images/collections/collection-normal-bg.png) !important;
   background-position: center !important;
   background-size: cover !important;
 }
 
 .bg-collection-multisig{
   background: var(--bs-collection-multisig) !important;
-  background-image: url(../images/collections/collectionMultisig.png) !important;
+  background-image: url(../images/collections/collection-multisig-bg.png) !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.bg-collection-aiken-normal{
+  background: var(--bs-collection-aiken-normal) !important;
+  background-image: url(../images/collections/collection-aiken-normal-bg.png) !important;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.bg-collection-aiken-multisig{
+  background: var(--bs-collection-aiken-multisig) !important;
+  background-image: url(../images/collections/collection-aiken-multisig-bg.png) !important;
   background-position: center !important;
   background-size: cover !important;
 }

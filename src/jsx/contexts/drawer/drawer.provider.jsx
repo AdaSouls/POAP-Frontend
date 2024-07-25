@@ -29,8 +29,8 @@ export function DrawerProvider({ children }) {
     createSoul: false,
     createSoulToken: false,
     createPoap: false,
-    open: false,
-    items: []
+    checkCollection: false,
+    open: false
   };
 
   const [state, dispatch] = useReducer(
@@ -80,7 +80,9 @@ function drawerReducer(state, action) {
         showCardanoWallet: true,
         showEthereumWallet: false,
         createSoul: false,
+        createSoulToken: false,
         createPoap: false,
+        checkCollection: false,
         open: true,
       };
     case 'SHOW_ETHEREUM_WALLET':
@@ -89,7 +91,9 @@ function drawerReducer(state, action) {
         showCardanoWallet: false,
         showEthereumWallet: true,
         createSoul: false,
+        createSoulToken: false,
         createPoap: false,
+        checkCollection: false,
         open: true
       };
     case 'CREATE_SOUL':
@@ -98,7 +102,9 @@ function drawerReducer(state, action) {
         showCardanoWallet: false,
         showEthereumWallet: false,
         createSoul: true,
+        createSoulToken: false,
         createPoap: false,
+        checkCollection: false,
         open: true
       };
     case 'CREATE_SOUL_TOKEN':
@@ -109,17 +115,21 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: true,
         createPoap: false,
+        checkCollection: false,
         open: true,
         collection: action.payload
       };
-    case 'CREATE_POAP':
+    case 'CHECK_COLLECTION':
       return {
         ...state,
         showCardanoWallet: false,
         showEthereumWallet: false,
         createSoul: false,
-        createPoap: true,
-        open: true
+        createSoulToken: false,
+        createPoap: false,
+        checkCollection: true,
+        open: true, 
+        items: action.payload
       };
     case 'CLOSE_DRAWER':
       return {
@@ -127,7 +137,9 @@ function drawerReducer(state, action) {
         showCardanoWallet: false,
         showEthereumWallet: false,
         createSoul: false,
+        createSoulToken: false,
         createPoap: false,
+        checkCollection: false,
         open: false
       };
     default:

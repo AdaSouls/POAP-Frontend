@@ -5,6 +5,7 @@ import EthereumWallet from './views/ethereumWallet.jsx';
 import CreateSoul from './views/createSoul.jsx';
 import CreatePoap from './views/createPoap.jsx';
 import CreateSoulToken from './views/createSoulToken.jsx';
+import CheckCollection from './views/checkCollection.jsx';
 
 export const Drawer = () => {
 
@@ -30,6 +31,10 @@ export const Drawer = () => {
 
     if (state?.createPoap === true) {
       return <CreatePoap />;
+    }
+
+    if (state?.checkCollection === true) {
+      return <CheckCollection />;
     }
 
   };  

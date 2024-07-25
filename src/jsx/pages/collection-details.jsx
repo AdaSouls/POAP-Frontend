@@ -5,6 +5,14 @@ import eternlWallet from "../../images/wallets/eternl.jpg";
 import { useEffect, useState } from "react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { burnToken } from "../../utils/util";
+import collectionNormalImage from "../../images/svg/collection-normal.svg";
+import collectionMultisigImage from "../../images/svg/collection-multisig.svg";
+import collectionMultisigIcon from "../../icons/svg/collection-multisig.svg";
+import collectionNormalIcon from "../../icons/svg/collection-normal.svg";
+import collectionAikenNormalIcon from "../../images/svg/collection-aiken-normal.svg"
+import collectionAikenMultisigIcon from "../../images/svg/collection-aiken-multisig.svg"
+import collectionOwnerIcon from "../../icons/svg/collection-owner.svg";
+import collectionInvitedIcon from "../../icons/svg/collection-invited.svg";
 
 const Collection = () => {
     const { id } = useParams();
@@ -81,13 +89,12 @@ const Collection = () => {
                       <div className="card inner-header">
                           <div className="d-flex justify-content-between m-3">
                               <div className="inner-header-back">
-                                  <Link to="/souls" className="simple-link">
+                                  <Link to="/collections/souls" className="simple-link">
                                       <i className="icofont-rounded-left"></i>   
                                   </Link>                            
                               </div>
                               <div className="inner-header-title">
-                                  <h4>
-                                      <span className="text-uppercase">{collection.name+" "}</span>
+                                  <h4>                                      
                                       Collection
                                   </h4>
                               </div>
@@ -104,32 +111,145 @@ const Collection = () => {
                   </div>
                 </div>
                 <div className="row">
-                      <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
-                        <div className="card card-create bg-soulbound card-classic">
-                          <div
-                            className="card-body card-classic-max-height"
-                            onClick={createSoulToken}
-                          >
-                            <h4>CREATE<span> SOULBOUND Token</span></h4>               
-                            <div className="plus-button align-content-center" >
-                              <div></div><div></div>
-                            </div>              
-                          </div>
-                          <div className="d-flex justify-content-between m-3">
-                                <div className="align-content-center mt-4">                    
-                                <span className="verified">
-                                { wallet && <i className="icofont-check-alt"></i> }
-                                { !wallet && <i className="icofont-close-line"></i> }
-                                </span>     
-                                </div>
-                            <div className="align-content-center mt-4">
-
-                            </div> 
-                          </div>
-                        </div>
+                  {/* CREATE TOKEN */}
+                  <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
+                    <div className="card card-create bg-soulbound card-classic">
+                      <div
+                        className="card-body card-classic-max-height"
+                        onClick={createSoulToken}
+                      >
+                        <h4>CREATE<span> SOULBOUND Token</span></h4>               
+                        <div className="plus-button align-content-center" >
+                          <div></div><div></div>
+                        </div>              
                       </div>
+                      <div className="d-flex justify-content-between m-3">
+                            <div className="align-content-center mt-4">                    
+                            <span className="verified">
+                            { wallet && <i className="icofont-check-alt"></i> }
+                            { !wallet && <i className="icofont-close-line"></i> }
+                            </span>     
+                            </div>
+                        <div className="align-content-center mt-4"></div> 
+                      </div>
+                    </div>
+                  </div>
+                  {/* COLLECTION BANNER */}
+                  <div className="col-xxl-5 col-xl-5 col-lg-4 col-md-7 col-sm-12">
+                    <div className={ (collection.invited.length == 1 ? (collection.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (collection.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
+                      <div className="card-body card-classic-max-height d-flex justify-content-start">
+                        <img
+                            className="mr-3 rounded-circle mr-0 mr-sm-3"
+                            src={ collection.invited.length == 1 ? (collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                            width="50"
+                            height="50"
+                            alt=""
+                        />
+                        <h4 className="text-capitalize">{collection.name}</h4>  
+                      </div>
+                      <div className="d-flex justify-content-between m-3">
+                        <div className="align-content-center mt-4">                    
+                          <ul>
+                            <li className="d-flex justify-content-start">
+                              <img
+                                className="mr-2"
+                                src={ collection.invited.length == 1 ? (collectionNormalIcon) : (collectionMultisigIcon) }
+                                width="25"
+                                height="25"
+                                alt=""
+                              />
+                            { collection.invited.length == 1 ?  (<p className="pt-1">simple</p>) :  (<p className="pt-1">multisig</p>) }
+                            </li>
+                            <li className="d-flex justify-content-start">
+                              <img
+                                className="mr-2"
+                                src={ collectionOwnerIcon }
+                                width="25"
+                                height="25"
+                                alt=""
+                              />
+                              <p className="pt-1">Owner</p>
+                            </li>
+                          </ul>            
+                        </div>
+                        <div className="align-content-center mt-5">                                
+                          
+                        </div> 
+                      </div>
+                    </div>
+                  </div>
+                  {/* COLLECTION DETAILS */}
+                  <div className="col-xxl-4 col-xl-4 col-lg-4 col-md-12">
+                    <div className="card card-classic">
+                      <div className="card-header">
+                        <h4 className="card-title">Collection Details</h4>                     
+                      </div>
+                      <div className="card-body card-classic-max-height-title"> 
+                        <p className="pt-1">Description</p>
+                        <p className="mt-2 mb-3">Description: <span className="small">{collection.description}</span></p>
+                        <p className="mt-2">Symbol: <span className="small">{collection.symbol}</span></p>
+                        <p className="mt-2">Created: <span className="small">{collection.createdAt}</span></p>
+                        <p className="mt-1">Updated: <span className="small">{collection.updatedAt}</span></p>
+                        <p className="mt-2">Owner: <span className="small">{collection.owner}</span></p>                              
+                      </div>
+                    </div>
+                  </div>
 
-                      <div className="col-xxl-9 col-xl-8 col-lg-6 col-md-6">
+
+                  {/* TOKEN */}
+                  { collection && (
+                      collection.tokens.map(t => {
+                        return (
+                          <div key={t.soulboundId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
+                            <div className="card card-small">
+                              <div className="card-token">
+                                <div className="card-body top-area d-flex">
+                                  <div className="d-flex align-items-center">
+                                    <img
+                                      className="mr-3 rounded-circle mr-0 mr-sm-3"
+                                      src={collectionAikenMultisigIcon}
+                                      width="100"
+                                      height="100"
+                                      alt=""
+                                    />
+                                    <div className="media-body">
+                                      <h4 className="mb-0 capitalize">{t.name}</h4>
+                                      {/* <p className="mb-0">Text</p> */}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="bottom-area border-top align-content-center">
+                                  <div className="card-body d-flex justify-content-end">
+                                      { t.burnTx && (
+                                        
+                                        <p>Burned</p>
+                                        
+                                      ) }
+                                    <div className="align-content-center px-2">
+                                    { t.claimUtxo ? (
+                                        
+                                        <p>Claimed</p>
+                                        
+                                      ):(
+                                        <p>not Claimed</p> 
+                                      ) }
+                                    </div> 
+                                    <div className="align-content-center px-2">
+                                      { !t.burnTx && (
+                                        <button className="btn btn-danger btn-small" onClick={() => burnSoulToken(t)}>
+                                        Burn
+                                        </button>
+                                      ) }
+                                    </div>                 
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                  )}
+                      {/* <div className="col-xxl-9 col-xl-8 col-lg-6 col-md-6">
                         <div className="card card-classic">
                             { collection && (
                                 <>
@@ -184,7 +304,10 @@ const Collection = () => {
                                 </>
                             ) }
                         </div>
-                      </div>
+                      </div> */}
+
+                      
+
                     </div>
                     </>
             )}

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import collectionIconNormal from "../../images/svg/collection-normal.svg"
-import collectionIconMultisig from "../../images/svg/collection-multisig.svg"
+import collectionNormalIcon from "../../images/svg/collection-normal.svg"
+import collectionMultisigIcon from "../../images/svg/collection-multisig.svg"
+import collectionAikenNormalIcon from "../../images/svg/collection-aiken-normal.svg"
+import collectionAikenMultisigIcon from "../../images/svg/collection-aiken-multisig.svg"
 import poapNormal from "../../images/svg/poap-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 import collectionMenu from "../../icons/svg/collection-menu.svg";
@@ -10,19 +12,13 @@ import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { getAll, getAllInvited, sign, update } from "../../services/collection.service";
 import { buildSignature, getSigningMessage } from "../../utils/util";
-import walletStatus from "../../images/collections/walletStatus.png";
+import walletStatus from "../../images/collections/wallet-status.png";
 
 const Souls = () => { 
   const [collections, setCollections] = useState([]);
   const [invitedCollections, setInvitedCollections] = useState([]);
   const { cardano: { wallet }, ethereum: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
-
-  const createPoap = () => {
-    dispatch({
-      type: 'CREATE_POAP'
-    });
-  };  
 
   const createSoul = () => {
     dispatch({
@@ -36,10 +32,9 @@ const Souls = () => {
     });
   };  
 
-  const showEthereumWallet = () => {
-    dispatch({
-      type: 'SHOW_ETHEREUM_WALLET'
-    });
+  const checkCollection = (id, name) => {
+    const items = {id, name};
+    dispatch({ type: 'CHECK_COLLECTION', payload: items });
   };  
 
   useEffect(() => {
@@ -97,7 +92,7 @@ const Souls = () => {
 
         <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
           <div className="card card-create bg-soulbound card-classic">
-            <div className="card-body card-classic-max-height" onClick={wallet ? createSoul : console.log("nada")} >
+            <div className="card-body card-classic-max-height" onClick={wallet ? createSoul : console.log("alert! wallect connect")} >
               <h4>CREATE<span> SOUL COLLECTION</span></h4>               
               <div className={(wallet ? "plus-button" : "axis-button")+" align-content-center"} >
                 <div></div><div></div>
@@ -122,30 +117,32 @@ const Souls = () => {
           <div className="card card-classic">
             <div className="card-header">
               <h4 className="card-title">Collections</h4>
-              <span>
-                <Link to={"/collections/souls"} className="btn btn-gradient btn-icon rounded-lg">
-                <img
-                  className="p-1"
-                  src={collectionMenu}
-                  width="35"
-                  height="35"
-                  alt=""
-                />
-                </Link>
-              </span>
+              {wallet && (
+                <span>
+                  <Link to={"/collections/souls"} className="btn btn-gradient btn-icon rounded-lg">
+                    <img
+                      className="p-1"
+                      src={collectionMenu}
+                      width="35"
+                      height="35"
+                      alt=""
+                    />
+                  </Link>
+                </span>
+              )}              
             </div>
             <div className="card-body card-classic-max-height-title">
               <div className="table-responsive">
                 <table className="table table-striped table-small responsive-table">
                   <tbody>
                   {wallet ? (
-                  collections.map(c => {
+                  collections.slice(-4).map(c => {
                         return (
                           <tr key={c.collectionId} >
                             <td className="table-image">                      
                               <img
                                 className="rounded-circle border-1"
-                                src={collectionIconNormal}
+                                src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalIcon)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigIcon)) }
                                 width="47"
                                 height="47"
                                 alt=""
@@ -184,7 +181,7 @@ const Souls = () => {
                                 <button 
                                   type="button"
                                   className='btn btn-secondary btn-icon float-right'
-                                  onClick={() => showCardanoWallet()}
+                                  onClick={() => checkCollection(c.collectionId, c.name)}
                                 ><img
                                     src={loadingIcon}
                                     width="21"
@@ -193,11 +190,13 @@ const Souls = () => {
                                   />
                                 </button>
                                 </td>                              
-                              ) }
+                              ) } 
+
+                              
                             
                           </tr>
                         )
-                    })
+                    })               
                   ) : (
                     <div className="wallet-non-connected">
                         <img                        
@@ -207,9 +206,13 @@ const Souls = () => {
                           alt=""
                         />
                       </div>
-                  )}
-                  </tbody>
+                  )} 
+                                   
+                  </tbody>                  
                 </table>
+                {collections.length > 4 && (
+                      <Link to={"/collections/souls"} className="btn btn-white btn-small btn-block mt-3">See More</Link>
+                  )}
               </div>
             </div>
           </div>
@@ -219,17 +222,19 @@ const Souls = () => {
           <div className="card card-classic">
             <div className="card-header">
               <h4 className="card-title">Invited Collections</h4>
-              <span>
+              {wallet && (
+                <span>
                 <Link to={"/collections/souls"} className="btn btn-gradient-purple btn-icon rounded-lg">
-                <img
-                  className="p-1"
-                  src={collectionMenu}
-                  width="35"
-                  height="35"
-                  alt=""
-                />
+                  <img
+                    className="p-1"
+                    src={collectionMenu}
+                    width="35"
+                    height="35"
+                    alt=""
+                  />
                 </Link>
               </span>
+              )}              
             </div>
             <div className="card-body card-classic-max-height-title">
             <div className="table-responsive">
@@ -242,7 +247,7 @@ const Souls = () => {
                             <td className="table-image">                      
                               <img
                                 className="rounded-circle border-1"
-                                src={collectionIconMultisig}
+                                src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalIcon)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigIcon)) }
                                 width="47"
                                 height="47"
                                 alt=""
@@ -264,8 +269,8 @@ const Souls = () => {
                                               
                             
                               { allSigned(c) && (
-                                <td className="table-press-icon align-items-center">
-                                <Link to={`/collection/${c.collectionId}`} className="table-link">
+                                <td className="table-press-icon">
+                                <Link to={`/collection/${c.collectionId}`} className="table-link float-right">
                                   <img
                                     src={circleArrow}
                                     width="30"
@@ -281,7 +286,7 @@ const Souls = () => {
                                 <button 
                                   type="button"
                                   className='btn btn-secondary btn-icon float-right'
-                                  onClick={() => showCardanoWallet()}
+                                  onClick={() => checkCollection()}
                                 ><img
                                     src={loadingIcon}
                                     width="21"
@@ -307,14 +312,16 @@ const Souls = () => {
                   )}
                   </tbody>
                 </table>
+                {invitedCollections.length > 4 && (                  
+                  <Link to={"/collections/souls"} className="btn btn-white btn-small btn-block mt-3">See More</Link>                  
+                )}
               </div>
             </div>
           </div>
         </div>
-
       </div>
 
-      <div className="row">
+      {/* <div className="row">
 
         <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
           <div className="card card-create bg-poap card-classic">
@@ -343,9 +350,6 @@ const Souls = () => {
             <div className="card-header">
               <h4 className="card-title">Collections</h4>
               <span>
-                {/* <Link to={"#"} className="simple-link">
-                  See more
-                </Link> */}
               </span>
             </div>
             <div className="card-body card-classic-max-height-title">
@@ -497,7 +501,7 @@ const Souls = () => {
           </div>
         </div>
 
-      </div>
+      </div> */}
     </Layout>
   );
 };

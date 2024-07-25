@@ -2,7 +2,7 @@ import React from 'react';
 import { useState } from 'react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import {getEthereumWallet} from '../../../utils/ethWallets';
-import { ethWallets } from '../../../utils/ethWallets';
+import underConstruct from "../../../images/construct.png";
 
 export default function EthereumWallet() {
 
@@ -35,12 +35,22 @@ export default function EthereumWallet() {
             <h4            
               className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
             >
-              Ethereum Wallet
+              Connect Wallet
             </h4>
           </div>          
         </div>      
         <div className="drawer-body">
-          <div style={{ display: 'flex', 'flexDirection': 'column' }}>
+        <div className="row d-flex justify-content-center under-construct">
+        
+        <img
+        className="align-content-center m-0"
+        src={underConstruct}
+        alt=""
+        />
+        <h5 className="align-content-center m-0">Section under construction</h5>
+      
+    </div>   
+          {/* <div style={{ display: 'flex', 'flexDirection': 'column' }}>
               {ethWallets.map(w => {
                   return (
                     <div className={"card card-button"+(selectedWallet == w ? " selected" : "")+( ethereum.provider ? (ethereum.provider.wallet == w ? " connected" : "") : ("") )}>
@@ -72,9 +82,9 @@ export default function EthereumWallet() {
                     </div>
                   )
               })}
-            </div>
+            </div> */}
         </div>
-        { selectedWallet ? (
+        {/* { selectedWallet ? (
             ethereum.provider ? (
               ethereum.provider.wallet == selectedWallet ? (
                 <div className='drawer-footer d-flex flex-column'>
@@ -102,7 +112,7 @@ export default function EthereumWallet() {
               Select Wallet
             </button>
           </div>
-        )}
+        )} */}
         
     </div>
   );

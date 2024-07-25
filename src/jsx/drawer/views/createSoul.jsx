@@ -2,7 +2,6 @@ import React from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import eternlWallet from "../../../images/wallets/eternl.jpg";
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, InputGroup } from 'react-bootstrap';
 import { buildCollectionContracts, buildPolicy, generateNonce, getAddressPaymentKeyHash, getStakeAddress, readValidators } from '../../../utils/util';
@@ -17,26 +16,17 @@ export default function CreateSoul() {
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
+  const [aikenCourse, setAikenCourse] = useState('');
   const [multisig, setMultisig] = useState(false);
   const [signers, setSigners] = useState(['']);
-
-  const toggleEvent = () => {
-    if (!event){
-      setEvent(true)
+ 
+  const toggleaikenCourse = () => {
+    if (!aikenCourse){
+      setAikenCourse('true')
     } else {
-      setEvent(false)
+      setAikenCourse('')
     }
   }; 
-  
-  const toggleStreamer = () => {
-    if (!streamer){
-      setStreamer(true)
-    } else {
-      setStreamer(false)
-    }
-  }; 
-
-
 
   const closeDrawer = () => {
     dispatch({
@@ -97,11 +87,10 @@ export default function CreateSoul() {
     const policy = buildPolicy('all', { signers: keys});
 
     const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited //aikenCourse
-       });
+    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited, aikenCourse });
     closeDrawer();
     // navigate(`/collection/${collectionId}`);
-    navigate(`/souls`);
+    navigate(`/collections/souls`);
   };
   
   return (
@@ -210,22 +199,12 @@ export default function CreateSoul() {
                   className="form-check-input"
                   type="checkbox"
                   id="flexSwitchCheckDefault"
-                  onClick={toggleEvent}
+                  name='aikenCourse'
+                  
+                  onChange={() => toggleaikenCourse()}
                 />                  
               </div>
-            </div> 
-            {event &&
-              <div className="col-12">
-                {/* <label className="form-label">Description</label> */}
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Description"
-                  name="description"
-                />
-              </div> 
-            }
-            
+            </div>             
             <hr className='col-12 my-3'></hr>            
             <hr className='col-12 my-4 mt-3'></hr>                      
             <div className='drawer-footer'>
