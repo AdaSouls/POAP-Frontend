@@ -95,7 +95,7 @@ const Collection = () => {
                               </div>
                               <div className="inner-header-title">
                                   <h4>                                      
-                                      Collection
+                                      SOUL COLLECTION
                                   </h4>
                               </div>
                               <div className="inner-header-buttons">

@@ -16,15 +16,15 @@ export default function CreateSoul() {
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
-  const [aikenCourse, setAikenCourse] = useState('');
+  const [aikenCourse, setAikenCourse] = useState(false);
   const [multisig, setMultisig] = useState(false);
   const [signers, setSigners] = useState(['']);
  
-  const toggleaikenCourse = () => {
+  const toggleAikenCourse = () => {
     if (!aikenCourse){
-      setAikenCourse('true')
+      setAikenCourse(true)
     } else {
-      setAikenCourse('')
+      setAikenCourse(false)
     }
   }; 
 
@@ -106,7 +106,7 @@ export default function CreateSoul() {
             <h4            
               className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
             >
-              Create SOUL
+              Create SOUL COLLECTION
             </h4>
           </div>          
         </div>      
@@ -200,13 +200,11 @@ export default function CreateSoul() {
                   type="checkbox"
                   id="flexSwitchCheckDefault"
                   name='aikenCourse'
-                  
-                  onChange={() => toggleaikenCourse()}
+                  onChange={() => toggleAikenCourse()}
                 />                  
               </div>
             </div>             
             <hr className='col-12 my-3'></hr>            
-            <hr className='col-12 my-4 mt-3'></hr>                      
             <div className='drawer-footer'>
               <Button type="submit" className="btn btn-gradient btn-block">
                 Create

@@ -53,7 +53,7 @@ export default function CreatePoap() {
             <h4            
               className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
             >
-              Create SOUL
+              Create SOUL COLLECTION
             </h4>
           </div>          
         </div>      

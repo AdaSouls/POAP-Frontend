@@ -28,7 +28,7 @@ export default function CheckCollection() {
                 src={waiting}
                 alt=""
                 />
-                <h5 className="align-content-center m-0">Waiting for the other wallets to sign the collection</h5>                
+                <h5 className="align-content-center m-0">Waiting for other owners to sign this collection</h5>                
                 <p className='text-center pt-3'><span>ID: </span>{items.id}</p>
             </div>         
         </div>

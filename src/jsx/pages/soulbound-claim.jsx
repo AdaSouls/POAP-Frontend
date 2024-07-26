@@ -74,7 +74,13 @@ const SoulboundClaim = () => {
                           <div
                             className="card-body card-classic-max-height"
                           >
-                            <h4>CLAIM <span>SOULBOUND TOKEN</span></h4>               
+                            <h4>CLAIM <span>SOULBOUND TOKEN</span></h4> 
+                            <br />
+                            <p>A soulbound token is a type of digital token that is 
+                              non-transferable and is permanently tied to a specific individual 
+                              or entity.</p>
+                            <br />
+                            <p>They can represent credentials, achievements, affiliations or attributes.</p>       
                           </div>
                           <div className="d-flex justify-content-between m-3">
                                 <div className="align-content-center mt-4">                    

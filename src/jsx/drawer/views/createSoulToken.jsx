@@ -10,17 +10,42 @@ export default function CreateSoulToken() {
   const dispatch = useDrawerDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const placeholderObj = {
+    name: "Charles Hoskinson",
+    status: "Passed"
+  }
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
-  const [metadata, setMetadata] = useState('');
-
+  const [metadata, setMetadata] = useState(JSON.stringify(placeholderObj, null, 4));
+  const [aikenCourseApproved, setAikenCourseApproved] = useState(false);
+  const [isMetadataValidJson, setIsMetadataValidJson] = useState(true);
 
   const closeDrawer = () => {
     dispatch({
       type: 'CLOSE_DRAWER'
     });
   };  
+
+  const toggleAikenCourseApproved = () => {
+    console.log("toggle");
+    if (!aikenCourseApproved){
+      setAikenCourseApproved(true)
+    } else {
+      setAikenCourseApproved(false)
+    }
+  }; 
+
+  const validateJsonFormat = (metadata) => {
+    try {
+      JSON.parse(metadata);
+    } catch (e) {
+      setIsMetadataValidJson(false);
+      return;
+    }
+    setIsMetadataValidJson(true);
+    return;
+  }
 
 
   const handleSubmit = async (e) => {
@@ -49,8 +74,7 @@ export default function CreateSoulToken() {
       const success = await provider.awaitTx(txHash);
       console.log('Success?', success);
 
-      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata //aikenCourseApproved
-         });
+      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata , aikenCourseApproved });
       collection.tokens.push(token);
       closeDrawer();
       navigate(location.pathname, { replace: true });
@@ -73,7 +97,7 @@ export default function CreateSoulToken() {
             <h4            
               className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
             >
-              Create SOUL Token
+              Create SOULBOUND TOKEN
             </h4>
           </div>          
         </div>      
@@ -105,19 +129,41 @@ export default function CreateSoulToken() {
                 onChange={(event) => setAddress(event.target.value)}
               />
             </div>
+            <hr className='col-12 my-4 mb-2'></hr>
+            <div className="col-10">
+              <h6
+                className="py-2"                
+              >
+                Has the student passed the final exam?
+              </h6> 
+            </div>  
+            <div className="col-2">
+              <div className="form-check form-switch">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="flexSwitchCheckDefault"
+                  name='aikenCourseApproved'
+                  onChange={() => toggleAikenCourseApproved()}
+                />                  
+              </div>
+            </div>             
+            <hr className='col-12 my-3'></hr>            
             <div className="col-12">
             <Form.Label>Metadata</Form.Label>
               <Form.Control
                 as="textarea"
-                placeholder="{}"
+                placeholder={JSON.stringify(placeholderObj, null, 2)}
                 style={{ height: '100px' }}
-                value={metadata}  onChange={(event) => setMetadata(event.target.value)}
+                value={metadata}  
+                onChange={(event) => { setMetadata(event.target.value); validateJsonFormat(event.target.value); }}
               />
             {/* <label>
               Metadata:
               <textarea value={metadata}  onChange={(event) => setMetadata(event.target.value)} />
             </label> */}
             </div>
+            {isMetadataValidJson ? <p>Valid JSON</p> : <p>Invalid JSON</p>}
             <hr className='col-12 my-4 mt-3'></hr>                      
             <div className='drawer-footer'>
               <Button type="submit" className="btn btn-gradient btn-block">
