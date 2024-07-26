@@ -30,6 +30,7 @@ export function DrawerProvider({ children }) {
     createSoulToken: false,
     createPoap: false,
     checkCollection: false,
+    viewToken: false,
     open: false
   };
 
@@ -83,6 +84,7 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         checkCollection: false,
+        viewToken: false,
         open: true,
       };
     case 'SHOW_ETHEREUM_WALLET':
@@ -94,6 +96,7 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         checkCollection: false,
+        viewToken: false,
         open: true
       };
     case 'CREATE_SOUL':
@@ -105,6 +108,7 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         checkCollection: false,
+        viewToken: false,
         open: true
       };
     case 'CREATE_SOUL_TOKEN':
@@ -116,6 +120,7 @@ function drawerReducer(state, action) {
         createSoulToken: true,
         createPoap: false,
         checkCollection: false,
+        viewToken: false,
         open: true,
         collection: action.payload
       };
@@ -128,9 +133,23 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         checkCollection: true,
+        viewToken: false,
         open: true, 
         items: action.payload
       };
+    case 'VIEW_TOKEN':
+        return {
+          ...state,
+          showCardanoWallet: false,
+          showEthereumWallet: false,
+          createSoul: false,
+          createSoulToken: false,
+          createPoap: false,
+          checkCollection: false,
+          viewToken: true,
+          open: true, 
+          token: action.payload
+        };
     case 'CLOSE_DRAWER':
       return {
         ...state,
@@ -140,6 +159,7 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         checkCollection: false,
+        viewToken: false,
         open: false
       };
     default:
