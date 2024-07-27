@@ -208,7 +208,7 @@ const SoulboundClaim = () => {
                                     )}
                                   </div>
                                   <div className="align-content-center token-status">
-                                  { t.claimUtxo ? ( 
+                                  {/* { t.claimUtxo ? ( 
                                        <img
                                        title="Claimed"
                                          className="btn-primary p-1 rounded-circle"
@@ -226,7 +226,7 @@ const SoulboundClaim = () => {
                                         height="30"
                                         alt=""
                                       />                                                                                    
-                                    ) }
+                                    ) } */}
                                   </div> 
                                 </div>
                                 <div className="align-content-center">
