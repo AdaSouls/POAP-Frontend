@@ -190,7 +190,7 @@ export default function CreateSoul() {
               <h6
                 className="py-2"                
               >
-                Is this for the Aiken Course?
+                Is this for the Smart Contracts Course?
               </h6> 
             </div>  
             <div className="col-2">

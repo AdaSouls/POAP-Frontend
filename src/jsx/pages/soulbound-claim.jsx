@@ -230,7 +230,7 @@ const SoulboundClaim = () => {
                                   </div> 
                                 </div>
                                 <div className="align-content-center">
-                                  <h5 className="p-0 m-0">{t.collection.name}</h5>
+                                  <h5 className="p-0 m-0 capitalize">{t.collection.name}</h5>
                                 </div>                 
                               </div>
                             </div>
