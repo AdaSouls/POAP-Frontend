@@ -211,25 +211,25 @@ const Collection = () => {
                       
                         <div className="card-body card-classic-max-height-title">    
                         <PerfectScrollbar>
-                          <div className="pr-4">                     
+                          <div className="pr-4">
+                          <p className="m-0 small gray">Collection ID</p>
+                          <p className="m-0 mb-2">{collection.collectionId}</p>
+{/*                       <p className="m-0 small gray">Smart Contract</p>
+                          <p className="m-0 mb-2">{collection.smartContract}</p> */}
+                          <p className="m-0 small gray">Policy ID</p>
+                          <p className="m-0 mb-2">{collection.policyId}</p>
+                          <p className="m-0 small gray">Policy Hash</p>
+                          <p className="m-0 mb-2">{collection.policyHash}</p>                     
                           <p className="m-0 small gray">Description</p>
                           <p className="m-0 mb-3">{collection.description}</p>
-                          <p className="m-0 small gray">Symbol</p>
-                          <p className="m-0 mb-2">{collection.symbol}</p>
+{/*                           <p className="m-0 small gray">Symbol</p>
+                          <p className="m-0 mb-2">{collection.symbol}</p> */}
+{/*                           <p className="m-0 small gray">Owner</p>
+                          <p className="m-0 mb-2">{collection.owner}</p> */}
                           <p className="m-0 small gray">Created</p>
                           <p className="m-0 mb-2">{collection.createdAt}</p>
                           <p className="m-0 small gray">Updated</p>
                           <p className="m-0 mb-2">{collection.updatedAt}</p>
-                          <p className="m-0 small gray">Owner</p>
-                          <p className="m-0 mb-2">{collection.owner}</p>
-                          <p className="m-0 small gray">Collection ID</p>
-                          <p className="m-0 mb-2">{collection.collectionId}</p>
-                          <p className="m-0 small gray">Policy Hash</p>
-                          <p className="m-0 mb-2">{collection.policyHash}</p>
-                          <p className="m-0 small gray">Policy ID</p>
-                          <p className="m-0 mb-2">{collection.policyId}</p>
-                          <p className="m-0 small gray">Smart Contract</p>
-                          <p className="m-0 mb-2">{collection.smartContract}</p>
                           </div>
                           </PerfectScrollbar>  
                         </div>
