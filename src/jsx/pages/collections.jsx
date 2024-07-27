@@ -206,7 +206,7 @@ const Collections = () => {
                           type="button"
                           className='btn btn-secondary btn-small float-right'
                           onClick={() => checkCollection(c.collectionId, c.name)}
-                        >Loading
+                        >Pending
                         </button>                                              
                       )} 
                     </div> 
@@ -277,7 +277,7 @@ const Collections = () => {
                           type="button"
                           className='btn btn-secondary btn-small float-right'
                           onClick={() => checkCollection(c.collectionId, c.name)}
-                        >Loading
+                        >Pending
                         </button>                                              
                       )} 
                     </div> 
