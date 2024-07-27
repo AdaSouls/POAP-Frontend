@@ -51,9 +51,9 @@ export default function CardanoWallet() {
         </div>      
         <div className="drawer-body">
           <div style={{ display: 'flex', 'flexDirection': 'column' }}>
-              {supportedWallets(wallets).map(w => {
+              {supportedWallets(wallets).map((w, i) => {
                   return (
-                    <div className={"card card-button"+(selectedWallet.code == w.code ? " selected" : "")+( cardano.wallet ? (cardano.wallet.code == w.code ? " connected" : "") : ("") )}>
+                    <div key={i} className={"card card-button"+(selectedWallet.code == w.code ? " selected" : "")+( cardano.wallet ? (cardano.wallet.code == w.code ? " connected" : "") : ("") )}>
                                  
                       <div className="card-body top-area d-flex" onClick={() => setSelectedWallet(w)}>
                         <div className="d-flex align-items-center">

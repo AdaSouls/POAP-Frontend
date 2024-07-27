@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React from 'react';
 import { useDrawer } from '../contexts/drawer/drawer.provider.jsx';
 import CardanoWallet from './views/cardanoWallet.jsx';
 import EthereumWallet from './views/ethereumWallet.jsx';
@@ -11,7 +11,7 @@ import ViewToken from './views/viewToken.jsx';
 export const Drawer = () => {
 
   const state = useDrawer();
-  
+
   const drawerComponent = (state) => {
 
     if (state?.showCardanoWallet === true) {
