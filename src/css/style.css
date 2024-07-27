@@ -13047,6 +13047,10 @@ button:active,
   cursor: default !important;
 }
 
+.cursor-loading{
+  cursor: wait !important;
+}
+
 .card-create .card-body h4,
 .card-create .card-body .h4 {
   color: #fff;
@@ -13691,23 +13695,46 @@ button.dropdown-toggle.btn.btn-primary {
 
 .drawer-header{
   height: 50px;
-  padding-left: 10px;
-  padding-right: 20px;
 }
 
 .drawer-body{
   height: calc(100% - 150px);
   margin: 20px 0px;
   overflow-x: hidden;
-  padding-left: 10px;
-  padding-right: 20px;
 }
+
+.drawer-loading{
+  width: calc(100% - 30px);
+  display: flex;
+  justify-content: center;
+  height: calc(100% - 50px);
+  max-width: 450px;
+  margin: 50px 0px;
+  position: absolute;
+  background-color: #f8f8fb;
+  overflow: hidden;
+  opacity: 1;
+  transition: 0.4s;
+  text-align: center;
+}
+
+.inner-loading{
+  align-content: center;
+  height: 200px;
+  width: auto;
+  margin-top: 50%;
+}
+
+.drawer-loading img{  
+  height: 45px;
+  width: 45px;
+  margin-bottom: 5px;
+}
+
 
 .drawer-footer{
   height: 50px;
   overflow: hidden;
-  padding-left: 10px;
-  padding-right: 20px;
 }
   /* @apply w-full;
   @apply flex;

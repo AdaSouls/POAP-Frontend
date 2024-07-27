@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, Form } from 'react-bootstrap';
 import { mintToken } from '../../../utils/util';
 import { addSoulbound } from '../../../services/token.service';
+import LoadingDrawer from '../loading';
 
 export default function CreateSoulToken() {
   const { cardano: { wallet }, collection } = useDrawer();
@@ -20,6 +21,7 @@ export default function CreateSoulToken() {
   const [metadata, setMetadata] = useState(JSON.stringify(placeholderObj, null, 4));
   const [aikenCourseApproved, setAikenCourseApproved] = useState(false);
   const [isMetadataValidJson, setIsMetadataValidJson] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const closeDrawer = () => {
     dispatch({
@@ -48,8 +50,9 @@ export default function CreateSoulToken() {
 
 
   const handleSubmit = async (e) => {
+    setLoading(true);
     e.preventDefault();
-
+    
     // mint token
     const provider = wallet.provider;
 
@@ -76,30 +79,39 @@ export default function CreateSoulToken() {
       const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata , aikenCourseApproved });
       collection.tokens.push(token);
       closeDrawer();
+      setLoading(false);
       navigate(location.pathname, { replace: true });
       
     } catch (error) {
+      setLoading(false);
       console.log('Error', error);
     }
   };
   
   return (
-    <div className="d-flex flex-column w-100 h-100 p-3">      
+    <div className="d-flex flex-column w-100 h-100 p-3 drawer">      
         <div className="drawer-header">
-          <div className="d-flex justify-content-start">                  
-            <button
+          <div className="d-flex justify-content-start"> 
+            {loading ?(
+              <button
+              className="btn btn-close align-content-center px-1 mt-2 position-absolute cursor-loading"
+              aria-label="close"
+            >                        
+            </button>
+            ):(
+              <button
               className="btn btn-close align-content-center px-1 mt-2 position-absolute"
               onClick={closeDrawer}
               aria-label="close"
             >                        
             </button>
-            <h4            
-              className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
-            >
+            )}                 
+            <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold">
               Create SOULBOUND TOKEN
             </h4>
           </div>          
-        </div>      
+        </div>
+        {loading && <LoadingDrawer/>}      
         <div className="drawer-body">
           <form
             name="myform"
@@ -130,7 +142,7 @@ export default function CreateSoulToken() {
             </div>
             {collection.aikenCourse && (
               <>
-              <hr className='col-12 my-4 mb-2'></hr>
+              <div className='col-12 mt-4 mb-2 border'></div>
               <div className="col-10">
                 <h6
                   className="py-2"                
@@ -152,7 +164,7 @@ export default function CreateSoulToken() {
               </>
             )}
                          
-            <hr className='col-12 my-3'></hr>            
+            <div className='col-12 mt-4 mb-2 border'></div>            
             <div className="col-12">
             <Form.Label>Metadata</Form.Label>
               <Form.Control
@@ -168,11 +180,18 @@ export default function CreateSoulToken() {
             </label> */}
             </div>
             {isMetadataValidJson ? <p>Valid JSON</p> : <p>Invalid JSON</p>}
-            <hr className='col-12 my-4 mt-3'></hr>                      
+            <div className='col-12 mt-4 mb-2 border'></div>                      
             <div className='drawer-footer'>
-              <Button type="submit" className="btn btn-gradient btn-block">
-                Create
-              </Button>
+              {loading ? (
+                <Button className="btn btn-secondary btn-block cursor-loading">
+                  Create
+                </Button>
+              ):(
+                <Button type="submit" className="btn btn-gradient btn-block">
+                  Create
+                </Button>
+              )}
+             
             </div>
           </form>
         </div>

@@ -59,7 +59,7 @@ export default function ViewToken() {
               <div className="card-body top-area d-flex cursor-default">
                 <div className="d-flex align-items-center">
                   <img
-                    className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
+                    className="mr-3 mr-0 mr-sm-3"
                     src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (token.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
                     width="60"
                     height="60"
