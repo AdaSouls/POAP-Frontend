@@ -28,7 +28,6 @@ export default function CreateSoulToken() {
   };  
 
   const toggleAikenCourseApproved = () => {
-    console.log("toggle");
     if (!aikenCourseApproved){
       setAikenCourseApproved(true)
     } else {
@@ -129,25 +128,30 @@ export default function CreateSoulToken() {
                 onChange={(event) => setAddress(event.target.value)}
               />
             </div>
-            <hr className='col-12 my-4 mb-2'></hr>
-            <div className="col-10">
-              <h6
-                className="py-2"                
-              >
-                Has the student passed the final exam?
-              </h6> 
-            </div>  
-            <div className="col-2">
-              <div className="form-check form-switch">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="flexSwitchCheckDefault"
-                  name='aikenCourseApproved'
-                  onChange={() => toggleAikenCourseApproved()}
-                />                  
+            {collection.aikenCourse && (
+              <>
+              <hr className='col-12 my-4 mb-2'></hr>
+              <div className="col-10">
+                <h6
+                  className="py-2"                
+                >
+                  Has the student passed the final exam?
+                </h6> 
+              </div>  
+              <div className="col-2">
+                <div className="form-check form-switch">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="flexSwitchCheckDefault"
+                    name='aikenCourseApproved'
+                    onChange={() => toggleAikenCourseApproved()}
+                  />                  
+                </div>
               </div>
-            </div>             
+              </>
+            )}
+                         
             <hr className='col-12 my-3'></hr>            
             <div className="col-12">
             <Form.Label>Metadata</Form.Label>

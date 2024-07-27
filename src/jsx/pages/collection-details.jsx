@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { get, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
-import eternlWallet from "../../images/wallets/eternl.jpg";
 import { useEffect, useState } from "react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { burnToken } from "../../utils/util";
@@ -13,7 +12,11 @@ import collectionAikenNormalIcon from "../../images/svg/collection-aiken-normal.
 import collectionAikenMultisigIcon from "../../images/svg/collection-aiken-multisig.svg"
 import collectionOwnerIcon from "../../icons/svg/collection-owner.svg";
 import collectionInvitedIcon from "../../icons/svg/collection-invited.svg";
-
+import tokenAikenNormal from "../../images/svg/aiken-normal.svg";
+import tokenAikenMultisig from "../../images/svg/aiken-multisig.svg";
+import tokenSoulNormal from "../../images/svg/soul-normal.svg";
+import tokenSoulMultisig from "../../images/svg/soul-multisig.svg";
+import PerfectScrollbar from "react-perfect-scrollbar";
 
 const Collection = () => {
     const { id } = useParams();
@@ -31,8 +34,8 @@ const Collection = () => {
         });
     }; 
 
-    const viewToken = ( token ) => {
-      const getToken = token;
+    const viewToken = ( token, collection ) => {
+      const getToken = { token, collection };
       dispatch({ type: 'VIEW_TOKEN', payload: getToken });
     }; 
 
@@ -164,22 +167,37 @@ const Collection = () => {
                                 height="25"
                                 alt=""
                               />
-                            { collection.invited.length == 1 ?  (<p className="pt-1">simple</p>) :  (<p className="pt-1">multisig</p>) }
+                            { collection.invited.length == 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
                             </li>
-                            <li className="d-flex justify-content-start">
-                              <img
-                                className="mr-2"
-                                src={ collectionOwnerIcon }
-                                width="25"
-                                height="25"
-                                alt=""
-                              />
-                              <p className="pt-1">Owner</p>
+                            <li className="d-flex justify-content-start">                              
+                              {wallet.stake_address == collection.owner ? (
+                                <>
+                                  <img
+                                    className="mr-2"
+                                    src={ collectionOwnerIcon }
+                                    width="25"
+                                    height="25"
+                                    alt=""
+                                  />
+                                  <p className="pt-1">Owner</p>
+                                </>
+                              ):(
+                                <>
+                                  <img
+                                    className="mr-2"
+                                    src={ collectionInvitedIcon }
+                                    width="25"
+                                    height="25"
+                                    alt=""
+                                  />
+                                  <p className="pt-1">Ivited</p> 
+                                </>
+                              )}                              
                             </li>
                           </ul>            
                         </div>
                         <div className="align-content-center mt-5">                                
-                          
+                         
                         </div> 
                       </div>
                     </div>
@@ -190,31 +208,48 @@ const Collection = () => {
                       <div className="card-header">
                         <h4 className="card-title">Collection Details</h4>                     
                       </div>
-                      <div className="card-body card-classic-max-height-title"> 
-                        <p className="pt-1">Description</p>
-                        <p className="mt-2 mb-3">Description: <span className="small">{collection.description}</span></p>
-                        <p className="mt-2">Symbol: <span className="small">{collection.symbol}</span></p>
-                        <p className="mt-2">Created: <span className="small">{collection.createdAt}</span></p>
-                        <p className="mt-1">Updated: <span className="small">{collection.updatedAt}</span></p>
-                        <p className="mt-2">Owner: <span className="small">{collection.owner}</span></p>                              
-                      </div>
+                      
+                        <div className="card-body card-classic-max-height-title">    
+                        <PerfectScrollbar>
+                          <div className="pr-4">                     
+                          <p className="m-0 small gray">Description</p>
+                          <p className="m-0 mb-3">{collection.description}</p>
+                          <p className="m-0 small gray">Symbol</p>
+                          <p className="m-0 mb-2">{collection.symbol}</p>
+                          <p className="m-0 small gray">Created</p>
+                          <p className="m-0 mb-2">{collection.createdAt}</p>
+                          <p className="m-0 small gray">Updated</p>
+                          <p className="m-0 mb-2">{collection.updatedAt}</p>
+                          <p className="m-0 small gray">Owner</p>
+                          <p className="m-0 mb-2">{collection.owner}</p>
+                          <p className="m-0 small gray">Collection ID</p>
+                          <p className="m-0 mb-2">{collection.collectionId}</p>
+                          <p className="m-0 small gray">Policy Hash</p>
+                          <p className="m-0 mb-2">{collection.policyHash}</p>
+                          <p className="m-0 small gray">Policy ID</p>
+                          <p className="m-0 mb-2">{collection.policyId}</p>
+                          <p className="m-0 small gray">Smart Contract</p>
+                          <p className="m-0 mb-2">{collection.smartContract}</p>
+                          </div>
+                          </PerfectScrollbar>  
+                        </div>
+                        
                     </div>
                   </div>
-
-
                   {/* TOKEN */}
                   { collection && (
                       collection.tokens.map(t => {
+                        console.log(t);
                         return (
-                          <div key={t.soulboundId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12 card-token-select">
+                          <div key={t.soulboundId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6 card-token-select">
                             <div className="card card-small">
                               <div className="card-token">
                             
-                                <div className="card-body top-area d-flex cursor-pointer" onClick={()=>viewToken(t)}>
+                                <div className="card-body top-area d-flex cursor-pointer" onClick={()=>viewToken(t, collection)}>
                                   <div className="d-flex align-items-center">
                                     <img
-                                      className="mr-3 rounded-circle mr-0 mr-sm-3 border-1"
-                                      src={collectionAikenMultisigIcon}
+                                      className="mr-3 mr-0 mr-sm-3"
+                                      src={ collection.invited.length == 1 ? (collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
                                       width="100"
                                       height="100"
                                       alt=""
@@ -241,23 +276,23 @@ const Collection = () => {
                                       </div>
                                       <div className="align-content-center token-status">
                                       { t.claimUtxo ? ( 
-                                            <img
-                                              title="Not claimed"
-                                              className="btn-secondary p-1 rounded-circle"
-                                              src={ collectionOwnerIcon }
-                                              width="30"
-                                              height="30"
-                                              alt=""
-                                            />                                                                                
-                                        ):(                                          
-                                            <img
+                                          <img
                                             title="Claimed"
-                                              className="btn-primary p-1 rounded-circle"
-                                              src={ collectionOwnerIcon }
-                                              width="30"
-                                              height="30"
-                                              alt=""
-                                            />                                          
+                                            className="btn-primary p-1 rounded-circle"
+                                            src={ collectionOwnerIcon }
+                                            width="30"
+                                            height="30"
+                                            alt=""
+                                          />                                                                               
+                                        ):(  
+                                          <img
+                                             title="Not claimed"
+                                             className="btn-secondary p-1 rounded-circle"
+                                             src={ collectionOwnerIcon }
+                                             width="30"
+                                             height="30"
+                                             alt=""
+                                          />                                                                                    
                                         ) }
                                       </div> 
                                     </div>

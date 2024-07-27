@@ -11,7 +11,6 @@ import ViewToken from './views/viewToken.jsx';
 export const Drawer = () => {
 
   const state = useDrawer();
-
   
   const drawerComponent = (state) => {
 

@@ -172,7 +172,7 @@ const Collections = () => {
                             height="25"
                             alt=""
                           />
-                         { c.invited.length == 1 ?  (<p className="pt-1">simple</p>) :  (<p className="pt-1">multisig</p>) }
+                         { c.invited.length == 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
                         </li>
                         <li className="d-flex justify-content-start">
                           <img

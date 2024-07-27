@@ -4,7 +4,6 @@ import collectionNormalIcon from "../../images/svg/collection-normal.svg"
 import collectionMultisigIcon from "../../images/svg/collection-multisig.svg"
 import collectionAikenNormalIcon from "../../images/svg/collection-aiken-normal.svg"
 import collectionAikenMultisigIcon from "../../images/svg/collection-aiken-multisig.svg"
-import poapNormal from "../../images/svg/poap-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 import collectionMenu from "../../icons/svg/collection-menu.svg";
 import loadingIcon from "../../icons/svg/loading-icon.svg";
@@ -313,7 +312,7 @@ const Souls = () => {
                   </tbody>
                 </table>
                 {invitedCollections.length > 4 && (                  
-                  <Link to={"/collections/souls"} className="btn btn-white btn-small btn-block mt-3">See More</Link>                  
+                  <Link to={"/collections/all"} className="btn btn-white btn-small btn-block mt-3">See More</Link>                  
                 )}
               </div>
             </div>

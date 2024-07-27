@@ -1,7 +1,19 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import waiting from "../../../images/waiting.png";
+import collectionNormalImage from "../../../images/svg/collection-normal.svg";
+import collectionMultisigImage from "../../../images/svg/collection-multisig.svg";
+import collectionMultisigIcon from "../../../icons/svg/collection-multisig.svg";
+import collectionNormalIcon from "../../../icons/svg/collection-normal.svg";
+import collectionAikenNormalIcon from "../../../images/svg/collection-aiken-normal.svg"
+import collectionAikenMultisigIcon from "../../../images/svg/collection-aiken-multisig.svg"
+import collectionOwnerIcon from "../../../icons/svg/collection-owner.svg";
+import collectionInvitedIcon from "../../../icons/svg/collection-invited.svg";
+import tokenAikenNormal from "../../../images/svg/aiken-normal.svg";
+import tokenAikenMultisig from "../../../images/svg/aiken-multisig.svg";
+import tokenSoulNormal from "../../../images/svg/soul-normal.svg";
+import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
+import PerfectScrollbar from "react-perfect-scrollbar";
 
 export default function ViewToken() {
   const { token } = useDrawer();
@@ -12,25 +24,92 @@ export default function ViewToken() {
       type: 'CLOSE_DRAWER'
     });
   };  
-
-  console.log(token);
   
   return (
     <div className="d-flex flex-column w-100 h-100 p-3">      
         <div className="drawer-header">
-            <div className="d-flex justify-content-start">                  
+            <div className="d-flex justify-content-start ">                  
                 <button className="btn btn-close align-content-center px-1 mt-2 position-absolute" onClick={closeDrawer} aria-label="close" ></button>
-                <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold capitalize">{token.name || ''} </h4>
+                <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold capitalize">SoulBound Token</h4>
             </div>          
         </div>      
         <div className="drawer-body">
-            <p>Aiken Course Approved: {token.aikenCourseApproved || false}</p>
-            <p>beneficiary: {token.beneficiary || ''}</p>
-            <p>burnTx: {token.burnTx || ''}</p>  
-            <p>Mint Tx: {token.mintUtxo.txHash || ''}</p>  
-            <p>Claim Tx: {token.claimUtxo?.txHash || ''}</p>   
-            <p>collectionId: {token.collectionId || ''}</p>
-            {/* <p>Metadata: {token.metadata || ''}</p>*/}
+
+          {token.collection && (            
+            <div className={"card card-button"}>                                 
+              <div className="card-body top-area d-flex cursor-default">
+                <div className="d-flex align-items-center">
+                  <img
+                    className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
+                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                    width="60"
+                    height="60"
+                    alt=""
+                  /> 
+                  <div className="media-body">
+                    <p className='m-0 small gray'>Collection</p>
+                    <h4 className="mb-0">{token.collection.name}</h4>                    
+                  </div>
+                </div>
+              </div>             
+            </div>
+          )}
+          {token.collection && (   
+            <div className={"card card-button"}>                                 
+              <div className="card-body top-area d-flex cursor-default">
+                <div className="d-flex align-items-center">
+                  <img
+                    className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
+                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (token.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
+                    width="60"
+                    height="60"
+                    alt=""
+                  /> 
+                  <div className="media-body">
+                    <p className='m-0 small gray'>SoulBound Token</p>
+                    <h4 className="mb-0">{token.token.name}</h4>
+                  </div>
+                </div>
+              </div>             
+            </div>
+          )}            
+          {token.collection.aikenCourse && (            
+            <div className={"card card-small"}>                                 
+              <div className="card-body top-area d-flex cursor-default">
+                <div className="d-flex align-items-center">
+                  <img
+                    className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
+                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                    width="60"
+                    height="60"
+                    alt=""
+                  /> 
+                  <div className="media-body">
+                    <p className='m-0 small gray'>Collection</p>
+                    <h4 className="mb-0">{token.collection.name}</h4>                    
+                  </div>
+                </div>
+              </div>             
+            </div>
+          )}
+          <div className='text-break'>
+            <h4 className='pb-3 max-width'>Details</h4>
+            <p className="m-0 small gray">Beneficiary</p>
+            <p className="m-0 mb-3">{token.token.beneficiary}</p>
+            <p className="m-0 small gray">Created</p>
+            <p className="m-0 mb-2">{token.token.createdAt}</p>
+            <p className="m-0 small gray">Updated</p>
+            <p className="m-0 mb-2">{token.token.updatedAt}</p>
+            <p className="m-0 small gray">SoulBound ID</p>
+            <p className="m-0 mb-2">{token.token.soulboundId}</p>
+            <p className="m-0 small gray">Mint</p>
+            <p className="m-0 mb-2">{token.token.mintUtxo?.txHash || "" }</p>
+            <p className="m-0 small gray">Claim</p>
+            <p className="m-0 mb-2">{token.token.claimUtxo?.txHash || "Not Claimed" }</p>
+            <p className="m-0 small gray">Burn</p>
+            <p className="m-0 mb-2">{token.token.burnTx || "Not Burned"}</p>
+          </div>
+        
         </div>
         {/* <div className='drawer-footer'>
           <Link to={"#"} className="btn btn-gradient btn-block">
