@@ -1,19 +1,13 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import collectionNormalImage from "../../../images/svg/collection-normal.svg";
 import collectionMultisigImage from "../../../images/svg/collection-multisig.svg";
-import collectionMultisigIcon from "../../../icons/svg/collection-multisig.svg";
-import collectionNormalIcon from "../../../icons/svg/collection-normal.svg";
 import collectionAikenNormalIcon from "../../../images/svg/collection-aiken-normal.svg"
 import collectionAikenMultisigIcon from "../../../images/svg/collection-aiken-multisig.svg"
-import collectionOwnerIcon from "../../../icons/svg/collection-owner.svg";
-import collectionInvitedIcon from "../../../icons/svg/collection-invited.svg";
 import tokenAikenNormal from "../../../images/svg/aiken-normal.svg";
 import tokenAikenMultisig from "../../../images/svg/aiken-multisig.svg";
 import tokenSoulNormal from "../../../images/svg/soul-normal.svg";
 import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
-import PerfectScrollbar from "react-perfect-scrollbar";
 
 export default function ViewToken() {
   const { token } = useDrawer();
@@ -94,8 +88,15 @@ export default function ViewToken() {
           )}
           <div className='text-break'>
             <a class="twitter-share-button"
-              href="https://twitter.com/intent/tweet?text=Hello%20world">
-            Share on Twitter</a>
+              href="https://twitter.com/intent/tweet?text=This%20is%20a%20test%20tweet"
+              data-size="large"
+              data-text="custom share text"
+              data-url="https://dev.twitter.com/web/tweet-button"
+              data-hashtags="example,demo"
+              data-via="twitterdev"
+              data-related="twitterapi,twitter">
+            Share on Twitter
+            </a>
             <br /><br />
             <h4 className='pb-3 max-width'>Details</h4>
             <p className="m-0 small gray">Soulbound ID</p>
