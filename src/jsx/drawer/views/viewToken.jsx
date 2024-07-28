@@ -93,6 +93,10 @@ export default function ViewToken() {
             </div>
           )}
           <div className='text-break'>
+            <a class="twitter-share-button"
+              href="https://twitter.com/intent/tweet?text=Hello%20world">
+            Share on Twitter</a>
+            <br /><br />
             <h4 className='pb-3 max-width'>Details</h4>
             <p className="m-0 small gray">Soulbound ID</p>
             <p className="m-0 mb-2">{token.token.soulboundId}</p>
