@@ -179,7 +179,7 @@ export default function CreateSoulToken() {
               <textarea value={metadata}  onChange={(event) => setMetadata(event.target.value)} />
             </label> */}
             </div>
-            {isMetadataValidJson ? <p>Valid JSON</p> : <p>Invalid JSON</p>}
+            {isMetadataValidJson ? <p>Valid JSON</p> : <p style={{color: "red"}}>Invalid JSON</p>}
             <div className='col-12 mt-4 mb-2 border'></div>                      
             <div className='drawer-footer'>
               {loading ? (
