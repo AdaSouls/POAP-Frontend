@@ -45,10 +45,13 @@ export const Drawer = () => {
 
   return (
     
-    <React.Fragment>  
+    <React.Fragment>
+      <>
+      <div className={`background-drawer ${state?.open === true ? 'open' : ''}`}></div>
       <div className={`drawer drawer-cart ${state?.open === true ? 'open' : ''}`}>
         {drawerComponent(state)}
       </div>
+      </>
     </React.Fragment>
 
   );

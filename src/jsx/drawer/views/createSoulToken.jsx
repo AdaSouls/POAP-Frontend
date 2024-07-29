@@ -13,13 +13,14 @@ export default function CreateSoulToken() {
   const location = useLocation();
   const placeholderObj = {
     name: "Charles Hoskinson",
-    status: "Passed"
+    status: "Passed",
+    image: "diploma"
   }
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [metadata, setMetadata] = useState(JSON.stringify(placeholderObj, null, 4));
-  const [aikenCourseApproved, setAikenCourseApproved] = useState(false);
+  const [aikenCourseApproved, setAikenCourseApproved] = useState("");
   const [isMetadataValidJson, setIsMetadataValidJson] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -29,11 +30,21 @@ export default function CreateSoulToken() {
     });
   };  
 
+  console.log(aikenCourseApproved)
+
   const toggleAikenCourseApproved = () => {
     if (!aikenCourseApproved){
-      setAikenCourseApproved(true)
+      setAikenCourseApproved("aprobado")
     } else {
-      setAikenCourseApproved(false)
+      setAikenCourseApproved("")
+    }
+  }; 
+
+  const toggleAikenCourseApprovedHonor = () => {
+    if (aikenCourseApproved == "honores"){
+      setAikenCourseApproved("aprobado")
+    } else {
+      setAikenCourseApproved("honores")
     }
   }; 
 
@@ -153,7 +164,7 @@ export default function CreateSoulToken() {
               <div className="col-2">
                 <div className="form-check form-switch">
                   <input
-                    className="form-check-input"
+                    className="form-check-input cheked"
                     type="checkbox"
                     id="flexSwitchCheckDefault"
                     name='aikenCourseApproved'
@@ -161,6 +172,29 @@ export default function CreateSoulToken() {
                   />                  
                 </div>
               </div>
+              { aikenCourseApproved && (
+                <>
+                <div className='col-12 mt-4 mb-2 border'></div>
+                <div className="col-10">
+                  <h6
+                    className="py-2"                
+                  >
+                    Has approved with honors?
+                  </h6> 
+                </div>  
+                <div className="col-2">
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="flexSwitchCheckDefault"
+                      name='aikenCourseApproved'
+                      onChange={() => toggleAikenCourseApprovedHonor()}
+                    />                  
+                  </div>
+                </div>
+                </>
+              )}
               </>
             )}
                          

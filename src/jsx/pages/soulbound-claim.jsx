@@ -73,7 +73,7 @@ const SoulboundClaim = () => {
       }, [wallet]);
 
     return (
-        <Layout activeMenu={3}>
+        <Layout activeMenu={4}>
         { loading && ( <p>Loading...</p>) }
         { error && (<p>Error loading collection: {error.message}</p>) }
         { !loading && (

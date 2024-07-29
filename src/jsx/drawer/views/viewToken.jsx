@@ -8,6 +8,9 @@ import tokenAikenNormal from "../../../images/svg/aiken-normal.svg";
 import tokenAikenMultisig from "../../../images/svg/aiken-multisig.svg";
 import tokenSoulNormal from "../../../images/svg/soul-normal.svg";
 import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
+import PerfectScrollbar from "react-perfect-scrollbar";
+import { PhotoProvider, PhotoView } from 'react-photo-view';
+import 'react-photo-view/dist/react-photo-view.css';
 
 export default function ViewToken() {
   const { token } = useDrawer();
@@ -28,7 +31,7 @@ export default function ViewToken() {
             </div>          
         </div>      
         <div className="drawer-body">
-
+        <PerfectScrollbar>
           {token.collection && (            
             <div className={"card card-button"}>                                 
               <div className="card-body top-area d-flex cursor-default">
@@ -68,23 +71,15 @@ export default function ViewToken() {
             </div>
           )}            
           {token.collection.aikenCourse && (            
-            <div className={"card card-small"}>                                 
-              <div className="card-body top-area d-flex cursor-default">
-                <div className="d-flex align-items-center">
-                  <img
-                    className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
-                    width="60"
-                    height="60"
-                    alt=""
-                  /> 
-                  <div className="media-body">
-                    <p className='m-0 small gray'>Collection</p>
-                    <h4 className="mb-0">{token.collection.name}</h4>                    
-                  </div>
-                </div>
-              </div>             
-            </div>
+          <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
+            <PhotoView src={process.env.PUBLIC_URL + "/diplomas/" + token.token.metadata.image + ".jpg"}>
+              <img
+              className="diploma cursor-pointer"
+              src={process.env.PUBLIC_URL + "/diplomas/" + token.token.metadata.image + ".jpg"}
+              alt=""
+              />
+            </PhotoView>
+            </PhotoProvider>  
           )}
           <div className='text-break'>
             <a class="twitter-share-button"
@@ -114,7 +109,7 @@ export default function ViewToken() {
             <p className="m-0 small gray">Updated</p>
             <p className="m-0 mb-2">{token.token.updatedAt}</p>
           </div>
-        
+          </PerfectScrollbar>
         </div>
         {/* <div className='drawer-footer'>
           <Link to={"#"} className="btn btn-gradient btn-block">
