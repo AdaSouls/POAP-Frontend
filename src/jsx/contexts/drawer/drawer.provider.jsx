@@ -162,6 +162,18 @@ function drawerReducer(state, action) {
         viewToken: false,
         open: false
       };
+    case 'CREATE_POAP':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: true,
+        checkCollection: false,
+        viewToken: false,
+        open: true
+      };
     default:
       return state;
   }
