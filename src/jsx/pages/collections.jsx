@@ -92,7 +92,7 @@ const Collections = () => {
   }
 
   return (
-    <Layout activeMenu={4}>
+    <Layout activeMenu={3}>
       <>
         <div className="row">
             {/* CARDS HEADER */}

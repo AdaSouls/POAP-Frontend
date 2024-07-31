@@ -87,7 +87,7 @@ const Collection = () => {
       }, [id, wallet]);
 
     return (
-      <Layout activeMenu={4}>
+      <Layout activeMenu={3}>
             { loading && (<p>Loading...</p>) }
             { error && (<p>Error loading collection: {error.message}</p>) }
             { !loading && (

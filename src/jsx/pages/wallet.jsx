@@ -84,7 +84,7 @@ const Wallet = () => {
                         className="btn btn-gradient btn-small"
                         onClick={showCardanoWallet}
                       >
-                        Connect
+                        Connect Cardano Wallet
                       </button>
                     </div>                  
                   </div>
@@ -175,7 +175,7 @@ const Wallet = () => {
                         className="btn btn-gradient btn-small"
                         onClick={showEthereumWallet}
                       >
-                        Connect
+                        Connect Ethereum Wallet
                       </button>
                     </div>                  
                   </div>

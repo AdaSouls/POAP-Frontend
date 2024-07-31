@@ -68,7 +68,7 @@ const Dashboard = () => {
                 className="btn btn-gradient btn-block btn-small mt-1"
                 to={"/wallet"}
               >
-                Wallets
+                Connect Wallets
               </Link>              
             </div>
           </div>

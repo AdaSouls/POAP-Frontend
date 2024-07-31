@@ -29,7 +29,7 @@ const Sidebar = ({ activeMenu }) => {
       <div className="menu">
         <ul>
           {menus.map((item) => (
-            <li key={item.id} className={activeMenu == item.id ? "active" : ""}>
+            <li key={item.id} className={activeMenu === item.id ? "active" : ""}>
               <Link
                 to={item.href}
                 title={item.title}
