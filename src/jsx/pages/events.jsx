@@ -114,7 +114,7 @@ const Events = () => {
   };
 
   return (
-    <Layout activeMenu={4}>
+    <Layout activeMenu={7}>
       <div className="row">
         <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
           <div className="card card-create bg-poap card-classic">
