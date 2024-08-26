@@ -1,7 +1,6 @@
-import React from 'react';
 import { useState } from 'react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import {getEthereumWallet} from '../../../utils/ethWallets';
+import { getEthereumWallet, ethWallets } from '../../../utils/ethWallets';
 import underConstruct from "../../../images/construct.png";
 
 export default function EthereumWallet() {
@@ -41,79 +40,70 @@ export default function EthereumWallet() {
         </div>      
         <div className="drawer-body">
         <div className="row d-flex justify-content-center under-construct">
-        
-        <img
-        className="align-content-center m-0"
-        src={underConstruct}
-        alt=""
-        />
-        <h5 className="align-content-center m-0">Section under construction</h5>
-      
     </div>   
-          {/* <div style={{ display: 'flex', 'flexDirection': 'column' }}>
-              {ethWallets.map(w => {
-                  return (
-                    <div className={"card card-button"+(selectedWallet == w ? " selected" : "")+( ethereum.provider ? (ethereum.provider.wallet == w ? " connected" : "") : ("") )}>
-                      <div className="card-body top-area d-flex" onClick={() => setSelectedWallet(w)}>
-                        <div className="d-flex align-items-center">
-                          <img
-                            className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-                            src={w.img}
-                            width="60"
-                            height="60"
-                            alt=""
-                          /> 
-                          <div className="media-body">
-                            <h4 className="mb-0">{w.name}</h4>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bottom-area border-top align-content-center">
-                        <div className="card-body d-flex justify-content-between">
-                          <div className="align-content-center wallet-status">
-                            <span className="verified">
-                              <i className="icofont-check-alt"></i>
-                            </span>
-                            { ethereum.provider && ( w == ethereum.provider.wallet && "Connected" )}
-                          </div>
-                          <div></div>                  
-                        </div>
-                      </div>              
+      <div style={{ display: 'flex', 'flexDirection': 'column' }}>
+        {ethWallets.map(w => {
+            return (
+              <div className={"card card-button"+(selectedWallet == w ? " selected" : "")+( ethereum.provider ? (ethereum.provider.wallet == w ? " connected" : "") : ("") )}>
+                <div className="card-body top-area d-flex" onClick={() => setSelectedWallet(w)}>
+                  <div className="d-flex align-items-center">
+                    <img
+                      className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
+                      src={w.img}
+                      width="60"
+                      height="60"
+                      alt=""
+                    /> 
+                    <div className="media-body">
+                      <h4 className="mb-0">{w.name}</h4>
                     </div>
-                  )
-              })}
-            </div> */}
-        </div>
-        {/* { selectedWallet ? (
-            ethereum.provider ? (
-              ethereum.provider.wallet == selectedWallet ? (
-                <div className='drawer-footer d-flex flex-column'>
-                  <button className="btn btn-danger" onClick={() => onSelectWallet(null)}>
-                    Disconnect
-                  </button>
-                </div>  
-              ) : (
-                <div className='drawer-footer d-flex flex-column'>
-                  <button className="btn btn-gradient" onClick={() => { onSelectWallet(getEthereumWallet(selectedWallet), selectedWallet); }}>
-                    Connect
-                  </button>
+                  </div>
                 </div>
-              )       
+                <div className="bottom-area border-top align-content-center">
+                  <div className="card-body d-flex justify-content-between">
+                    <div className="align-content-center wallet-status">
+                      <span className="verified">
+                        <i className="icofont-check-alt"></i>
+                      </span>
+                      { ethereum.provider && ( w == ethereum.provider.wallet && "Connected" )}
+                    </div>
+                    <div></div>                  
+                  </div>
+                </div>              
+              </div>
+            )
+        })}
+      </div>
+      </div>
+        { selectedWallet ? (
+          ethereum.provider ? (
+            ethereum.provider.wallet == selectedWallet ? (
+              <div className='drawer-footer d-flex flex-column'>
+                <button className="btn btn-danger" onClick={() => onSelectWallet(null)}>
+                  Disconnect
+                </button>
+              </div>  
             ) : (
               <div className='drawer-footer d-flex flex-column'>
-                  <button className="btn btn-gradient" onClick={() => { onSelectWallet(getEthereumWallet(selectedWallet), selectedWallet); }}>
-                    Connect
-                  </button>
-                </div>
-            )
+                <button className="btn btn-gradient" onClick={() => { onSelectWallet(getEthereumWallet(selectedWallet), selectedWallet); }}>
+                  Connect
+                </button>
+              </div>
+            )       
           ) : (
-          <div className='drawer-footer d-flex flex-column'>
-            <button className="btn btn-non">
-              Select Wallet
-            </button>
-          </div>
-        )} */}
-        
+            <div className='drawer-footer d-flex flex-column'>
+                <button className="btn btn-gradient" onClick={() => { onSelectWallet(getEthereumWallet(selectedWallet), selectedWallet); }}>
+                  Connect
+                </button>
+              </div>
+          )
+        ) : (
+        <div className='drawer-footer d-flex flex-column'>
+          <button className="btn btn-non">
+            Select Wallet
+          </button>
+        </div>
+      )}
     </div>
   );
 }

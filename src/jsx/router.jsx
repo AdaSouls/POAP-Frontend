@@ -9,6 +9,7 @@ import { Drawer } from "./drawer/drawer";
 import Collection from "./pages/collection-details";
 import SoulboundClaim from "./pages/soulbound-claim";
 import Collections from "./pages/collections";
+import Events from "./pages/events";
 
 const Router = () => {
   return (
@@ -22,6 +23,7 @@ const Router = () => {
           <Route path="/" exact element={<Dashboard />} />
           <Route path="/search" element={<Search />} />
           <Route path="/wallet" element={<Wallet />} />
+          <Route path="/create-event" element={<Events />} />
           <Route path="/souls" element={<Souls />} />
           <Route path="/Settings-profile" element={<SettingsProfile />} />
           <Route path="/soulbounds-claim" element={<SoulboundClaim />} />
