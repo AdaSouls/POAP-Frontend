@@ -29,6 +29,7 @@ export function DrawerProvider({ children }) {
     createSoul: false,
     createSoulToken: false,
     createPoap: false,
+    createEvent: false,
     checkCollection: false,
     viewToken: false,
     open: false
@@ -83,6 +84,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true,
@@ -95,6 +97,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true
@@ -107,6 +110,7 @@ function drawerReducer(state, action) {
         createSoul: true,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true
@@ -119,6 +123,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: true,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true,
@@ -132,6 +137,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: true,
         viewToken: false,
         open: true, 
@@ -145,6 +151,7 @@ function drawerReducer(state, action) {
           createSoul: false,
           createSoulToken: false,
           createPoap: false,
+          createEvent: false,
           checkCollection: false,
           viewToken: true,
           open: true, 
@@ -158,6 +165,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: false
@@ -170,6 +178,20 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: true,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
+        open: true
+      };
+    case 'CREATE_EVENT':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: true,
         checkCollection: false,
         viewToken: false,
         open: true
