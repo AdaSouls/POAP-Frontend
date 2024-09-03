@@ -1,108 +1,121 @@
-
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { ethers, formatEther } from 'ethers';
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { ethers, formatEther } from "ethers";
 
 const useEthereum = () => {
-
   const [provider, setCurrentProvider] = useState(null);
 
+  // const DESIRED_CHAIN_ID = "0x61";
+  // const DESIRED_CHAIN_PARAMS = {
+  //   chainId: DESIRED_CHAIN_ID,
+  //   chainName: "BNB Chain Testnet",
+  //   nativeCurrency: {
+  //     name: "tBNB",
+  //     symbol: "tBNB",
+  //     decimals: 18,
+  //   },
+  //   rpcUrls: ["https://data-seed-prebsc-1-s1.bnbchain.org:8545/"],
+  //   blockExplorerUrls: ["https://testnet.bscscan.com/"],
+  // };
+  const DESIRED_CHAIN_ID = "0x30da5";
+  const DESIRED_CHAIN_PARAMS = {
+    chainId: DESIRED_CHAIN_ID,
+    chainName: "Milkomeda C1 Testnet",
+    nativeCurrency: {
+      name: "mTAda",
+      symbol: "mTAda",
+      decimals: 18,
+    },
+    rpcUrls: ["https://rpc-devnet-cardano-evm.c1.milkomeda.com"],
+    blockExplorerUrls: ["https://explorer-devnet-cardano-evm.c1.milkomeda.com"],
+  };
+
   const setProvider = useCallback(async (provider, wallet) => {
-    try {
-
-      if (!provider) {
-        setCurrentProvider(null);
-        return Promise.resolve(null);
-      }
-
-      // ADD CHAIN
-      await provider.request({
-        method: 'wallet_addEthereumChain',
-        params: [
-          {
-            chainId: "0x30da5",
-            rpcUrls: ["https://rpc-devnet-cardano-evm.c1.milkomeda.com"],
-            chainName: "Milkomeda C1 Testnet",
-            nativeCurrency: {
-              name: "mTAda",
-              symbol: "mTAda", // 2-6 characters long
-              decimals: 18,
-            },
-            blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
-          },
-        ],
-      }) 
-
-      // SWITCH CHAIN
-      await provider.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x30da5' }],
-      })
-
-      const api = new ethers.BrowserProvider(provider);
-      const networkId = await api.getNetwork();
-      const signer = await api.getSigner();
-      const address = await signer.getAddress();    
-      const balance = await api.getBalance(address);
-      const balanceFormated = formatEther(balance);
-
-      // const url = "https://rpc-devnet-cardano-evm.c1.milkomeda.com";  
-      // const api = new ethers.JsonRpcProvider(url);
-      // const account0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-      // const signer = new ethers.Wallet(account0, api);   
-
-      const newWalletState = { ...provider, api, signer, wallet, address, chainId : networkId.chainId, balanceFormated };
-      setCurrentProvider(newWalletState);
-      return newWalletState;
-      
-
-    } catch (e) {      
-      if(e.code == 4902){
-        console.log("Please Add Chain")
-      } else {
-        console.log(e);
-      }
-
+    if (!provider) {
+      setCurrentProvider(null);
+      return Promise.resolve(null);
     }
+
+    try {
+      // 1. Request account access
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      console.log("Connected accounts:", accounts);
+
+      // 2. Get the current chainId
+      const currentChainId = await window.ethereum.request({
+        method: "eth_chainId",
+      });
+      console.log("Current chainId:", currentChainId);
+      
+      // 3. Check if the current chainId matches the desired one
+      if (currentChainId !== DESIRED_CHAIN_ID) {
+        // 4. Attempt to switch to the desired network
+        console.log("Switching to the desired network...");
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: DESIRED_CHAIN_ID }],
+        });
+        console.log("Current chainId after request switching network:", currentChainId);
+        console.log("Switched to desired network!");
+      } else {
+        console.log("Already connected to the desired network");
+      }
+    } catch (error) {
+      if (error.code === 4902) {
+        try {
+          // 5. If the network is not added, add it
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [DESIRED_CHAIN_PARAMS],
+          });
+          console.log("Added and switched to the desired network!");
+        } catch (addError) {
+          console.error("Failed to add the desired network:", addError);
+        }
+      } else {
+        console.error("Failed to connect or switch network:", error);
+      }
+    }
+
+    console.log("🚀 ~ setProvider ~ window.ethereum:", window.ethereum)
+    const api = new ethers.BrowserProvider(window.ethereum);
+    // const api = new ethers.BrowserProvider(window.ethereum, "any", { chainId: DESIRED_CHAIN_ID });
+    console.log("🚀 ~ setProvider ~ api:", api)
+    const networkId = await api.getNetwork();
+    console.log("🚀 ~ setProvider ~ networkId:", networkId)
+    const signer = await api.getSigner();
+    console.log("🚀 ~ setProvider ~ signer:", signer)
+    const address = await signer.getAddress();
+    console.log("🚀 ~ setProvider ~ address:", address)
+    // const balance = api.getBalance(address);
+    // console.log("🚀 ~ setProvider ~ balance:", balance)
+    // const balanceFormated = formatEther(balance);
+    // console.log("🚀 ~ setProvider ~ balanceFormated:", balanceFormated)
+    const newWalletState = {
+      ...provider,
+      api,
+      signer,
+      wallet,
+      address,
+      chainId: networkId.chainId,
+      // balanceFormated: balanceFormated ? balanceFormated : 0,
+    };
+    console.log("🚀 ~ setProvider ~ newWalletState:", newWalletState)
+    setCurrentProvider(newWalletState);
+    return newWalletState;
   }, []);
-
-  // const setProvider = useCallback(async (provider, wallet) => {
-
-  //   try {
-  //     if (!provider) {
-  //       setCurrentProvider(null);
-  //       return Promise.resolve(null);
-  //     }
-
-  //     const api = await provider.enable();
-     
-  //     const accounts = await provider.request({
-  //       method: "eth_requestAccounts"
-  //     });
-  //     // const signer = provider.getSigner();
-      
-  //     const account = (accounts[0]);       
-      
-  //     // Get current chain ID for connected wallet
-  //     const viewChainId = await provider.request({
-  //       method: "eth_chainId"
-  //     });
-            
-  //     const chainId = (Number(viewChainId));
-  //     const newWalletState = { ...provider, chainId: chainId, account: account, api: api, wallet: wallet };
-  //     setCurrentProvider(newWalletState);
-  //     return newWalletState;
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // }, []);
-
-  const value = useMemo(() => ({
-    provider,
-    setProvider,
-}), [provider, setProvider]);
-
-return value;
   
+  const value = useMemo(
+    () => ({
+      provider,
+      setProvider,
+    }),
+    [provider, setProvider]
+  );
+  console.log("🚀 ~ setProvider ~ value:", value)
+  
+  return value;
 };
 
 export default useEthereum;

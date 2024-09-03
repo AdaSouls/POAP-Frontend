@@ -25,7 +25,7 @@ import trustIcon from "../images/wallets/trust.jpg";
 export const getEthereumWallet = (wallet) => {
   console.log(window.ethereum.providers);
   
-  console.log("🚀 ~ getEthereumWal ~ window.ethereum:", window.ethereum.selectedAddress)
+  console.log("🚀 ~ getEthereumWal ~ window.ethereum:", window.ethereum.eth_accounts);
 
   switch(wallet.name) {
     case "Coinbase":
