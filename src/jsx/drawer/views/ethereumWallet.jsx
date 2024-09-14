@@ -16,6 +16,8 @@ export default function EthereumWallet() {
   };  
 
   const onSelectWallet = async (provider, wallet) => {
+    console.log("🚀 ~ onSelectWal ~ wallet:", wallet)
+    console.log("🚀 ~ onSelectWal ~ provider:", provider)
     const newWalletState = await ethereum.setProvider(provider, wallet);
     dispatch({ type: 'UPDATE_ETHEREUM_WALLET', payload: newWalletState });
     closeDrawer();
@@ -42,9 +44,9 @@ export default function EthereumWallet() {
         <div className="row d-flex justify-content-center under-construct">
     </div>   
       <div style={{ display: 'flex', 'flexDirection': 'column' }}>
-        {ethWallets.map(w => {
+        {ethWallets.map((w, index) => {
             return (
-              <div className={"card card-button"+(selectedWallet == w ? " selected" : "")+( ethereum.provider ? (ethereum.provider.wallet == w ? " connected" : "") : ("") )}>
+              <div key={index} className={"card card-button"+(selectedWallet == w ? " selected" : "")+( ethereum.provider ? (ethereum.provider.wallet == w ? " connected" : "") : ("") )}>
                 <div className="card-body top-area d-flex" onClick={() => setSelectedWallet(w)}>
                   <div className="d-flex align-items-center">
                     <img
