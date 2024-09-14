@@ -4,6 +4,8 @@ import { ethers, formatEther } from "ethers";
 const useEthereum = () => {
   const [provider, setCurrentProvider] = useState(null);
 
+  // BNB TESTNET
+  //
   // const DESIRED_CHAIN_ID = "0x61";
   // const DESIRED_CHAIN_PARAMS = {
   //   chainId: DESIRED_CHAIN_ID,
@@ -16,17 +18,35 @@ const useEthereum = () => {
   //   rpcUrls: ["https://data-seed-prebsc-1-s1.bnbchain.org:8545/"],
   //   blockExplorerUrls: ["https://testnet.bscscan.com/"],
   // };
-  const DESIRED_CHAIN_ID = "0x30da5";
+
+  // MILKOMEDA C1 TESTNET
+  //
+  // const DESIRED_CHAIN_ID = "0x30da5";
+  // const DESIRED_CHAIN_PARAMS = {
+  //   chainId: DESIRED_CHAIN_ID,
+  //   chainName: "Milkomeda C1 Testnet",
+  //   nativeCurrency: {
+  //     name: "mTAda",
+  //     symbol: "mTAda",
+  //     decimals: 18,
+  //   },
+  //   rpcUrls: ["https://rpc-devnet-cardano-evm.c1.milkomeda.com"],
+  //   blockExplorerUrls: ["https://explorer-devnet-cardano-evm.c1.milkomeda.com"],
+  // };
+
+  // POLYGON AMOY TESTNET
+  //
+  const DESIRED_CHAIN_ID = "0x13882";
   const DESIRED_CHAIN_PARAMS = {
     chainId: DESIRED_CHAIN_ID,
-    chainName: "Milkomeda C1 Testnet",
+    chainName: "Polygon Amoy Testnet",
     nativeCurrency: {
-      name: "mTAda",
-      symbol: "mTAda",
+      name: "MATIC",
+      symbol: "MATIC",
       decimals: 18,
     },
-    rpcUrls: ["https://rpc-devnet-cardano-evm.c1.milkomeda.com"],
-    blockExplorerUrls: ["https://explorer-devnet-cardano-evm.c1.milkomeda.com"],
+    rpcUrls: ["https://rpc-amoy.polygon.technology/"],
+    blockExplorerUrls: ["https://amoy.polygonscan.com/"],
   };
 
   const setProvider = useCallback(async (provider, wallet) => {
@@ -47,7 +67,7 @@ const useEthereum = () => {
         method: "eth_chainId",
       });
       console.log("Current chainId:", currentChainId);
-      
+
       // 3. Check if the current chainId matches the desired one
       if (currentChainId !== DESIRED_CHAIN_ID) {
         // 4. Attempt to switch to the desired network
@@ -56,7 +76,10 @@ const useEthereum = () => {
           method: "wallet_switchEthereumChain",
           params: [{ chainId: DESIRED_CHAIN_ID }],
         });
-        console.log("Current chainId after request switching network:", currentChainId);
+        console.log(
+          "Current chainId after request switching network:",
+          currentChainId
+        );
         console.log("Switched to desired network!");
       } else {
         console.log("Already connected to the desired network");
@@ -78,20 +101,13 @@ const useEthereum = () => {
       }
     }
 
-    console.log("🚀 ~ setProvider ~ window.ethereum:", window.ethereum)
     const api = new ethers.BrowserProvider(window.ethereum);
     // const api = new ethers.BrowserProvider(window.ethereum, "any", { chainId: DESIRED_CHAIN_ID });
-    console.log("🚀 ~ setProvider ~ api:", api)
     const networkId = await api.getNetwork();
-    console.log("🚀 ~ setProvider ~ networkId:", networkId)
     const signer = await api.getSigner();
-    console.log("🚀 ~ setProvider ~ signer:", signer)
     const address = await signer.getAddress();
-    console.log("🚀 ~ setProvider ~ address:", address)
     // const balance = api.getBalance(address);
-    // console.log("🚀 ~ setProvider ~ balance:", balance)
     // const balanceFormated = formatEther(balance);
-    // console.log("🚀 ~ setProvider ~ balanceFormated:", balanceFormated)
     const newWalletState = {
       ...provider,
       api,
@@ -101,11 +117,11 @@ const useEthereum = () => {
       chainId: networkId.chainId,
       // balanceFormated: balanceFormated ? balanceFormated : 0,
     };
-    console.log("🚀 ~ setProvider ~ newWalletState:", newWalletState)
+    console.log("🚀 ~ setProvider ~ newWalletState:", newWalletState);
     setCurrentProvider(newWalletState);
     return newWalletState;
   }, []);
-  
+
   const value = useMemo(
     () => ({
       provider,
@@ -113,8 +129,6 @@ const useEthereum = () => {
     }),
     [provider, setProvider]
   );
-  console.log("🚀 ~ setProvider ~ value:", value)
-  
   return value;
 };
 
