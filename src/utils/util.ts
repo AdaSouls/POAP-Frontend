@@ -329,7 +329,7 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
         )
         // .addSignerKey(signerKey)
         .validTo(validTo)
-        .complete();
+        .complete({ nativeUplc: false });
     const txComplete = await tx.sign();
     const lovelaceOut = findLockedLovelace(smartContract, txComplete.txComplete.body().outputs());
     const mintUtxo: UTxO = {
@@ -395,7 +395,7 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
             }
         )
         .validTo(validTo)
-        .complete();
+        .complete({ nativeUplc: false });
     const txSigned = await tx.sign().complete();
     const lovelaceOut = findLockedLovelace(smartContract, txSigned.txSigned.body().outputs());
     const claimUtxo: UTxO = {
@@ -434,7 +434,7 @@ export const burnToken = async (tokenName: string, policy: Policy, policyId: str
         .attachSpendingValidator(redeem)
         // .addSignerKey(signerKey)
         .validTo(validTo)
-        .complete();
+        .complete({ nativeUplc: false });
     const txSigned = await tx.sign().complete();
     return txSigned;
 }
