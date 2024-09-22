@@ -284,10 +284,12 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
     console.log('Redeemer:', mintRedeemer);
 
     const data = Data.fromJson({
-        [policyId]: {
-            [tokenName]: {
-                name: tokenName,
-                ...metadata
+        721: {
+            [policyId]: {
+                [tokenName]: {
+                    name: tokenName,
+                    ...metadata
+                }
             }
         }
     })
