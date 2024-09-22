@@ -7,10 +7,13 @@ import adaSolusLogoBanner from "../../images/banner/adasouls-logo-banner.png";
 import Layout from "../layout/layout";
 import { Slide } from 'react-slideshow-image';
 import 'react-slideshow-image/dist/styles.css';
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 
 const indicators = (index) => (<div className="indicator">{index + 1}</div>);
 
 const Dashboard = () => {
+  const { cardano: { wallet }, ethereum: { provider } } = useDrawer();
+  const dispatch = useDrawerDispatch();
 
   const images = [
     bannerWelcome,
@@ -25,41 +28,48 @@ const Dashboard = () => {
           <div className="card welcome-profile card-classic">
             <div className="card-body card-classic-max-height">
               <h4>Welcome to<br></br><span>AdaSouls</span></h4>
+              <br></br>
+              <p>
+                We are a multichain platform. Connect your Cardano wallet to interact with SOUL and your Ethereum wallet to interact with POAP.
+              </p>
               <ul>
                 <li>                  
-                  <span className="verified">
+                  { wallet ? (
+                    <span className="verified">
                     <i className="icofont-check-alt"></i>
                   </span>
+                  ) : (
+                    <span className="not-verified">
+                    <i className="icofont-close-line"></i>
+                  </span>
+                  )}
                   Cardano Wallet
                   {/* <Link to={"#"}> */}
                   {/* </Link> */}
                 </li>                
                 <li>                  
-                  <span className="not-verified">
+                  { provider ? (
+                    <span className="verified">
+                    <i className="icofont-check-alt"></i>
+                  </span>
+                  ) : (
+                    <span className="not-verified">
                     <i className="icofont-close-line"></i>
                   </span>
+                  )}
                   Ethereum Wallet
-                  {/* <Link to={"#"}> */}
-                  {/* </Link> */}
-                </li>
-                <li>                  
-                  <span className="not-verified">
-                     <i className="icofont-close-line"></i>
-                  </span>
-                  Role
                   {/* <Link to={"#"}> */}
                   {/* </Link> */}
                 </li>
               </ul>
             </div>
             <div className="m-3">
-              <button
-                className="btn btn-gradient btn-block"
-                // onClick={showCart}
+              <Link
+                className="btn btn-gradient btn-block btn-small mt-1"
+                to={"/wallet"}
               >
-                Wallets
-              </button>
-              
+                Connect Wallets
+              </Link>              
             </div>
           </div>
         </div>

@@ -2,7 +2,6 @@ import React from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import eternlWallet from "../../../images/wallets/eternl.jpg";
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, InputGroup } from 'react-bootstrap';
 import { buildCollectionContracts, buildPolicy, generateNonce, getAddressPaymentKeyHash, getStakeAddress, readValidators } from '../../../utils/util';
@@ -17,26 +16,17 @@ export default function CreateSoul() {
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
+  const [aikenCourse, setAikenCourse] = useState(false);
   const [multisig, setMultisig] = useState(false);
   const [signers, setSigners] = useState(['']);
-
-  const toggleEvent = () => {
-    if (!event){
-      setEvent(true)
+ 
+  const toggleAikenCourse = () => {
+    if (!aikenCourse){
+      setAikenCourse(true)
     } else {
-      setEvent(false)
+      setAikenCourse(false)
     }
   }; 
-  
-  const toggleStreamer = () => {
-    if (!streamer){
-      setStreamer(true)
-    } else {
-      setStreamer(false)
-    }
-  }; 
-
-
 
   const closeDrawer = () => {
     dispatch({
@@ -97,9 +87,10 @@ export default function CreateSoul() {
     const policy = buildPolicy('all', { signers: keys});
 
     const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited });
+    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited, aikenCourse });
     closeDrawer();
-    navigate(`/collections/${collectionId}`);
+    // navigate(`/collection/${collectionId}`);
+    navigate(`/collections/souls`);
   };
   
   return (
@@ -115,7 +106,7 @@ export default function CreateSoul() {
             <h4            
               className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
             >
-              Create SOUL
+              Create SOUL COLLECTION
             </h4>
           </div>          
         </div>      
@@ -193,13 +184,13 @@ export default function CreateSoul() {
                 </Button>
               </div>
               )}
-            </div>
+            </div> 
             <hr className='col-12 my-4 mb-2'></hr>
             <div className="col-10">
               <h6
                 className="py-2"                
               >
-                Is it for an event ?
+                Is this for the Smart Contracts Course?
               </h6> 
             </div>  
             <div className="col-2">
@@ -208,52 +199,12 @@ export default function CreateSoul() {
                   className="form-check-input"
                   type="checkbox"
                   id="flexSwitchCheckDefault"
-                  onClick={toggleEvent}
-                />                
+                  name='aikenCourse'
+                  onChange={() => toggleAikenCourse()}
+                />                  
               </div>
-            </div> 
-            {event &&
-              <div className="col-12">
-                {/* <label className="form-label">Description</label> */}
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Description"
-                  name="description"
-                />
-              </div> 
-            }
-            
-            <hr className='col-12 my-3'></hr> 
-            <div className="col-10">
-              <h6
-                className="py-2"                
-              >
-                Are you streamer ?
-              </h6> 
-            </div>  
-            <div className="col-2">
-              <div className="form-check form-switch">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="flexSwitchCheckDefault"
-                  onClick={toggleStreamer}
-                />                
-              </div>
-            </div> 
-            {streamer &&
-              <div className="col-12">
-                {/* <label className="form-label">Description</label> */}
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Description"
-                  name="description"
-                />
-              </div> 
-            }
-            <hr className='col-12 my-4 mt-3'></hr>                      
+            </div>             
+            <hr className='col-12 my-3'></hr>            
             <div className='drawer-footer'>
               <Button type="submit" className="btn btn-gradient btn-block">
                 Create

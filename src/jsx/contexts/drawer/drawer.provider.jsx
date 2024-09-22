@@ -1,5 +1,6 @@
 import react, { createContext, useCallback, useContext, useReducer } from 'react';
 import useCardano from './useCardano';
+import useEthereum from './useEthereum';
 import {
   Blockfrost
 } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js";
@@ -15,17 +16,23 @@ export function DrawerProvider({ children }) {
           process.env.REACT_APP_BLOCKFROST_URL,
           process.env.REACT_APP_BLOCKFROST_PROJECT_ID
       )
-    });
+    }
+  );
+  
+  const ethereumState = useEthereum();
 
   const initialState = {  
     cardano: cardanoState,
+    ethereum: ethereumState,
     showCardanoWallet: false,
     showEthereumWallet: false,
     createSoul: false,
     createSoulToken: false,
     createPoap: false,
-    open: false,
-    items: []
+    createEvent: false,
+    checkCollection: false,
+    viewToken: false,
+    open: false
   };
 
   const [state, dispatch] = useReducer(
@@ -53,6 +60,14 @@ export function useDrawerDispatch() {
 
 function drawerReducer(state, action) {
   switch (action.type) {
+    case 'UPDATE_ETHEREUM_WALLET':
+      return { 
+        ...state, 
+        ethereum: {
+          ...state.ethereum,
+          provider: action.payload
+        }
+      };
     case 'UPDATE_CARDANO_WALLET':
       return { 
         ...state, 
@@ -67,7 +82,11 @@ function drawerReducer(state, action) {
         showCardanoWallet: true,
         showEthereumWallet: false,
         createSoul: false,
+        createSoulToken: false,
         createPoap: false,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
         open: true,
       };
     case 'SHOW_ETHEREUM_WALLET':
@@ -76,7 +95,11 @@ function drawerReducer(state, action) {
         showCardanoWallet: false,
         showEthereumWallet: true,
         createSoul: false,
+        createSoulToken: false,
         createPoap: false,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
         open: true
       };
     case 'CREATE_SOUL':
@@ -85,7 +108,11 @@ function drawerReducer(state, action) {
         showCardanoWallet: false,
         showEthereumWallet: false,
         createSoul: true,
+        createSoulToken: false,
         createPoap: false,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
         open: true
       };
     case 'CREATE_SOUL_TOKEN':
@@ -96,8 +123,52 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: true,
         createPoap: false,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
         open: true,
         collection: action.payload
+      };
+    case 'CHECK_COLLECTION':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        checkCollection: true,
+        viewToken: false,
+        open: true, 
+        items: action.payload
+      };
+    case 'VIEW_TOKEN':
+        return {
+          ...state,
+          showCardanoWallet: false,
+          showEthereumWallet: false,
+          createSoul: false,
+          createSoulToken: false,
+          createPoap: false,
+          createEvent: false,
+          checkCollection: false,
+          viewToken: true,
+          open: true, 
+          token: action.payload
+        };
+    case 'CLOSE_DRAWER':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
+        open: false
       };
     case 'CREATE_POAP':
       return {
@@ -105,17 +176,25 @@ function drawerReducer(state, action) {
         showCardanoWallet: false,
         showEthereumWallet: false,
         createSoul: false,
+        createSoulToken: false,
         createPoap: true,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
         open: true
       };
-    case 'CLOSE_DRAWER':
+    case 'CREATE_EVENT':
       return {
         ...state,
         showCardanoWallet: false,
         showEthereumWallet: false,
         createSoul: false,
+        createSoulToken: false,
         createPoap: false,
-        open: false
+        createEvent: true,
+        checkCollection: false,
+        viewToken: false,
+        open: true
       };
     default:
       return state;

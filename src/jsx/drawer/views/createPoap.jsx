@@ -53,7 +53,7 @@ export default function CreatePoap() {
             <h4            
               className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold"
             >
-              Create SOUL
+              Create POAP COLLECTION
             </h4>
           </div>          
         </div>      
@@ -93,8 +93,8 @@ export default function CreatePoap() {
             <div className="col-12">
               {/* <label className="form-label">Type</label> */}
               <select className="form-select">
-                <option value="">Choose a Type...</option>
-                <option value="">Normal</option>
+                <option value="">POAP</option>
+{/*                 <option value="">POAP</option> */}
               </select>
             </div>
             <hr className='col-12 my-4 mb-2'></hr>
@@ -102,7 +102,7 @@ export default function CreatePoap() {
               <h6
                 className="py-2"                
               >
-                Is it for an event ?
+                Is it for an event?
               </h6> 
             </div>  
             <div className="col-2">
@@ -132,7 +132,7 @@ export default function CreatePoap() {
               <h6
                 className="py-2"                
               >
-                Are you streamer ?
+                Are you a streamer?
               </h6> 
             </div>  
             <div className="col-2">
