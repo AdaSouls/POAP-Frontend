@@ -70,7 +70,7 @@ export default function ViewToken() {
               </div>             
             </div>
           )}            
-          {token.collection.aikenCourse && (            
+          {token.collection.aikenCourse && token?.token?.metadata?.image && (            
           <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
             <PhotoView src={process.env.PUBLIC_URL + "/diplomas/" + token.token.metadata.image + ".jpg"}>
               <img
