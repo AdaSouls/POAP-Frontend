@@ -16,8 +16,6 @@ export default function EthereumWallet() {
   };  
 
   const onSelectWallet = async (provider, wallet) => {
-    console.log("🚀 ~ onSelectWal ~ wallet:", wallet)
-    console.log("🚀 ~ onSelectWal ~ provider:", provider)
     const newWalletState = await ethereum.setProvider(provider, wallet);
     dispatch({ type: 'UPDATE_ETHEREUM_WALLET', payload: newWalletState });
     closeDrawer();

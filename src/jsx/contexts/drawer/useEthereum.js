@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { ethers, formatEther } from "ethers";
 
+const { REACT_APP_POLYGON_AMOY_RPC } = process.env;
+
 const useEthereum = () => {
   const [provider, setCurrentProvider] = useState(null);
 
@@ -45,7 +47,7 @@ const useEthereum = () => {
       symbol: "MATIC",
       decimals: 18,
     },
-    rpcUrls: ["https://rpc-amoy.polygon.technology/"],
+    rpcUrls: [REACT_APP_POLYGON_AMOY_RPC],
     blockExplorerUrls: ["https://amoy.polygonscan.com/"],
   };
 
@@ -105,6 +107,7 @@ const useEthereum = () => {
     // const api = new ethers.BrowserProvider(window.ethereum, "any", { chainId: DESIRED_CHAIN_ID });
     const networkId = await api.getNetwork();
     const signer = await api.getSigner();
+    console.log("🚀 ~ setProvider ~ signer:", signer)
     const address = await signer.getAddress();
     // const balance = api.getBalance(address);
     // const balanceFormated = formatEther(balance);
