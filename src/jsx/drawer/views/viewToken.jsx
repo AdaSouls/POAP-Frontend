@@ -13,22 +13,25 @@ import PerfectScrollbar from "react-perfect-scrollbar";
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { getPinataUrl } from "../../../services/pinata.service";
+import loadingGif from "../../../images/loading.gif";
 
 export default function ViewToken() {
   const { token } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [ url, setUrl ] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     
     const getUrl = async() => {  
-        const _url = await getPinataUrl(token.token.metadata.image);
-        setUrl(_url); 
-        console.log(_url)   
+      setLoading(true);
+      const _url = await getPinataUrl(token.token.metadata.image);
+      setUrl(_url);        
     }  
     
     if (!url){
       getUrl();
+      setLoading(false);
     }
     
   }, []);
@@ -87,7 +90,7 @@ export default function ViewToken() {
               </div>             
             </div>
           )}            
-          {url && token?.token?.metadata?.image && (
+          {!loading && url && token?.token?.metadata?.image ? (
           <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
             <PhotoView src={url.url}>
               <img
@@ -97,6 +100,15 @@ export default function ViewToken() {
               />
             </PhotoView>
             </PhotoProvider>  
+          ):(
+            <div className="loading-card">
+                        <img                        
+                          src={loadingGif}
+                          width="50"
+                          height="50"
+                          alt=""
+                        />
+                      </div>
           )}
           <div className='text-break'>
             <a class="twitter-share-button"
