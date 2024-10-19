@@ -10,8 +10,9 @@ import {
   isAdmin,
   createEventId,
   getOwner,
-  getEvents
+  getEvents,
 } from "../../../utils/poapContractInteractions";
+import useValidateEventDate from "../../helpers/useValidateEventDate";
 
 export default function CreateEvent() {
   const state = useDrawer();
@@ -20,6 +21,8 @@ export default function CreateEvent() {
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(false);
   const [expiryDate, setExpiryDate] = useState(new Date());
+  const { isDateValid } = useValidateEventDate({ date: expiryDate });
+  console.log("🚀 ~ CreateEvent ~ isDateValid:", isDateValid)
   const [selectedIssuer, setSelectedIssuer] = useState("");
   const [issuers, setIssuers] = useState([
     {
@@ -70,8 +73,15 @@ export default function CreateEvent() {
     eventOrganizer,
     signer
   ) => {
-    const miliseconds = new Date(mintExpiration);
-    const timestamp = Math.floor(miliseconds.getTime() / 1000);
+    let miliseconds;
+    let timestamp;
+    if (!date) {
+      // Timestamp for 19/10/2124 => "no expiration"
+      timestamp = 4884970320;
+    } else {
+      miliseconds = new Date(mintExpiration);
+      timestamp = Math.floor(miliseconds.getTime() / 1000);
+    }
     const event = await createEventId(
       issuerId,
       eventId,
@@ -127,24 +137,10 @@ export default function CreateEvent() {
       state.ethereum.provider.address,
       state.ethereum.provider.signer
     );
-    console.log("🚀 ~ handleSubmit ~ eventCreated:", eventCreated)
-
-    // fetch("http://localhost:8080/event/createAndApproveMock", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify(createInfo),
-    // });
+    console.log("🚀 ~ handleSubmit ~ eventCreated:", eventCreated);
 
     const events = await getEvents(state.ethereum.provider.signer);
     updateEvents(events);
-    // const isSignerAdmin = await isAdmin(address, state.ethereum.provider.signer);
-    // console.log("🚀 ~ handleSubmit ~ isSignerAdmin:", isSignerAdmin)
-    // const isSignerOwner = await getOwner(state.ethereum.provider.signer);
-    // console.log("🚀 ~ handleSubmit ~ isSignerOwner:", isSignerOwner)
-    // closeDrawer();
-    // navigate("/otp-2");
   };
 
   // Use this useEffect to fetch issuers from the backend when it's ready and connected to the frontend
@@ -229,32 +225,6 @@ export default function CreateEvent() {
               onChange={(event) => setDescription(event.target.value)}
             />
           </div>
-          {/* <hr className="col-12 my-4 mb-2"></hr>
-          <div className="col-10">
-            <h6 className="py-2">Is it for an event?</h6>
-          </div>
-          <div className="col-2">
-            <div className="form-check form-switch">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="flexSwitchCheckDefault"
-                onClick={toggleEvent}
-              />
-            </div>
-          </div>
-          {event && (
-            <div className="col-12">
-              <label className="form-label">Description</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Description"
-                name="description"
-              />
-            </div>
-          )} */}
-
           <hr className="col-12 my-3"></hr>
           <div className="col-10">
             <h6 className="py-2">Do you want an expiry date?</h6>
@@ -282,30 +252,6 @@ export default function CreateEvent() {
               />
             </div>
           )}
-          {/* <hr className="col-12 my-3"></hr>
-          <div className="col-10">
-            <h6 className="py-2">Are you a streamer?</h6>
-          </div>
-          <div className="col-2">
-            <div className="form-check form-switch">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="flexSwitchCheckDefault"
-                onClick={toggleStreamer}
-              />
-            </div>
-          </div>
-          {streamer && (
-            <div className="col-12">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Description"
-                name="description"
-              />
-            </div>
-          )} */}
           <hr className="col-12 my-4 mt-3"></hr>
         </form>
       </div>
@@ -317,6 +263,7 @@ export default function CreateEvent() {
           type="submit"
           className="btn btn-gradient btn-block"
           onClick={handleSubmit}
+          disabled={date ? !isDateValid : false}
         >
           Create
         </Button>
