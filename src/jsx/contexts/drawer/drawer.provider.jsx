@@ -158,6 +158,21 @@ function drawerReducer(state, action) {
           open: true, 
           token: action.payload
         };
+    case 'VIEW_EVENT':
+        return {
+          ...state,
+          showCardanoWallet: false,
+          showEthereumWallet: false,
+          createSoul: false,
+          createSoulToken: false,
+          createPoap: false,
+          createEvent: false,
+          checkCollection: false,
+          viewToken: false,
+          viewEvent: true,
+          open: true, 
+          event: action.payload
+        };
     case 'CLOSE_DRAWER':
       return {
         ...state,

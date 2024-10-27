@@ -298,6 +298,7 @@ export const getEvents = async (signer) => {
           maxSupply: maxSupply,
           mintExpiration: mintExpiration,
           eventOrganizer,
+          txHash: event.transactionHash
         });
       }
     }

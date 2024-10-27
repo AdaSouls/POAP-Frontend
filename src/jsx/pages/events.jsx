@@ -18,6 +18,7 @@ import {
   getPoaps,
   getMintedTokensByAddress,
 } from "../../utils/poapContractInteractions";
+import PoapEvent from "../components/poapEvent";
 
 const Events = () => {
   const [loading, setLoading] = useState(true);
@@ -85,6 +86,8 @@ const Events = () => {
     updatePoaps(poaps);
   };
 
+  const adressEvents = events.filter((event) => event.eventOrganizer === provider.address);
+
   return (
     <Layout activeMenu={7}>
       <div className="row">
@@ -134,8 +137,8 @@ const Events = () => {
             </div>
           </div>
         </div>
-
-        <div className="col-xxl-5 col-xl-5 col-lg-4 col-md-7 col-sm-12">
+        {/* Poap tokens, going to be removed from here and put them on wallet */}
+        {/* <div className="col-xxl-5 col-xl-5 col-lg-4 col-md-7 col-sm-12">
           <div className="card card-classic">
             <div className="card-header">
               <h4 className="card-title">Poap Collection</h4>
@@ -312,9 +315,8 @@ const Events = () => {
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="col-xxl-4 col-xl-4 col-lg-4 col-md-12">
+        </div> */}
+        <div className="col-xxl-9 col-xl-9 col-lg-8 col-md-7">
           <div className="card card-classic">
             <div className="card-header">
               <h4 className="card-title">Events</h4>
@@ -345,43 +347,8 @@ const Events = () => {
                     {provider ? (
                       <>
                         {events.length > 0 ? (
-                          events.map((event, index) => {
-                            return (
-                              <tr key={index}>
-                                <td className="table-image">
-                                  <img
-                                    className="rounded-circle"
-                                    src={eventNormal}
-                                    width="47"
-                                    height="47"
-                                    alt=""
-                                  />
-                                </td>
-                                <td>Event ID: {event.eventId}</td>
-                                <td>Max supply: {event.maxSupply}</td>
-                                <td className="table-press-icon">
-                                  <button
-                                    onClick={() =>
-                                      mintPoap(event.issuerId, event.eventId)
-                                    }
-                                    style={{
-                                      border: "none",
-                                      backgroundColor: "rgba(0, 0, 0, 0)",
-                                      color: "rgba(0, 0, 0, 0)",
-                                      width: "auto",
-                                      height: "auto",
-                                    }}
-                                  >
-                                    <img
-                                      src={circlePlus}
-                                      width="30"
-                                      height="30"
-                                      alt=""
-                                    />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
+                          adressEvents.map((event, index) => {
+                            return <PoapEvent event={event} index={index} />;
                           })
                         ) : (
                           <>
@@ -488,14 +455,14 @@ const Events = () => {
                     )}
                   </tbody>
                 </table>
-                {events.length > 4 && (
+                {/* {events.length > 4 && (
                   <Link
                     to={"/collections/all"}
                     className="btn btn-white btn-small btn-block mt-3"
                   >
                     See More
                   </Link>
-                )}
+                )} */}
               </div>
             </div>
           </div>

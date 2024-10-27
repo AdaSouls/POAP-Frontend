@@ -1,5 +1,4 @@
-import React, { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {  useNavigate } from "react-router-dom";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -7,9 +6,7 @@ import {
 import { useState } from "react";
 import { Button } from "react-bootstrap";
 import {
-  isAdmin,
   createEventId,
-  getOwner,
   getEvents,
 } from "../../../utils/poapContractInteractions";
 import useValidateEventDate from "../../helpers/useValidateEventDate";

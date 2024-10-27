@@ -8,6 +8,7 @@ import CreateEvent from './views/createEvent.jsx';
 import CreateSoulToken from './views/createSoulToken.jsx';
 import CheckCollection from './views/checkCollection.jsx';
 import ViewToken from './views/viewToken.jsx';
+import ViewEvent from './views/viewEvent.jsx';
 
 export const Drawer = () => {
 
@@ -44,6 +45,10 @@ export const Drawer = () => {
 
     if (state?.viewToken === true) {
       return <ViewToken />;
+    }
+
+    if (state?.viewEvent === true) {
+      return <ViewEvent />;
     }
 
   };  
