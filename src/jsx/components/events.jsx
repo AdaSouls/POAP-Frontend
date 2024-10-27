@@ -1,12 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import poapNormal from "../../images/svg/poap-normal.svg";
-import eventNormal from "../../images/svg/event-normal.svg";
-import circleArrow from "../../icons/svg/circle-arrow.svg";
+import eventNormal from "../../images/svg/event-normal.svg"
 import circlePlus from "../../icons/svg/circle-plus.svg";
 import collectionMenu from "../../icons/svg/collection-menu.svg";
-import loadingIcon from "../../icons/svg/loading-icon.svg";
-import Layout from "../layout/layout";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -15,16 +11,15 @@ import walletStatus from "../../images/collections/wallet-status.png";
 import {
   getEvents,
   mintToken,
-  getPoaps,
   getMintedTokensByAddress,
 } from "../../utils/poapContractInteractions";
-import PoapEvent from "../components/poapEvent";
+import PoapEvent from "./poapEvent";
 
 const Events = () => {
   const [loading, setLoading] = useState(true);
   const {
     ethereum: { provider },
-    poapCollection: { events, poaps },
+    poapEvents,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
 
@@ -56,7 +51,7 @@ const Events = () => {
 
   useEffect(() => {
     async function fetchData() {
-      if (provider && events.length === 0) {
+      if (provider && poapEvents.length === 0) {
         const events = await getEvents(provider.signer);
         const mintedPoaps = await getMintedTokensByAddress(
           provider.address,
@@ -81,15 +76,15 @@ const Events = () => {
     const poaps = await getMintedTokensByAddress(
       provider.address,
       provider.signer,
-      events
+      poapEvents
     );
     updatePoaps(poaps);
   };
 
-  const adressEvents = events.filter((event) => event.eventOrganizer === provider.address);
+  const adressEvents = poapEvents.filter((event) => event.eventOrganizer === provider.address);
 
   return (
-    <Layout activeMenu={7}>
+    // <Layout activeMenu={7}>
       <div className="row">
         <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
           <div className="card card-create bg-poap card-classic">
@@ -346,7 +341,7 @@ const Events = () => {
                   <tbody>
                     {provider ? (
                       <>
-                        {events.length > 0 ? (
+                        {poapEvents.length > 0 ? (
                           adressEvents.map((event, index) => {
                             return <PoapEvent event={event} index={index} />;
                           })
@@ -468,7 +463,7 @@ const Events = () => {
           </div>
         </div>
       </div>
-    </Layout>
+    // </Layout>
   );
 };
 

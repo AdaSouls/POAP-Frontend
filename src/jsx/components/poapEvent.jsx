@@ -57,7 +57,7 @@ const PoapEvent = ({ event, index }) => {
       <td>Event ID: {event.eventId}</td>
       <td>Issuer ID: {event.issuerId}</td>
       <td>Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)}</td>
-      <td>Max supply: {event.maxSupply}</td>
+      <td>Minted: {event.totalSupply} of {event.maxSupply}</td>
       <td className="table-press-icon">
         <button
           onClick={() => viewEvent()}

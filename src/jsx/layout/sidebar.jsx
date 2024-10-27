@@ -17,7 +17,7 @@ const Sidebar = ({ activeMenu }) => {
   const menus = [
     { id: 1, href: "/", title: "Home", iconActive: homeIcon, iconInactive: homeIcon },
     { id: 2, href: "/search", title: "Search", iconActive: searchIcon, iconInactive: searchIcon },
-    { id: 7, href: "/create-event", title: "Create Event", iconActive: soulsIconActive, iconInactive: soulsIconInactive },
+    // { id: 7, href: "/create-event", title: "Create Event", iconActive: soulsIconActive, iconInactive: soulsIconInactive },
     { id: 3, href: "/souls", title: "Create", iconActive: soulsIconActive, iconInactive: soulsIconInactive },
     { id: 4, href: "/soulbounds-claim", title: "Claim", iconActive: adaSoulsIconActive, iconInactive: adaSoulsIconInactive },
     { id: 5, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive },

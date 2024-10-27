@@ -33,7 +33,8 @@ export function DrawerProvider({ children }) {
     checkCollection: false,
     viewToken: false,
     open: false,
-    poapCollection: {events: [], poaps: []},
+    poapEvents: [],
+    poapCollection: [],
   };
 
   const [state, dispatch] = useReducer(
@@ -215,18 +216,12 @@ function drawerReducer(state, action) {
     case 'UPDATE_EVENTS':
       return {
         ...state,
-        poapCollection: {
-          poaps: state.poapCollection.poaps,
-          events: action.payload
-        }
+        poapEvents: action.payload
       };
     case 'UPDATE_POAPS':
       return {
         ...state,
-        poapCollection: {
-          poaps: action.payload,
-          events: state.poapCollection.events
-        }
+        poapCollection: action.payload
       };
     default:
       return state;

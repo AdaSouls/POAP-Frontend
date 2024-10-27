@@ -292,10 +292,13 @@ export const getEvents = async (signer) => {
 
       // Check if maxSupply is greater than zero
       if (maxSupply > 0) {
+        const eventTotalSupply = await poapContract.getEventTotalSupply(eventId);
+
         eventData.push({
           issuerId: issuerIdNumber,
           eventId: eventIdNumber,
           maxSupply: maxSupply,
+          totalSupply: Number(eventTotalSupply),
           mintExpiration: mintExpiration,
           eventOrganizer,
           txHash: event.transactionHash
