@@ -136,7 +136,7 @@ export default function CreateEvent() {
     );
     console.log("🚀 ~ handleSubmit ~ eventCreated:", eventCreated);
 
-    const events = await getEvents(state.ethereum.provider.signer);
+    const events = await getEvents();
     updateEvents(events);
   };
 

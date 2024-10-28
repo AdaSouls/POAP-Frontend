@@ -1,21 +1,37 @@
-import React, { useState } from "react";
 import Layout from "../layout/layout";
-import underConstruct from "../../images/construct.png";
+import {
+  useDrawer
+} from "../contexts/drawer/drawer.provider";
+import PoapEvent from "../components/poapEvent";
 
 const Search = () => {
-
+  const { poapEvents } = useDrawer();
   return (
     <Layout activeMenu={2}>
-      <div className="row d-flex justify-content-center under-construct mt-8">
-        
-          <img
-          className="align-content-center m-0"
-          src={underConstruct}
-          alt=""
-          />
-          <h5 className="align-content-center m-0">Section under construction</h5>
-        
-      </div>      
+      <div className="row">
+        <div className="col-xxl-12 col-xl-12 col-lg-12 h-auto mh-100">
+          <div className="card">
+            <div className="card-body">
+              <h4 className="card-title">Search</h4>
+            </div>
+          </div>
+          <div className="card p-4">
+            <table className="table table-striped table-small responsive-table">
+              <tbody>
+                {poapEvents.length === 0 ? (
+                  <tr>
+                    <td>No events found</td>
+                  </tr>
+                ) : (
+                  poapEvents.map((event, index) => (
+                    <PoapEvent event={event} index={index} key={index} />
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 };

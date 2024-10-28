@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Layout from "../layout/layout";
 import eternlWallet from "../../images/wallets/eternl.jpg";
 import { Link } from "react-router-dom";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import PoapCollection from "../components/poapCollection";
 
 const Wallet = () => {
 
-  const { cardano, ethereum } = useDrawer();
+  const { cardano, ethereum, poapEvents, poapCollection } = useDrawer();
   const dispatch = useDrawerDispatch();
 
   const showCardanoWallet = () => {
@@ -185,8 +186,8 @@ const Wallet = () => {
             </div>
           </div>
         </div>       
-      </div>  
-      
+      </div>
+      <PoapCollection />
     </Layout>
   );
 };

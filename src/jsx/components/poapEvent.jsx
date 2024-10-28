@@ -1,11 +1,9 @@
-import React from "react";
 import eventNormal from "../../images/svg/event-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 
 const PoapEvent = ({ event, index }) => {
-  // const { } = useDrawer();
   const dispatch = useDrawerDispatch();
 
   const mockData = {
@@ -16,7 +14,6 @@ const PoapEvent = ({ event, index }) => {
     country: "USA",
     startDate: "2024-06-15T09:00:00Z",
     endDate: "2024-08-13T17:00:00Z",
-    // expiryDate: date ? expiryDate : undefined,
     year: 2024,
     eventUrl: "https://www.techinnovationsconf.com",
     virtualEvent: false,

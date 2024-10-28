@@ -251,11 +251,11 @@ export const ownerOf = async (tokenId, signer) => {
   }
 };
 
-export const getEvents = async (signer) => {
+export const getEvents = async () => {
   const poapContract = new ethers.Contract(
     poapContractAddress,
     poapContractAbi,
-    signer
+    wallet
   );
   console.log("In getEvents");
 

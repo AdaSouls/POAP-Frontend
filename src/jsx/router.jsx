@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/index";
 import Souls from "./pages/souls";
@@ -9,15 +9,32 @@ import { Drawer } from "./drawer/drawer";
 import Collection from "./pages/collection-details";
 import SoulboundClaim from "./pages/soulbound-claim";
 import Collections from "./pages/collections";
-import Events from "./components/events";
+// import Events from "./components/events";
+import { useDrawerDispatch } from "./contexts/drawer/drawer.provider";
+import { getEvents } from "../utils/poapContractInteractions";
 
 const Router = () => {
+  const dispatch = useDrawerDispatch();
+  const updateEvents = (events) => {
+    dispatch({
+      type: "UPDATE_EVENTS",
+      payload: events,
+    });
+  };
+
+  useEffect(() => {
+    async function fetchData() {
+      const events = await getEvents();
+      updateEvents(events);
+    }
+    fetchData();
+  }, []);
+
   return (
     <BrowserRouter>
-      
-        <Drawer/>  
-    
-      {/* <BrowserRouter> */}      
+      <Drawer />
+
+      {/* <BrowserRouter> */}
       <div id="main-wrapper">
         <Routes>
           <Route path="/" exact element={<Dashboard />} />
@@ -27,7 +44,7 @@ const Router = () => {
           <Route path="/souls" element={<Souls />} />
           <Route path="/Settings-profile" element={<SettingsProfile />} />
           <Route path="/soulbounds-claim" element={<SoulboundClaim />} />
-          <Route path="/collection/:id" element={<Collection />} />          
+          <Route path="/collection/:id" element={<Collection />} />
           <Route path="/collections/:section" element={<Collections />} />
         </Routes>
       </div>
