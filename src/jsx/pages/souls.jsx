@@ -13,9 +13,12 @@ import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider
 import { getAll, getAllInvited, sign, update } from "../../services/collection.service";
 import { buildSignature, getSigningMessage } from "../../utils/util";
 import walletStatus from "../../images/collections/wallet-status.png";
+import walletEmpty from "../../images/collections/wallet-empty.png";
+import loadingGif from "../../images/loading.gif";
 
 const Souls = () => { 
   const [collections, setCollections] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [invitedCollections, setInvitedCollections] = useState([]);
   const { cardano: { wallet }, ethereum: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
@@ -51,13 +54,16 @@ const Souls = () => {
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       if (!wallet) {
         setCollections([]);
+        setLoading(false);
       } else {
         const _collections = await getAll(wallet.stake_address);
         const _invitedCollections = await getAllInvited(wallet.stake_address);
         setCollections(_collections);
         setInvitedCollections(_invitedCollections);
+        setLoading(false);
       }
     }
     fetchData()
@@ -130,8 +136,8 @@ const Souls = () => {
             <div className="card-header">
               <h4 className="card-title">Collections</h4>
               {wallet && (
-                <span>
-                  <Link to={"/collections/souls"} className="btn btn-gradient btn-icon rounded-lg">
+                <span>                  
+                  <Link to={collections.slice(-4) != 0 ? ('/collections/souls') : ('')} className="btn btn-gradient btn-icon rounded-lg">
                     <img
                       className="p-1"
                       src={collectionMenu}
@@ -147,70 +153,89 @@ const Souls = () => {
               <div className="table-responsive">
                 <table className="table table-striped table-small responsive-table">
                   <tbody>
-                  {wallet ? (
-                  collections.slice(-4).map(c => {
-                        return (
-                          <tr key={c.collectionId} >
-                            <td className="table-image">                      
-                              <img
-                                className="rounded-circle border-1"
-                                src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalIcon)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigIcon)) }
-                                width="47"
-                                height="47"
-                                alt=""
-                              />
-                            </td>                      
-                            <td>
-                              {c.name}
-                            </td>   
-                            
-                               { isUnsigned(c) && (  
-                                <td className="table-press-icon">
-                                <button 
-                                  type="button"
-                                  className='btn btn-gradient btn-icon px-2'
-                                  onClick={() => signCollection(c)}
-                                >Sign</button>
-                                </td>                               
-                               ) }
-                                              
-                           
-                              { allSigned(c) && (                               
-                                 <td className="table-press-icon">
-                                <Link to={`/collection/${c.collectionId}`} className="table-link float-right">
-                                  <img
-                                    src={circleArrow}
-                                    width="30"
-                                    height="30"
-                                    alt=""
-                                  />
-                                </Link>
-                                </td>                              
-                              ) }
-
-                                { !allSigned(c) && !isUnsigned(c) && (                               
-                                 <td className="table-press-icon">
-                                <button 
-                                  type="button"
-                                  className='btn btn-secondary btn-icon float-right'
-                                  onClick={() => checkCollection(c.collectionId, c.name)}
-                                ><img
-                                    src={loadingIcon}
-                                    width="21"
-                                    height="21"
-                                    alt=""
-                                  />
-                                </button>
-                                </td>                              
-                              ) } 
-
+                  { loading ? (
+                    <div className="loading-card">
+                      <img                        
+                        src={loadingGif}
+                        width="50"
+                        height="50"
+                        alt=""
+                      />
+                    </div>
+                  ):(
+                    wallet ? (
+                      collections.slice(-4) <= 0 ? (
+                        <div className="wallet-non-connected">
+                          <img                        
+                            src={walletEmpty}
+                            width="150"
+                            height="140"
+                            alt=""
+                          />
+                          <p className="m-auto text-center">No collections</p>
+                        </div>
+                      ) : (
+                        collections.slice(-4).map(c => {
+                          return (
+                            <tr key={c.collectionId} >
+                              <td className="table-image">                      
+                                <img
+                                  className="rounded-circle border-1"
+                                  src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalIcon)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigIcon)) }
+                                  width="47"
+                                  height="47"
+                                  alt=""
+                                />
+                              </td>                      
+                              <td>
+                                {c.name}
+                              </td>  
                               
-                            
-                          </tr>
-                        )
-                    })               
-                  ) : (
-                    <div className="wallet-non-connected">
+                                 { isUnsigned(c) && (  
+                                  <td className="table-press-icon">
+                                  <button 
+                                    type="button"
+                                    className='btn btn-gradient btn-icon px-2'
+                                    onClick={() => signCollection(c)}
+                                  >Sign</button>
+                                  </td>                               
+                                 ) }
+                                                
+                             
+                                { allSigned(c) && (                               
+                                   <td className="table-press-icon">
+                                  <Link to={`/collection/${c.collectionId}`} className="table-link float-right">
+                                    <img
+                                      src={circleArrow}
+                                      width="30"
+                                      height="30"
+                                      alt=""
+                                    />
+                                  </Link>
+                                  </td>                              
+                                ) }
+  
+                                  { !allSigned(c) && !isUnsigned(c) && (                               
+                                   <td className="table-press-icon">
+                                  <button 
+                                    type="button"
+                                    className='btn btn-secondary btn-icon float-right'
+                                    onClick={() => checkCollection(c.collectionId, c.name)}
+                                  ><img
+                                      src={loadingIcon}
+                                      width="21"
+                                      height="21"
+                                      alt=""
+                                    />
+                                  </button>
+                                  </td>                              
+                                )}
+                            </tr>
+                          )
+                        })
+                      )                                  
+                    ) : (
+                      <div className="wallet-non-connected">
                         <img                        
                           src={walletStatus}
                           width="150"
@@ -218,6 +243,7 @@ const Souls = () => {
                           alt=""
                         />
                       </div>
+                    )
                   )} 
                                    
                   </tbody>                  
@@ -236,7 +262,7 @@ const Souls = () => {
               <h4 className="card-title">Multisig Collections</h4>
               {wallet && (
                 <span>
-                <Link to={"/collections/souls"} className="btn btn-gradient-purple btn-icon rounded-lg">
+                <Link to={invitedCollections.slice(-4) != 0 ? ('/collections/souls') : ('')} className="btn btn-gradient-purple btn-icon rounded-lg">
                   <img
                     className="p-1"
                     src={collectionMenu}
@@ -252,76 +278,101 @@ const Souls = () => {
             <div className="table-responsive">
                 <table className="table table-striped table-small responsive-table">
                   <tbody>
-                  {wallet ? (
-                  invitedCollections.map(c => {
-                        return (
-                          <tr key={c.collectionId} >
-                            <td className="table-image">                      
-                              <img
-                                className="rounded-circle border-1"
-                                src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalIcon)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigIcon)) }
-                                width="47"
-                                height="47"
-                                alt=""
-                              />
-                            </td>                      
-                            <td>
-                              {c.name}
-                            </td>   
-                            
-                               { isUnsigned(c) && (
-                                <td className="table-press-icon">
-                                <button 
-                                  type="button"
-                                  className='btn btn-gradient btn-icon px-2'
-                                  onClick={() => signCollection(c, true)}
-                                >Sign</button>
-                                 </td>
-                               ) }
-                                              
-                            
-                              { allSigned(c) && (
-                                <td className="table-press-icon">
-                                <Link to={`/collection/${c.collectionId}`} className="table-link float-right">
-                                  <img
-                                    src={circleArrow}
-                                    width="30"
-                                    height="30"
-                                    alt=""
-                                  />
-                                </Link>
-                                </td>
-                              ) }
-
-                              { !allSigned(c) && !isUnsigned(c) && (                               
-                                 <td className="table-press-icon">
-                                <button 
-                                  type="button"
-                                  className='btn btn-secondary btn-icon float-right'
-                                  onClick={() => checkCollection()}
-                                ><img
-                                    src={loadingIcon}
-                                    width="21"
-                                    height="21"
-                                    alt=""
-                                  />
-                                </button>
-                                </td>                              
-                              ) }
-                           
-                          </tr>
-                        )
-                    })
+                  { loading ? (
+                    <div className="loading-card">
+                      <img                        
+                        src={loadingGif}
+                        width="50"
+                        height="50"
+                        alt=""
+                      />
+                    </div>
                   ):(
-                    <div className="wallet-non-connected">
-                        <img                        
-                          src={walletStatus}
-                          width="150"
-                          height="140"
-                          alt=""
-                        />
-                      </div>
+                    wallet ? (
+                      invitedCollections.slice(-4) <= 0 ? (
+                        <div className="wallet-non-connected">
+                          <img                        
+                            src={walletEmpty}
+                            width="150"
+                            height="140"
+                            alt=""
+                          />
+                          <p className="m-auto text-center">No multisig collections</p>
+                        </div>
+                      ) : (
+                        invitedCollections.slice(-4).map(c => {
+                          return (
+                            <tr key={c.collectionId} >
+                              <td className="table-image">                      
+                                <img
+                                  className="rounded-circle border-1"
+                                  src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalIcon)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigIcon)) }
+                                  width="47"
+                                  height="47"
+                                  alt=""
+                                />
+                              </td>                      
+                              <td>
+                                {c.name}
+                              </td>   
+                              
+                                 { isUnsigned(c) && (
+                                  <td className="table-press-icon">
+                                  <button 
+                                    type="button"
+                                    className='btn btn-gradient btn-icon px-2'
+                                    onClick={() => signCollection(c, true)}
+                                  >Sign</button>
+                                   </td>
+                                 ) }
+                                                
+                              
+                                { allSigned(c) && (
+                                  <td className="table-press-icon">
+                                  <Link to={`/collection/${c.collectionId}`} className="table-link float-right">
+                                    <img
+                                      src={circleArrow}
+                                      width="30"
+                                      height="30"
+                                      alt=""
+                                    />
+                                  </Link>
+                                  </td>
+                                ) }
+  
+                                { !allSigned(c) && !isUnsigned(c) && (                               
+                                   <td className="table-press-icon">
+                                  <button 
+                                    type="button"
+                                    className='btn btn-secondary btn-icon float-right'
+                                    onClick={() => checkCollection()}
+                                  ><img
+                                      src={loadingIcon}
+                                      width="21"
+                                      height="21"
+                                      alt=""
+                                    />
+                                  </button>
+                                  </td>                              
+                                ) }
+                             
+                            </tr>
+                          )
+                        })
+                      )
+                      
+                      ):(
+                        <div className="wallet-non-connected">
+                            <img                        
+                              src={walletStatus}
+                              width="150"
+                              height="140"
+                              alt=""
+                            />
+                          </div>
+                      ) 
                   )}
+                  
                   </tbody>
                 </table>
                 {invitedCollections.length > 4 && (                  

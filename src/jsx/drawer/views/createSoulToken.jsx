@@ -151,6 +151,7 @@ export default function CreateSoulToken() {
                 onChange={(event) => setAddress(event.target.value)}
               />
             </div>
+            {/* <>
             {collection.aikenCourse && (
               <>
               <div className='col-12 mt-4 mb-2 border'></div>
@@ -197,7 +198,7 @@ export default function CreateSoulToken() {
               )}
               </>
             )}
-                         
+            </>              */}
             <div className='col-12 mt-4 mb-2 border'></div>            
             <div className="col-12">
             <Form.Label>Metadata</Form.Label>

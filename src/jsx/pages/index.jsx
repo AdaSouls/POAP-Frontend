@@ -2,7 +2,7 @@ import React from "react";
 import PerfectScrollbar from "react-perfect-scrollbar";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
-import bannerWelcome from "../../images/banner/banner-welcome.jpg";
+import bannerWelcome from "../../images/banner/banner-welcome.png";
 import adaSolusLogoBanner from "../../images/banner/adasouls-logo-banner.png";
 import Layout from "../layout/layout";
 import { Slide } from 'react-slideshow-image';

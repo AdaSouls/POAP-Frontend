@@ -15,7 +15,7 @@ export default function CardanoWallet() {
     const newWalletState = await cardano.setWallet(wallet);
     dispatch({ type: 'UPDATE_CARDANO_WALLET', payload: newWalletState });
     closeDrawer();
-}
+  }
 
   const supportedWallets = (wallets) => {
     if (typeof window.cardano === 'undefined') {

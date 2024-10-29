@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import collectionNormalImage from "../../../images/svg/collection-normal.svg";
 import collectionMultisigImage from "../../../images/svg/collection-multisig.svg";
@@ -11,10 +12,29 @@ import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
 import PerfectScrollbar from "react-perfect-scrollbar";
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
+import { getPinataUrl } from "../../../services/pinata.service";
+import loadingGif from "../../../images/loading.gif";
 
 export default function ViewToken() {
   const { token } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const [ url, setUrl ] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    
+    const getUrl = async() => {  
+      setLoading(true);
+      const _url = await getPinataUrl(token.token.metadata.image);
+      setUrl(_url);        
+    }  
+    
+    if (!url){
+      getUrl();
+      setLoading(false);
+    }
+    
+  }, []);
 
   const closeDrawer = () => {
     dispatch({
@@ -70,16 +90,25 @@ export default function ViewToken() {
               </div>             
             </div>
           )}            
-          {token.collection.aikenCourse && (            
+          {!loading && url && token?.token?.metadata?.image ? (
           <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
-            <PhotoView src={process.env.PUBLIC_URL + "/diplomas/" + token.token.metadata.image + ".jpg"}>
+            <PhotoView src={url.url}>
               <img
               className="diploma cursor-pointer"
-              src={process.env.PUBLIC_URL + "/diplomas/" + token.token.metadata.image + ".jpg"}
+              src={url.url}
               alt=""
               />
             </PhotoView>
             </PhotoProvider>  
+          ):(
+            <div className="loading-card">
+                        <img                        
+                          src={loadingGif}
+                          width="50"
+                          height="50"
+                          alt=""
+                        />
+                      </div>
           )}
           <div className='text-break'>
             <a class="twitter-share-button"
