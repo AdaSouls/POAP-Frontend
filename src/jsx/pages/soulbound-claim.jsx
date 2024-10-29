@@ -4,7 +4,7 @@ import Layout from "../layout/layout";
 import walletStatus from "../../images/collections/wallet-status.png";
 import { useEffect, useState } from "react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
-import { claimToken } from "../../utils/util";
+import { claimToken, getMaxUtxo } from "../../utils/util";
 import tokenAikenNormal from "../../images/svg/aiken-normal.svg";
 import tokenAikenMultisig from "../../images/svg/aiken-multisig.svg";
 import tokenSoulNormal from "../../images/svg/soul-normal.svg";
@@ -33,9 +33,10 @@ const SoulboundClaim = () => {
       const { collectionId, policyId, policyHash, smartContract, redeem } = token.collection;
       const beneficiary = wallet.utils.getAddressDetails(token.beneficiary).paymentCredential.hash;
 
-      const utxo = (await provider.wallet.getUtxos())[0];
+      const utxo = getMaxUtxo(await provider.wallet.getUtxos());
+      const { txCbor, ...tokenUtxo } = token.mintUtxo;
       try {
-        const { txSigned, claimUtxo } = await claimToken(token.name, token.metadata, policyId, policyHash, beneficiary, smartContract, redeem, token.mintUtxo, utxo, provider);
+        const { txSigned, claimUtxo } = await claimToken(token.name, policyId, policyHash, beneficiary, smartContract, redeem, tokenUtxo, utxo, provider);
         console.log('Tx Cbor:', txSigned.toString());
         const updatedToken = await updateToken(collectionId, token.soulboundId, { claimUtxo });
         setTokens(tokens.map((t) => t.soulboundId != token.soulboundId ? t : {...token, ...updatedToken}))

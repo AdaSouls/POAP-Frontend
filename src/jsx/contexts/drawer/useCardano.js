@@ -1,6 +1,6 @@
 
 import { useCallback, useMemo, useState } from "react";
-import { Lucid } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
+import { Lucid } from "https://unpkg.com/lucid-cardano@0.10.10/web/mod.js"
 import { cborDecode, getStakeAddress } from "../../../utils/util";
 
 function useCardano({ network, provider }) {

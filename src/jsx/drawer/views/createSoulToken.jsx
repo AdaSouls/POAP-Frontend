@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, Form } from 'react-bootstrap';
-import { mintToken } from '../../../utils/util';
+import { getMaxUtxo, mintToken } from '../../../utils/util';
 import { addSoulbound } from '../../../services/token.service';
 import LoadingDrawer from '../loading';
 
@@ -68,7 +68,7 @@ export default function CreateSoulToken() {
     const provider = wallet.provider;
 
     const { collectionId, policyId, policyHash, smartContract, mint, invited } = collection;
-    const utxo = (await provider.wallet.getUtxos())[0];
+    const utxo = getMaxUtxo(await provider.wallet.getUtxos());
     
     const addressDetails = wallet.utils.getAddressDetails(address);
     const beneficiary = addressDetails.paymentCredential.hash;
