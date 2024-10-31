@@ -13576,6 +13576,7 @@ button.dropdown-toggle.btn.btn-primary {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 10;
 }
 
 .ipfs-container-loading img{
