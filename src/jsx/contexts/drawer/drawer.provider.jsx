@@ -3,7 +3,7 @@ import useCardano from './useCardano';
 import useEthereum from './useEthereum';
 import {
   Blockfrost
-} from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js";
+} from "https://unpkg.com/lucid-cardano@0.10.10/web/mod.js";
 
 const DrawerContext = createContext(null);
 const DrawerDispatchContext = createContext(null);

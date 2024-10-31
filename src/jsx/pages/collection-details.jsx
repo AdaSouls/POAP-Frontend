@@ -3,7 +3,7 @@ import { get, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import { useEffect, useState } from "react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
-import { burnToken } from "../../utils/util";
+import { burnToken, getMaxUtxo } from "../../utils/util";
 import collectionNormalImage from "../../images/svg/collection-normal.svg";
 import collectionMultisigImage from "../../images/svg/collection-multisig.svg";
 import collectionMultisigIcon from "../../icons/svg/collection-multisig.svg";
@@ -51,7 +51,7 @@ const Collection = () => {
 
         const { collectionId, policy, policyId, redeem, mint, invited } = collection;
         const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
-        const utxo = (await provider.wallet.getUtxos())[0];
+        const utxo = getMaxUtxo(await provider.wallet.getUtxos());
         const tokenUtxo = token.claimUtxo || token.mintUtxo;
         const signatures = invited.reduce((dict, sig) => ({...dict, [sig.keyHash]: sig.signature}), {});
         const txSigned = await burnToken(token.name, policy, policyId, signatures, mint, redeem, tokenUtxo, utxo, provider);
