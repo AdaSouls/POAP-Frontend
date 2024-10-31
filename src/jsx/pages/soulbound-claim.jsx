@@ -115,13 +115,13 @@ const SoulboundClaim = () => {
                       { 
                       loading ? (
                         <div className="loading-card">
-                        <img                        
-                          src={loadingGif}
-                          width="50"
-                          height="50"
-                          alt=""
-                        />
-                      </div>
+                          <img                        
+                            src={loadingGif}
+                            width="50"
+                            height="50"
+                            alt=""
+                          />
+                        </div>
                       ) : (
                         wallet ? (
                           tokens.filter(claimUtxo => !claimUtxo.claimUtxo) == '' ? (

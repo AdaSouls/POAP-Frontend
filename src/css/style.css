@@ -4948,7 +4948,7 @@ fieldset:disabled .btn {
 }
 
 .card-button.selected{
- border: 1px solid #000;
+ border: 1px solid var(--bs-adasouls-four);
 }
 
 .card-button.connected{
@@ -5222,6 +5222,13 @@ fieldset:disabled .btn {
   height: 50px;
   width: 50px;
   margin: 100px auto;
+}
+
+.loading-collection-card{
+  display: block;
+  height: 35px;
+  width: 35px;
+  margin: 150px auto;
 }
 
 .card-header:first-child {
@@ -13558,9 +13565,38 @@ button.dropdown-toggle.btn.btn-primary {
   margin-bottom: 5px;
 }
 
-.diploma{
+.ipfs-container-loading{
+  position: absolute;
   width: 100%;
-  height: auto;
+  height: 296px;
+  border-radius: 5px;
+  background-color: var(--bs-collection-aiken-normal);
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ipfs-container-loading img{
+  width: 100%;
+}
+
+.ipfs-container{
+  position: relative;
+  width: 100%;
+  height: 296px;
+  border-radius: 5px;
+  background-color: var(--bs-collection-aiken-normal);
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ipfs-container img{  
+  width: 100%;
 }
 
 .drawer-footer{

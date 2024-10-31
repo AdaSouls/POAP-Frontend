@@ -19,7 +19,7 @@ export default function ViewToken() {
   const { token } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [ url, setUrl ] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     
@@ -31,7 +31,9 @@ export default function ViewToken() {
     
     if (!url){
       getUrl();
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+      }, 4000);      
     }
     
   }, []);
@@ -89,27 +91,39 @@ export default function ViewToken() {
                 </div>
               </div>             
             </div>
-          )}            
-          {!loading && url && token?.token?.metadata?.image ? (
-          <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
-            <PhotoView src={url.url}>
-              <img
-              className="diploma cursor-pointer"
-              src={url.url}
-              alt=""
-              />
-            </PhotoView>
-            </PhotoProvider>  
-          ):(
-            <div className="loading-card">
-                        <img                        
-                          src={loadingGif}
-                          width="50"
-                          height="50"
-                          alt=""
-                        />
-                      </div>
+          )}    
+               
+          { loading && (
+            <div className='ipfs-container-loading'> 
+              <div className="loading-card">
+                <img                        
+                  src={loadingGif}
+                  width="50"
+                  height="50"
+                  alt=""
+                />
+              </div> 
+            </div>
+          )} 
+
+          <div className='ipfs-container'> 
+          { url && (
+            token?.token?.metadata?.image ? (                
+              <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
+                <PhotoView src={url.url}>
+                  <img
+                  className="cursor-pointer"
+                  src={url.url}
+                  alt=""
+                  />
+                </PhotoView>
+              </PhotoProvider>               
+            ):(
+              <p>No image</p>
+            )
           )}
+          </div>
+
           <div className='text-break'>
             <a class="twitter-share-button"
               href="https://twitter.com/intent/tweet?text=This%20is%20a%20test%20tweet"

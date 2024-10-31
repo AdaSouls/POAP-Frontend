@@ -20,7 +20,6 @@ export default function CreateSoulToken() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [metadata, setMetadata] = useState(JSON.stringify(placeholderObj, null, 4));
-  const [aikenCourseApproved, setAikenCourseApproved] = useState("");
   const [isMetadataValidJson, setIsMetadataValidJson] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -29,24 +28,6 @@ export default function CreateSoulToken() {
       type: 'CLOSE_DRAWER'
     });
   };  
-
-  console.log(aikenCourseApproved)
-
-  const toggleAikenCourseApproved = () => {
-    if (!aikenCourseApproved){
-      setAikenCourseApproved("aprobado")
-    } else {
-      setAikenCourseApproved("")
-    }
-  }; 
-
-  const toggleAikenCourseApprovedHonor = () => {
-    if (aikenCourseApproved == "honores"){
-      setAikenCourseApproved("aprobado")
-    } else {
-      setAikenCourseApproved("honores")
-    }
-  }; 
 
   const validateJsonFormat = (metadata) => {
     try {
@@ -87,7 +68,7 @@ export default function CreateSoulToken() {
       const success = await provider.awaitTx(txHash);
       console.log('Success?', success);
 
-      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata , aikenCourseApproved });
+      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata });
       collection.tokens.push(token);
       closeDrawer();
       setLoading(false);
@@ -151,54 +132,6 @@ export default function CreateSoulToken() {
                 onChange={(event) => setAddress(event.target.value)}
               />
             </div>
-            {/* <>
-            {collection.aikenCourse && (
-              <>
-              <div className='col-12 mt-4 mb-2 border'></div>
-              <div className="col-10">
-                <h6
-                  className="py-2"                
-                >
-                  Has the student passed the final exam?
-                </h6> 
-              </div>  
-              <div className="col-2">
-                <div className="form-check form-switch">
-                  <input
-                    className="form-check-input cheked"
-                    type="checkbox"
-                    id="flexSwitchCheckDefault"
-                    name='aikenCourseApproved'
-                    onChange={() => toggleAikenCourseApproved()}
-                  />                  
-                </div>
-              </div>
-              { aikenCourseApproved && (
-                <>
-                <div className='col-12 mt-4 mb-2 border'></div>
-                <div className="col-10">
-                  <h6
-                    className="py-2"                
-                  >
-                    Has approved with honors?
-                  </h6> 
-                </div>  
-                <div className="col-2">
-                  <div className="form-check form-switch">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="flexSwitchCheckDefault"
-                      name='aikenCourseApproved'
-                      onChange={() => toggleAikenCourseApprovedHonor()}
-                    />                  
-                  </div>
-                </div>
-                </>
-              )}
-              </>
-            )}
-            </>              */}
             <div className='col-12 mt-4 mb-2 border'></div>            
             <div className="col-12">
             <Form.Label>Metadata</Form.Label>

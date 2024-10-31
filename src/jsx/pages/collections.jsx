@@ -13,11 +13,13 @@ import collectionAikenMultisigIcon from "../../images/svg/collection-aiken-multi
 import collectionOwnerIcon from "../../icons/svg/collection-owner.svg";
 import collectionInvitedIcon from "../../icons/svg/collection-invited.svg";
 import walletStatus from "../../images/collections/wallet-status.png";
+import loadingGif from "../../images/loading.gif";
 
 
 
 const Collections = () => { 
   const getFilter = useParams();
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(null);
   const [collections, setCollections] = useState([]);
   const [invitedCollections, setInvitedCollections] = useState([]);
@@ -42,15 +44,18 @@ const Collections = () => {
   };  
 
   useEffect(() => {
+    setLoading(true);
     setFilter(getFilter);
     async function fetchData() {
       if (!wallet) {
         setCollections([]);
+        setLoading(false);
       } else {
         const _collections = await getAll(wallet.stake_address);
         const _invitedCollections = await getAllInvited(wallet.stake_address);
         setCollections(_collections);
         setInvitedCollections(_invitedCollections);
+        setLoading(false);
       }
     }
     fetchData()
@@ -145,78 +150,114 @@ const Collections = () => {
               </div>
             </div>
           </div>
-        {wallet && (
-          collections.map(c => {
-            console.log(c);
-            return (
-              <div key={c.collectionId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
-                <div className={ (c.invited.length == 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
-                  <div className="card-body card-classic-max-height d-flex justify-content-start">
-                    <img
-                        className="mr-3 rounded-circle mr-0 mr-sm-3"
-                        src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
-                        width="50"
-                        height="50"
-                        alt=""
-                    />
-                    <h4 className="text-capitalize">{c.name}</h4>  
-                  </div>
-                  <div className="d-flex justify-content-between m-3">
-                    <div className="align-content-center mt-4">                    
-                      <ul>
-                        <li className="d-flex justify-content-start">
-                          <img
-                            className="mr-2"
-                            src={ c.invited.length == 1 ? (collectionNormalIcon) : (collectionMultisigIcon) }
-                            width="25"
-                            height="25"
-                            alt=""
-                          />
-                         { c.invited.length == 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
-                        </li>
-                        <li className="d-flex justify-content-start">
-                          <img
-                            className="mr-2"
-                            src={ collectionOwnerIcon }
-                            width="25"
-                            height="25"
-                            alt=""
-                          />
-                          <p className="pt-1">Owner</p>
-                        </li>
-                      </ul>            
+        { loading ? (
+          <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
+          <div className={ "card card-collection card-classic" }>
+            <div className="card-body card-classic-max-height d-flex justify-content-start">
+              <div className="loading-collection-card">
+                <img                        
+                  src={loadingGif}
+                  width="35"
+                  height="35"
+                  alt=""
+                />
+              </div> 
+            </div>
+            <div className="d-flex justify-content-between m-3">
+              <div className="align-content-center mt-4"></div>
+              <div className="align-content-center mt-5"></div> 
+            </div>
+          </div>
+        </div> 
+        ) : (
+          wallet ? (
+            collections.map(c => {
+              console.log(c);
+              return (
+                <div key={c.collectionId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                  <div className={ (c.invited.length == 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
+                    <div className="card-body card-classic-max-height d-flex justify-content-start">
+                      <img
+                          className="mr-3 rounded-circle mr-0 mr-sm-3"
+                          src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                          width="50"
+                          height="50"
+                          alt=""
+                      />
+                      <h4 className="text-capitalize">{c.name}</h4>  
                     </div>
-                    <div className="align-content-center mt-5">                                
-                      {isUnsigned(c) && (
-                        <button 
-                          type="button"
-                          className='btn btn-primary btn-small'
-                          onClick={() => signCollection(c)}
-                        >
-                        Sign
-                        </button>                                                          
-                      )}    
-                      {allSigned(c) && (                               
-                        <Link to={`/collection/${c.collectionId}`} className="btn btn-white btn-small">
-                          View
-                        </Link>                                                    
-                      )}
-                      {!allSigned(c) && !isUnsigned(c) && (     
-                        <button 
-                          type="button"
-                          className='btn btn-secondary btn-small float-right'
-                          onClick={() => checkCollection(c.collectionId, c.name)}
-                        >Pending
-                        </button>                                              
-                      )} 
-                    </div> 
+                    <div className="d-flex justify-content-between m-3">
+                      <div className="align-content-center mt-4">                    
+                        <ul>
+                          <li className="d-flex justify-content-start">
+                            <img
+                              className="mr-2"
+                              src={ c.invited.length == 1 ? (collectionNormalIcon) : (collectionMultisigIcon) }
+                              width="25"
+                              height="25"
+                              alt=""
+                            />
+                           { c.invited.length == 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
+                          </li>
+                          <li className="d-flex justify-content-start">
+                            <img
+                              className="mr-2"
+                              src={ collectionOwnerIcon }
+                              width="25"
+                              height="25"
+                              alt=""
+                            />
+                            <p className="pt-1">Owner</p>
+                          </li>
+                        </ul>            
+                      </div>
+                      <div className="align-content-center mt-5">                                
+                        {isUnsigned(c) && (
+                          <button 
+                            type="button"
+                            className='btn btn-primary btn-small'
+                            onClick={() => signCollection(c)}
+                          >
+                          Sign
+                          </button>                                                          
+                        )}    
+                        {allSigned(c) && (                               
+                          <Link to={`/collection/${c.collectionId}`} className="btn btn-white btn-small">
+                            View
+                          </Link>                                                    
+                        )}
+                        {!allSigned(c) && !isUnsigned(c) && (     
+                          <button 
+                            type="button"
+                            className='btn btn-secondary btn-small float-right'
+                            onClick={() => checkCollection(c.collectionId, c.name)}
+                          >Pending
+                          </button>                                              
+                        )} 
+                      </div> 
+                    </div>
                   </div>
+                </div>                          
+              )
+            })               
+          ) : (
+            <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+              <div className="card card-collection card-classic">
+                <div className="wallet-non-connected">
+                  <img 
+                    className="mt-6"                       
+                    src={walletStatus}
+                    width="150"
+                    height="140"
+                    alt=""
+                  />
                 </div>
-              </div>                          
-            )
-          })               
+              </div>
+            </div>
+          )
         )}
-        {wallet && (
+
+        { wallet && (
           invitedCollections.map(c => {
             console.log(c);
             return (
@@ -287,24 +328,6 @@ const Collections = () => {
             )
           })               
         )}  
-        {!wallet && (
-        <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
-          <div className="card card-collection card-classic">
-            <div className="wallet-non-connected">
-              <img 
-                className="mt-6"                       
-                src={walletStatus}
-                width="150"
-                height="140"
-                alt=""
-              />
-             </div>
-          </div>
-        </div>
-          
-             
-         
-        )} 
       </div>
     </>
     </Layout>
