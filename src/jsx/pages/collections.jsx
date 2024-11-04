@@ -105,7 +105,7 @@ const Collections = () => {
                 <div className="card inner-header">
                     <div className="d-flex justify-content-between m-3">
                         <div className="inner-header-back">
-                            <Link to="/souls" className="simple-link">
+                            <Link to="/create" className="simple-link">
                                 <i className="icofont-rounded-left"></i>   
                             </Link>                            
                         </div>

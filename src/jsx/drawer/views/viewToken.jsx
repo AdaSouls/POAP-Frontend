@@ -14,6 +14,7 @@ import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
 import { getPinataUrl } from "../../../services/pinata.service";
 import loadingGif from "../../../images/loading.gif";
+import { TwitterShareButton, XIcon } from 'react-share';
 
 export default function ViewToken() {
   const { token } = useDrawer();
@@ -123,18 +124,15 @@ export default function ViewToken() {
             )
           )}
           </div>
+          
+          { url && token?.token?.metadata?.image && (
+            <TwitterShareButton url={process.env.PUBLIC_URL + "localhost/diplomas/" + token.token.metadata.image + ".jpg"} title={"Este es mi titulo"} className='mt-2'>
+              <XIcon size={32} round={true} />
+            </TwitterShareButton>
+          )}
+          
 
-          <div className='text-break'>
-            <a class="twitter-share-button"
-              href="https://twitter.com/intent/tweet?text=This%20is%20a%20test%20tweet"
-              data-size="large"
-              data-text="custom share text"
-              data-url="https://dev.twitter.com/web/tweet-button"
-              data-hashtags="example,demo"
-              data-via="twitterdev"
-              data-related="twitterapi,twitter">
-            Share on Twitter
-            </a>
+          <div className='text-break'>  
             <br /><br />
             <h4 className='pb-3 max-width'>Details</h4>
             <p className="m-0 small gray">Soulbound ID</p>
