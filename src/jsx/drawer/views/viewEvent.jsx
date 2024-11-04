@@ -5,10 +5,15 @@ import {
 import collectionMultisigImage from "../../../images/svg/collection-multisig.svg";
 import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
 import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
+import { mintToken, getMintedTokensByAddress } from "../../../utils/poapContractInteractions";
 
 export default function ViewEvent() {
-  const { event } = useDrawer();
-  console.log("🚀 ~ ViewEvent ~ event:", event);
+  const {
+    event,
+    ethereum: { provider },
+    poapEvents,
+  } = useDrawer();
+  // console.log("🚀 ~ ViewEvent ~ event:", event);
   const dispatch = useDrawerDispatch();
   // event: {
   //     title,
@@ -43,6 +48,28 @@ export default function ViewEvent() {
     });
   };
 
+  const updatePoaps = (poaps) => {
+    dispatch({
+      type: "UPDATE_POAPS",
+      payload: poaps,
+    });
+  };
+
+  const mintPoap = async (issuerId, eventId) => {
+    const minting = await mintToken(
+      issuerId,
+      eventId,
+      provider.address,
+      provider.signer
+    );
+    const poaps = await getMintedTokensByAddress(
+      provider.address,
+      provider.signer,
+      poapEvents
+    );
+    updatePoaps(poaps);
+  };
+
   return (
     <div className="d-flex flex-column w-100 h-100 p-3">
       <div className="drawer-header">
@@ -58,7 +85,7 @@ export default function ViewEvent() {
         </div>
       </div>
       <div className="drawer-body">
-        <div className={"card card-button"}>
+        <div className="card card-button">
           <div className="card-body top-area d-flex cursor-default">
             <div className="d-flex align-items-center">
               {/* Modificar la img */}
@@ -76,7 +103,7 @@ export default function ViewEvent() {
             </div>
           </div>
         </div>
-        <div className={"card card-button"}>
+        <div className="card card-button">
           <div className="card-body top-area d-flex cursor-default">
             <div className="d-flex align-items-center">
               {/* Modificar la img */}
@@ -95,38 +122,10 @@ export default function ViewEvent() {
             </div>
           </div>
         </div>
-        <div className={"card card-small"}>
-          <div className="card-body top-area d-flex cursor-default">
-            <div className="d-flex align-items-center">
-              <img
-                className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-                src={collectionMultisigImage}
-                width="60"
-                height="60"
-                alt=""
-              />
-              <div className="media-body">
-                <p className="m-0 small gray">Collection</p>
-                <h4 className="mb-0">{event.mockData.platform}</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="text-break">
-          {/* <a class="twitter-share-button"
-              href="https://twitter.com/intent/tweet?text=This%20is%20a%20test%20tweet"
-              data-size="large"
-              data-text="custom share text"
-              data-url="https://dev.twitter.com/web/tweet-button"
-              data-hashtags="example,demo"
-              data-via="twitterdev"
-              data-related="twitterapi,twitter">
-            Share on Twitter
-            </a>
-            <br /><br /> */}
+        <div className="text-break p-4">
           <h4 className="pb-3 max-width">Details</h4>
           <p className="m-0 small gray">Event ID</p>
-          <p className="m-0 mb-2">{event.event.eventId}</p>
+          <p className="m-0 mb-3">{event.event.eventId}</p>
           <p className="m-0 small gray">Event Organizer</p>
           <p className="m-0 mb-3">{event.event.eventOrganizer}</p>
           {event.event.txHash && (
@@ -135,26 +134,39 @@ export default function ViewEvent() {
               <a
                 href={`https://amoy.polygonscan.com/tx/${event.event.txHash}`}
                 target="_blank"
-              >Link to Amoy Polygon Scan</a>
+              >
+                <p className="m-0 mb-3">Link to Amoy Polygon Scan</p>
+              </a>
             </>
           )}
-          {/* <p className="m-0 mb-2">{event.event.txHash || "Aca iria el hash"}</p> */}
-          {/* <p className="m-0 small gray">Claim</p>
-            <p className="m-0 mb-2">{event.event.claimUtxo?.txHash || "Not Claimed" }</p> */}
           <p className="m-0 small gray">Expiration</p>
-          <p className="m-0 mb-2">
+          <p className="m-0 mb-3">
             {formatDateToDDMMYYYY(event.event.mintExpiration * 1000)}
           </p>
           <p className="m-0 small gray">Start Date</p>
-          <p className="m-0 mb-2">
+          <p className="m-0 mb-3">
             {formatDateToDDMMYYYY(event.mockData.startDate)}
           </p>
           <p className="m-0 small gray">End Date</p>
-          <p className="m-0 mb-2">
+          <p className="m-0 mb-3">
             {formatDateToDDMMYYYY(event.mockData.endDate)}
           </p>
         </div>
       </div>
+      {event.mintable && (
+        <div className="drawer-footer">
+          <div className="d-flex justify-content-center">
+            <button
+              className="btn btn-primary w-100"
+              onClick={() => {
+                mintPoap(event.event.issuerId, event.event.eventId);
+              }}
+            >
+              Mint Poap
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

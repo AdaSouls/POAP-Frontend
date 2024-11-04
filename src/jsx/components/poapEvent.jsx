@@ -1,9 +1,10 @@
 import eventNormal from "../../images/svg/event-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
+import mintTokenButton from "../../icons/svg/mint-token-button.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
-import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import { useDrawerDispatch, useDrawer} from "../contexts/drawer/drawer.provider";
 
-const PoapEvent = ({ event, index }) => {
+const PoapEvent = ({ event, index, mintable, owned }) => {
   const dispatch = useDrawerDispatch();
 
   const mockData = {
@@ -36,13 +37,17 @@ const PoapEvent = ({ event, index }) => {
   const viewEvent = () => {
     dispatch({
       type: "VIEW_EVENT",
-      payload: { event, mockData },
+      payload: { event, mockData, mintable },
     });
   };
 
+  const isExpired = () => {
+    return event.mintExpiration * 1000 <= Date.now();
+  }
+
   return (
     <tr key={index}>
-      <td className="table-image">
+      <td className="table-image col-1">
         <img
           className="rounded-circle"
           src={eventNormal}
@@ -51,22 +56,57 @@ const PoapEvent = ({ event, index }) => {
           alt="Poap Event"
         />
       </td>
-      <td>Event ID: {event.eventId}</td>
-      <td>Issuer ID: {event.issuerId}</td>
-      <td>Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)}</td>
-      <td>Minted: {event.totalSupply} of {event.maxSupply}</td>
-      <td className="table-press-icon">
+      <td className="col-2">Event ID: {event.eventId}</td>
+      <td className="col-2">Issuer ID: {event.issuerId}</td>
+      <td className="col-3">
+        Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)}
+        {isExpired() && (<span
+          alt="Expired"
+          style={{
+            border: "1px solid rgb(232, 75, 75)",
+            borderRadius: "10px",
+            margin: "2px",
+            marginLeft: "10px",
+            padding: "2px 5px",
+            color: "rgb(232, 75, 75)",
+            fontSize: "10px",
+          }}
+        >
+          Expired
+        </span>)}
+      </td>
+      <td className="col-3">
+        Minted: {event.totalSupply} of {event.maxSupply}
+        {owned && (
+          <span
+            alt="Already minted"
+            style={{
+              border: "1px solid rgb(232, 75, 75)",
+              borderRadius: "10px",
+              margin: "2px",
+              marginLeft: "10px",
+              padding: "2px 5px",
+              color: "rgb(232, 75, 75)",
+              fontSize: "10px",
+            }}
+          >
+            Already minted
+          </span>
+        )}
+      </td>
+      <td className="col-1">
         <button
+          className="btn btn-white btn-small"
           onClick={() => viewEvent()}
           style={{
             border: "none",
             backgroundColor: "rgba(0, 0, 0, 0)",
             color: "rgba(0, 0, 0, 0)",
-            width: "auto",
-            height: "auto",
+            // width: "auto",
+            // height: "auto",
           }}
         >
-          <img src={circleArrow} width="30" height="30" alt="" />
+          <img src={isExpired() ? circleArrow : owned ? circleArrow : mintable ? mintTokenButton : circleArrow} alt="" />
         </button>
       </td>
     </tr>

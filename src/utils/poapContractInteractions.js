@@ -272,7 +272,7 @@ export const getEvents = async () => {
       12722760,
       "latest"
     );
-    console.log("🚀 ~ getEvents ~ events:", events);
+    // console.log("🚀 ~ getEvents ~ events:", events);
 
     const eventData = [];
 
@@ -306,7 +306,7 @@ export const getEvents = async () => {
       }
     }
 
-    console.log("Events with non-zero max supply:", eventData);
+    // console.log("Events with non-zero max supply:", eventData);
     return eventData;
   } catch (error) {
     console.error("Failed to get Events:", error);
@@ -396,4 +396,21 @@ export const getMintedTokensByAddress = async (address, signer, events) => {
     console.error("Failed to get minted tokens for the address:", error);
     return [];
   }
+};
+
+export const checkEventsMintedByAddress = (events, mintedTokens) => {
+  // Step 1: Create a Set of minted eventIds for quick lookup
+  const mintedEventIds = new Set(mintedTokens.map(token => token.eventId));
+
+  // Step 2: Map through events to check if each eventId is in mintedEventIds
+  const eventsWithMintStatus = events.map(event => {
+    const isMinted = mintedEventIds.has(event.eventId); // Check if eventId is in the Set
+    return {
+      ...event,
+      isMinted, // Add a property indicating whether the event was minted by this address
+    };
+  });
+
+  // console.log("Events with mint status:", eventsWithMintStatus);
+  return eventsWithMintStatus;
 };

@@ -28,8 +28,6 @@ const PoapCollection = () => {
     });
   };
 
-  [].map((e, i) => console.log(e, i));
-
   useEffect(() => {
     async function fetchData() {
       if (provider && poapCollection.length === 0) {

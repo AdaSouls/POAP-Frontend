@@ -17,6 +17,7 @@ import PoapEvent from "./poapEvent";
 
 const Events = () => {
   const [loading, setLoading] = useState(true);
+  const [addressEvents, setAddressEvents] = useState([]);
   const {
     ethereum: { provider },
     poapEvents,
@@ -60,28 +61,29 @@ const Events = () => {
         );
         updateEvents(events);
         updatePoaps(mintedPoaps);
+        setAddressEvents(poapEvents.filter((event) => event.eventOrganizer === provider.address))
         setLoading(false);
       }
     }
     fetchData();
   }, [provider]);
 
-  const mintPoap = async (issuerId, eventId) => {
-    const minting = await mintToken(
-      issuerId,
-      eventId,
-      provider.address,
-      provider.signer
-    );
-    const poaps = await getMintedTokensByAddress(
-      provider.address,
-      provider.signer,
-      poapEvents
-    );
-    updatePoaps(poaps);
-  };
+  // const mintPoap = async (issuerId, eventId) => {
+  //   const minting = await mintToken(
+  //     issuerId,
+  //     eventId,
+  //     provider.address,
+  //     provider.signer
+  //   );
+  //   const poaps = await getMintedTokensByAddress(
+  //     provider.address,
+  //     provider.signer,
+  //     poapEvents
+  //   );
+  //   updatePoaps(poaps);
+  // };
 
-  const adressEvents = poapEvents.filter((event) => event.eventOrganizer === provider.address);
+
 
   return (
     // <Layout activeMenu={7}>
@@ -163,7 +165,7 @@ const Events = () => {
                     {provider ? (
                       <>
                         {poapEvents.length > 0 ? (
-                          adressEvents.map((event, index) => {
+                          addressEvents.map((event, index) => {
                             return <PoapEvent event={event} index={index} />;
                           })
                         ) : (

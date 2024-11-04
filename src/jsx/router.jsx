@@ -12,6 +12,7 @@ import Collections from "./pages/collections";
 // import Events from "./components/events";
 import { useDrawerDispatch } from "./contexts/drawer/drawer.provider";
 import { getEvents } from "../utils/poapContractInteractions";
+import ClaimMint from "./pages/claim-mint";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -46,6 +47,7 @@ const Router = () => {
           <Route path="/soulbounds-claim" element={<SoulboundClaim />} />
           <Route path="/collection/:id" element={<Collection />} />
           <Route path="/collections/:section" element={<Collections />} />
+          <Route path="claim-mint" element={<ClaimMint />} />
         </Routes>
       </div>
     </BrowserRouter>

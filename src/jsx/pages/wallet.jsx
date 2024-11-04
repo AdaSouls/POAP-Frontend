@@ -187,7 +187,7 @@ const Wallet = () => {
           </div>
         </div>       
       </div>
-      <PoapCollection />
+      {ethereum.provider && <PoapCollection />}
     </Layout>
   );
 };
