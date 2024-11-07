@@ -8,9 +8,10 @@ export async function getPinataUrl(ipfs: string) {
         const response = await fetch(`${API_BASE_URL}/asset/getPinataImage/${ipfs}?code=${CODE_MASTER}`, {
             method: 'POST'
         });
-        if (!response.ok) {
-            throw new Error('Network response was not ok' + response.statusText);
-        }
+        // if (!response.ok) {
+        //     const data = await response.json();
+        //     return data;
+        // }
         const data = await response.json();
         return data;
     } catch (error) {

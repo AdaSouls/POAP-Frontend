@@ -15,6 +15,7 @@ import 'react-photo-view/dist/react-photo-view.css';
 import { getPinataUrl } from "../../../services/pinata.service";
 import loadingGif from "../../../images/loading.gif";
 import { TwitterShareButton, XIcon } from 'react-share';
+import noImage from "../../../images/collections/no-image.png";
 
 export default function ViewToken() {
   const { token } = useDrawer();
@@ -27,7 +28,7 @@ export default function ViewToken() {
     const getUrl = async() => {  
       setLoading(true);
       const _url = await getPinataUrl(token.token.metadata.image);
-      setUrl(_url);        
+      setUrl(_url);      
     }  
     
     if (!url){
@@ -108,8 +109,8 @@ export default function ViewToken() {
           )} 
 
           <div className='ipfs-container'> 
-          { url && (
-            token?.token?.metadata?.image ? (                
+          { url?.status == "ok" ? (
+                            
               <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
                 <PhotoView src={url.url}>
                   <img
@@ -120,13 +121,16 @@ export default function ViewToken() {
                 </PhotoView>
               </PhotoProvider>               
             ):(
-              <p>No image</p>
+              <img
+                src={noImage}
+                alt=""
+              />
             )
-          )}
+          }
           </div>
           
-          { url && token?.token?.metadata?.image && (
-            <TwitterShareButton url={process.env.PUBLIC_URL + "localhost/diplomas/" + token.token.metadata.image + ".jpg"} title={"Este es mi titulo"} className='mt-2'>
+          { url?.status == "ok" && (
+            <TwitterShareButton url={"https://app.adasouls.io/"} title={"AdaSouls is the first open platform to create Soulbound Tokens and POAPs in Cardano"} className='mt-2'>
               <XIcon size={32} round={true} />
             </TwitterShareButton>
           )}
