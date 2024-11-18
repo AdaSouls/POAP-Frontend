@@ -4,6 +4,7 @@ import {
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
 import { getEthereumWallet, ethWallets } from "../../../utils/ethWallets";
+import { connectedToWalletFunction } from "../../toasts/sweetAlerts";
 
 export default function EthereumWallet() {
   const { ethereum } = useDrawer();
@@ -19,6 +20,9 @@ export default function EthereumWallet() {
   const onSelectWallet = async (provider, wallet) => {
     const newWalletState = await ethereum.setProvider(provider, wallet);
     dispatch({ type: "UPDATE_ETHEREUM_WALLET", payload: newWalletState });
+    if(newWalletState){
+      connectedToWalletFunction(newWalletState.address)
+    }
     closeDrawer();
   };
 

@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 import poapContractJson from "./Poap.json";
 import {
   errorFunction,
-  eventCreatedFunction,
+  succesfullActionFunction,
   loadingFunction,
 } from "../jsx/toasts/sweetAlerts";
 // const poapContractJson = require('./Poap.json');
@@ -81,23 +81,18 @@ export const createEventId = async (
         //value: tokenPrice.toString(),
       }
     );
-    console.log("🚀 ~ createReceipt:", createReceipt);
     loadingFunction("Creating Event", "Please wait...", "");
-
-    const receipt = await createReceipt;
-
-    console.log("🚀 ~ receipt:", receipt);
-
-    const waitedReceipt = await receipt.wait();
-    console.log("Transaction submitted:", waitedReceipt);
-    console.log("Transaction confirmed in block:", waitedReceipt.blockNumber);
-    eventCreatedFunction(
+    
+    const receipt = await createReceipt.wait();
+    // console.log("Transaction submitted:", receipt);
+    // console.log("Transaction confirmed in block:", receipt.blockNumber);
+    succesfullActionFunction(
       "Event Created",
       "Event created successfully.",
-      `https://amoy.polygonscan.com/tx/${waitedReceipt.transactionHash}`
+      `https://amoy.polygonscan.com/tx/${receipt.transactionHash}`
     );
 
-    return waitedReceipt;
+    return receipt;
   } catch (error) {
     if (error.code === 4001) {
       console.error("User denied transaction signature:", error);
@@ -194,19 +189,27 @@ export const mintToken = async (
       gasPrice,
       gasLimit: 800000,
     });
-    const txResponse = await createReceipt.wait();
-    console.log("mintToken Transaction response:", txResponse);
-    return txResponse;
+    loadingFunction("Minting Token", "Please wait...", "");
+    const receipt = await createReceipt.wait();
+    // console.log("mintToken Transaction response:", receipt);
+    succesfullActionFunction("Token Minted", "Token minted successfully.", `https://amoy.polygonscan.com/tx/${receipt.transactionHash}`);
+    return receipt;
   } catch (error) {
     if (error.code === 4001) {
       console.error("User denied transaction signature:", error);
-      alert(
-        "Transaction was rejected. Please approve the transaction in MetaMask."
+      // alert(
+      //   "Transaction was rejected. Please approve the transaction in MetaMask."
+      // );
+      errorFunction(
+        "Transaction Rejected",
+        "Please approve the transaction in MetaMask.",
+        ""
       );
     } else {
       // Handle other errors
       console.error("Failed to create event ID:", error);
-      alert("An error occurred while creating the event. Please try again.");
+      errorFunction("Error", "An error occurred while creating the event. Please try again.", "");
+      // alert("An error occurred while creating the event. Please try again.");
     }
   }
 };
