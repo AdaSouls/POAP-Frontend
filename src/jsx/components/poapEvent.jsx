@@ -2,10 +2,16 @@ import eventNormal from "../../images/svg/event-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 import mintTokenButton from "../../icons/svg/mint-token-button.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
-import { useDrawerDispatch, useDrawer} from "../contexts/drawer/drawer.provider";
+import {
+  useDrawerDispatch,
+  useDrawer,
+} from "../contexts/drawer/drawer.provider";
 
 const PoapEvent = ({ event, index, mintable, owned }) => {
   const dispatch = useDrawerDispatch();
+  const {
+    ethereum: { provider },
+  } = useDrawer();
 
   const mockData = {
     title: "Tech Innovations Conference",
@@ -41,9 +47,9 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
     });
   };
 
-  const isExpired = () => {
-    return event.mintExpiration * 1000 <= Date.now();
-  }
+  // const isExpired = () => {
+  //   return event.mintExpiration * 1000 <= Date.now();
+  // };
 
   return (
     <tr key={index}>
@@ -60,20 +66,22 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
       <td className="col-2">Issuer ID: {event.issuerId}</td>
       <td className="col-3">
         Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)}
-        {isExpired() && (<span
-          alt="Expired"
-          style={{
-            border: "1px solid rgb(232, 75, 75)",
-            borderRadius: "10px",
-            margin: "2px",
-            marginLeft: "10px",
-            padding: "2px 5px",
-            color: "rgb(232, 75, 75)",
-            fontSize: "10px",
-          }}
-        >
-          Expired
-        </span>)}
+        {event.isExpired && (
+          <span
+            alt="Expired"
+            style={{
+              border: "1px solid rgb(232, 75, 75)",
+              borderRadius: "10px",
+              margin: "2px",
+              marginLeft: "10px",
+              padding: "2px 5px",
+              color: "rgb(232, 75, 75)",
+              fontSize: "10px",
+            }}
+          >
+            Expired
+          </span>
+        )}
       </td>
       <td className="col-3">
         Minted: {event.totalSupply} of {event.maxSupply}
@@ -106,7 +114,20 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
             // height: "auto",
           }}
         >
-          <img src={isExpired() ? circleArrow : owned ? circleArrow : mintable ? mintTokenButton : circleArrow} alt="" />
+          <img
+            src={
+              !provider
+                ? circleArrow
+                : event.isExpired
+                ? circleArrow
+                : owned
+                ? circleArrow
+                : mintable
+                ? mintTokenButton
+                : circleArrow
+            }
+            alt=""
+          />
         </button>
       </td>
     </tr>

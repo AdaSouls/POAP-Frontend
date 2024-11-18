@@ -4,11 +4,9 @@ import {
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
 import { getEthereumWallet, ethWallets } from "../../../utils/ethWallets";
-import underConstruct from "../../../images/construct.png";
-import { getMintedTokensByAddress } from "../../../utils/poapContractInteractions";
 
 export default function EthereumWallet() {
-  const { ethereum, poapEvents } = useDrawer();
+  const { ethereum } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [selectedWallet, setSelectedWallet] = useState("");
 
@@ -18,26 +16,9 @@ export default function EthereumWallet() {
     });
   };
 
-  const updatePoaps = (poaps) => {
-    dispatch({
-      type: "UPDATE_POAPS",
-      payload: poaps,
-    });
-  };
-
   const onSelectWallet = async (provider, wallet) => {
     const newWalletState = await ethereum.setProvider(provider, wallet);
-    // console.log("🚀 ~ onSelectWal ~ newWalletState.address:", newWalletState.address)
-    // console.log("🚀 ~ onSelectWal ~ newWalletState.signer:", newWalletState.signer)
     dispatch({ type: "UPDATE_ETHEREUM_WALLET", payload: newWalletState });
-    if (newWalletState) {
-      const mintedPoaps = await getMintedTokensByAddress(
-        newWalletState.address,
-        newWalletState.signer,
-        poapEvents
-      );
-      updatePoaps(mintedPoaps);
-    }
     closeDrawer();
   };
 

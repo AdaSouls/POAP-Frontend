@@ -1,14 +1,19 @@
-import { ethers, JsonRpcProvider } from "ethers";
+import { ethers } from "ethers";
 // const { ethers } = require('ethers');
 // import dotenv from "dotenv";
 // import path from "path";
 import poapContractJson from "./Poap.json";
+import {
+  errorFunction,
+  eventCreatedFunction,
+  loadingFunction,
+} from "../jsx/toasts/sweetAlerts";
 // const poapContractJson = require('./Poap.json');
 
 // dotenv.config({ path: path.join(__dirname, "../.././env") });
 
 const {
-  REACT_APP_DEV_OWNER_ADDRESS,
+  // REACT_APP_DEV_OWNER_ADDRESS,
   REACT_APP_POAP_CONTRACT_ADDRESS_POLYGON_AMOY,
   REACT_APP_MNEMONIC_DEVNET,
   REACT_APP_POLYGON_AMOY_RPC,
@@ -76,20 +81,40 @@ export const createEventId = async (
         //value: tokenPrice.toString(),
       }
     );
-    const receipt = await createReceipt.wait();
-    console.log("Transaction submitted:", receipt);
-    console.log("Transaction confirmed in block:", receipt.blockNumber);
-    return receipt;
+    console.log("🚀 ~ createReceipt:", createReceipt);
+    loadingFunction("Creating Event", "Please wait...", "");
+
+    const receipt = await createReceipt;
+
+    console.log("🚀 ~ receipt:", receipt);
+
+    const waitedReceipt = await receipt.wait();
+    console.log("Transaction submitted:", waitedReceipt);
+    console.log("Transaction confirmed in block:", waitedReceipt.blockNumber);
+    eventCreatedFunction(
+      "Event Created",
+      "Event created successfully.",
+      `https://amoy.polygonscan.com/tx/${waitedReceipt.transactionHash}`
+    );
+
+    return waitedReceipt;
   } catch (error) {
     if (error.code === 4001) {
       console.error("User denied transaction signature:", error);
-      alert(
-        "Transaction was rejected. Please approve the transaction in MetaMask."
+      errorFunction(
+        "Transaction Rejected",
+        "Please approve the transaction in MetaMask.",
+        ""
       );
     } else {
       // Handle other errors
       console.error("Failed to create event ID:", error);
-      alert("An error occurred while creating the event. Please try again.");
+      errorFunction(
+        "Error",
+        "An error occurred while creating the event. Please try again.",
+        ""
+      );
+      // alert("An error occurred while creating the event. Please try again.");
     }
   }
 };
@@ -261,8 +286,8 @@ export const getEvents = async () => {
 
   try {
     // Create a filter for the EventCreated event
-    const eventFilter = poapContract.filters;
-    console.log("🚀 ~ getEvents ~ eventFilter:", eventFilter);
+    // const eventFilter = poapContract.filters;
+    // console.log("🚀 ~ getEvents ~ eventFilter:", eventFilter);
     // const eventCreated = poapContract.filters.EventCreated();
     // console.log("🚀 ~ getEvents ~ eventFilter:", eventCreated);
 
@@ -272,6 +297,7 @@ export const getEvents = async () => {
       12722760,
       "latest"
     );
+    // console.log("🚀 ~ getEvents ~ events:", events[0])
     // console.log("🚀 ~ getEvents ~ events:", events);
 
     const eventData = [];
@@ -290,9 +316,14 @@ export const getEvents = async () => {
       const issuerIdNumber = Number(issuerId);
       const eventIdNumber = Number(eventId);
 
+      const isExpired = () => {
+        return mintExpiration * 1000 <= Date.now();
+      };
       // Check if maxSupply is greater than zero
       if (maxSupply > 0) {
-        const eventTotalSupply = await poapContract.getEventTotalSupply(eventId);
+        const eventTotalSupply = await poapContract.getEventTotalSupply(
+          eventId
+        );
 
         eventData.push({
           issuerId: issuerIdNumber,
@@ -301,10 +332,14 @@ export const getEvents = async () => {
           totalSupply: Number(eventTotalSupply),
           mintExpiration: mintExpiration,
           eventOrganizer,
-          txHash: event.transactionHash
+          txHash: event.transactionHash,
+          blockNumber: event.blockNumber,
+          isExpired: isExpired(),
         });
       }
     }
+
+    eventData.sort((a, b) => a.isExpired - b.isExpired);
 
     // console.log("Events with non-zero max supply:", eventData);
     return eventData;
@@ -383,7 +418,7 @@ export const getMintedTokensByAddress = async (address, signer, events) => {
     for (let i = 0; i < balance; i++) {
       const { tokenId, eventId } =
         await poapContract.tokenDetailsOfOwnerByIndex(address, i);
-        const event = eventMap.get(Number(eventId));
+      const event = eventMap.get(Number(eventId));
       tokens.push({
         tokenId: Number(tokenId),
         eventId: Number(eventId),
@@ -400,10 +435,10 @@ export const getMintedTokensByAddress = async (address, signer, events) => {
 
 export const checkEventsMintedByAddress = (events, mintedTokens) => {
   // Step 1: Create a Set of minted eventIds for quick lookup
-  const mintedEventIds = new Set(mintedTokens.map(token => token.eventId));
+  const mintedEventIds = new Set(mintedTokens.map((token) => token.eventId));
 
   // Step 2: Map through events to check if each eventId is in mintedEventIds
-  const eventsWithMintStatus = events.map(event => {
+  const eventsWithMintStatus = events.map((event) => {
     const isMinted = mintedEventIds.has(event.eventId); // Check if eventId is in the Set
     return {
       ...event,

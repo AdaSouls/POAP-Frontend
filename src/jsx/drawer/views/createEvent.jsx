@@ -1,4 +1,4 @@
-import {  useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -19,7 +19,6 @@ export default function CreateEvent() {
   const [date, setDate] = useState(false);
   const [expiryDate, setExpiryDate] = useState(new Date());
   const { isDateValid } = useValidateEventDate({ date: expiryDate });
-  console.log("🚀 ~ CreateEvent ~ isDateValid:", isDateValid)
   const [selectedIssuer, setSelectedIssuer] = useState("");
   const [issuers, setIssuers] = useState([
     {
@@ -134,7 +133,6 @@ export default function CreateEvent() {
       state.ethereum.provider.address,
       state.ethereum.provider.signer
     );
-    console.log("🚀 ~ handleSubmit ~ eventCreated:", eventCreated);
 
     const events = await getEvents();
     updateEvents(events);
