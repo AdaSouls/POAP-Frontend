@@ -12,9 +12,18 @@ export default function CreateSoulToken() {
   const navigate = useNavigate();
   const location = useLocation();
   const placeholderObj = {
-    name: "Charles Hoskinson",
-    status: "Passed",
-    image: "diploma"
+    "city": "Buenos Aires",
+    "country": "Argentina",
+    "course": "Cardano Developers Course",
+    "date": "2024-07-29",
+    "entity": "FRBA UTN",
+    "hours": 50,
+    "image": "ipfs://bafybeihlioutct4g64hbgzcn3vjtn367wyskwwqvyyvvmj7ohtdddtb7a4",
+    "issuer": "IOG",
+    "status": "Completed",
+    "student": "Charles Hoskinson",
+    "type": "Attendance",
+    "venue": "ALBA"
   }
 
   const [name, setName] = useState('');

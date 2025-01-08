@@ -93,7 +93,7 @@ const Dashboard = () => {
                     <div style={{ 'backgroundImage': `url(${images[1]})` }}>
                         <span>
                           <img src={diplomaLogoBanner}></img>
-                          <p><strong>AdaSouls</strong> is testing the issuance of exclusive <strong>Soulbound Credentials</strong> for students of the <strong>Cardano Developers</strong> Course at <strong>ALBA Labs</strong></p>
+                          <p><strong>AdaSouls</strong> is testing the issuance of exclusive <strong>Soulbound Credentials</strong> for students of the <strong>Cardano Developers Course</strong>  at <strong>ALBA Labs</strong></p>
                         </span>
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromText, UTxO, TxSigned, TxComplete, C, M, SignedMessage } from "https://unpkg.com/lucid-cardano@0.10.10/web/mod.js"
+import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromHex as fromHexLucid, fromText, UTxO, TxSigned, TxComplete, C, M, SignedMessage } from "https://unpkg.com/lucid-cardano@0.10.10/web/mod.js"
 import * as CBOR from "cbor-js";
 import blueprint from "./plutus.json";
 import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadata, ClaimRedeemer, SigStructure, CoseSignature, Signatures } from "./types";
@@ -339,6 +339,7 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
         .validTo(validTo)
         .complete({ nativeUplc: false });
     const txComplete = await tx.sign();
+    console.log("TX JSON: ", C.Transaction.from_bytes(fromHexLucid(txComplete.toString())).to_json());
     const lovelaceOut = findLockedLovelace(smartContract, txComplete.txComplete.body().outputs());
     const mintUtxo: UTxO = {
         txCbor: txComplete.toString(),
