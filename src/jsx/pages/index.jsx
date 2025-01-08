@@ -3,7 +3,9 @@ import PerfectScrollbar from "react-perfect-scrollbar";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
 import bannerWelcome from "../../images/banner/banner-welcome.png";
+import bannerDiplomas from "../../images/banner/banner-diplomas.png";
 import adaSolusLogoBanner from "../../images/banner/adasouls-logo-banner.png";
+import diplomaLogoBanner from "../../images/banner/diploma-logo-banner.png";
 import Layout from "../layout/layout";
 import { Slide } from 'react-slideshow-image';
 import 'react-slideshow-image/dist/styles.css';
@@ -17,7 +19,7 @@ const Dashboard = () => {
 
   const images = [
     bannerWelcome,
-    bannerWelcome,
+    bannerDiplomas
   ];
 
   return (
@@ -29,8 +31,11 @@ const Dashboard = () => {
             <div className="card-body card-classic-max-height">
               <h4>Welcome to<br></br><span>AdaSouls</span></h4>
               <br></br>
-              <p>
+              {/* <p>
                 We are a multichain platform. Connect your Cardano wallet to interact with SOUL and your Ethereum wallet to interact with POAP.
+              </p> */}
+              <p>
+                Connect your Cardano wallet to interact with SOUL.
               </p>
               <ul>
                 <li>                  
@@ -47,7 +52,7 @@ const Dashboard = () => {
                   {/* <Link to={"#"}> */}
                   {/* </Link> */}
                 </li>                
-                <li>                  
+                {/* <li>                  
                   { provider ? (
                     <span className="verified">
                     <i className="icofont-check-alt"></i>
@@ -58,9 +63,7 @@ const Dashboard = () => {
                   </span>
                   )}
                   Ethereum Wallet
-                  {/* <Link to={"#"}> */}
-                  {/* </Link> */}
-                </li>
+                </li> */}
               </ul>
             </div>
             <div className="m-3">
@@ -89,8 +92,8 @@ const Dashboard = () => {
                 <div className="each-slide-effect">
                     <div style={{ 'backgroundImage': `url(${images[1]})` }}>
                         <span>
-                          <img src={adaSolusLogoBanner}></img>
-                          <p><strong>AdaSouls</strong> is the first open platform to create <strong>Soulbound Tokens</strong> and <strong>POAPs</strong> in <strong>Cardano</strong></p>
+                          <img src={diplomaLogoBanner}></img>
+                          <p><strong>AdaSouls</strong> is testing the issuance of exclusive <strong>Soulbound Credentials</strong> for students of the <strong>Cardano Developers</strong> Course at <strong>ALBA Labs</strong></p>
                         </span>
                     </div>
                 </div>

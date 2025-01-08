@@ -16,10 +16,10 @@ const Sidebar = ({ activeMenu }) => {
   
   const menus = [
     { id: 1, href: "/", title: "Home", iconActive: homeIcon, iconInactive: homeIcon },
-    { id: 2, href: "/search", title: "Search", iconActive: searchIcon, iconInactive: searchIcon },
+    // { id: 2, href: "/search", title: "Search", iconActive: searchIcon, iconInactive: searchIcon },
     { id: 3, href: "/create", title: "Create", iconActive: soulsIconActive, iconInactive: soulsIconInactive },
-    { id: 4, href: "/mint-claim", title: "Mint or Claim", iconActive: adaSoulsIconActive, iconInactive: adaSoulsIconInactive },
-    { id: 5, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive },
+    { id: 4, href: "/mint-claim", title: "Mint or Claim", iconActive: adaSoulsIconActive, iconInactive: adaSoulsIconInactive }
+    // { id: 5, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive },
     // { id: 6, href: "/settings-profile", title: "Settings", iconActive: settingsIcon, iconInactive: settingsIcon }
     
   ];

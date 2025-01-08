@@ -1,11 +1,11 @@
 import React, {useState} from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { wallets } from '../../../utils/wallets';
 import { Button } from 'react-bootstrap';
 
 export default function CardanoWallet() {
-
+  const navigate = useNavigate();
   const { cardano } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [ selectedWallet, setSelectedWallet ] = useState("");
@@ -13,8 +13,9 @@ export default function CardanoWallet() {
 
   const onSelectWallet = async (wallet) => {
     const newWalletState = await cardano.setWallet(wallet);
-    dispatch({ type: 'UPDATE_CARDANO_WALLET', payload: newWalletState });
+    dispatch({ type: 'UPDATE_CARDANO_WALLET', payload: newWalletState });    
     closeDrawer();
+    navigate('/create');
   }
 
   const supportedWallets = (wallets) => {
