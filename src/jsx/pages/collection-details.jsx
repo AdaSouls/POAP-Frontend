@@ -209,7 +209,7 @@ const Collection = () => {
                                     height="25"
                                     alt=""
                                   />
-                                  <p className="pt-1">Ivited</p> 
+                                  <p className="pt-1">Invited</p> 
                                 </>
                               )}                              
                             </li>
