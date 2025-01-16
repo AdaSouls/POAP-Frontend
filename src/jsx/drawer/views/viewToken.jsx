@@ -130,7 +130,7 @@ export default function ViewToken() {
           </div>
           
           { url?.status == "ok" && (
-            <TwitterShareButton url={"https://app.adasouls.io/"} title={"AdaSouls is the first open platform to create Soulbound Tokens and POAPs in Cardano"} className='mt-2'>
+            <TwitterShareButton url={"https://app.adasouls.io"} title={"@AdaSouls is the first open platform to create Soulbound Tokens and POAPs in #Cardano. Visit "} className='mt-2'>
               <XIcon size={32} round={true} />
             </TwitterShareButton>
           )}
