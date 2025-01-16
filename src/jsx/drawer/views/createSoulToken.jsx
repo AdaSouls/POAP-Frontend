@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button, Form } from 'react-bootstrap';
-import { mintToken } from '../../../utils/util';
+import { getMaxUtxo, mintToken } from '../../../utils/util';
 import { addSoulbound } from '../../../services/token.service';
 import LoadingDrawer from '../loading';
 
@@ -12,14 +12,23 @@ export default function CreateSoulToken() {
   const navigate = useNavigate();
   const location = useLocation();
   const placeholderObj = {
-    name: "Charles Hoskinson",
-    status: "Passed"
+    "city": "Buenos Aires",
+    "country": "Argentina",
+    "course": "Cardano Developers Course",
+    "date": "2024-07-29",
+    "entity": "FRBA UTN",
+    "hours": 50,
+    "image": "ipfs://bafybeihlioutct4g64hbgzcn3vjtn367wyskwwqvyyvvmj7ohtdddtb7a4",
+    "issuer": "IOG",
+    "status": "Completed",
+    "student": "Charles Hoskinson",
+    "type": "Attendance",
+    "venue": "ALBA"
   }
 
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [metadata, setMetadata] = useState(JSON.stringify(placeholderObj, null, 4));
-  const [aikenCourseApproved, setAikenCourseApproved] = useState(false);
   const [isMetadataValidJson, setIsMetadataValidJson] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -28,14 +37,6 @@ export default function CreateSoulToken() {
       type: 'CLOSE_DRAWER'
     });
   };  
-
-  const toggleAikenCourseApproved = () => {
-    if (!aikenCourseApproved){
-      setAikenCourseApproved(true)
-    } else {
-      setAikenCourseApproved(false)
-    }
-  }; 
 
   const validateJsonFormat = (metadata) => {
     try {
@@ -57,7 +58,7 @@ export default function CreateSoulToken() {
     const provider = wallet.provider;
 
     const { collectionId, policyId, policyHash, smartContract, mint, invited } = collection;
-    const utxo = (await provider.wallet.getUtxos())[0];
+    const utxo = getMaxUtxo(await provider.wallet.getUtxos());
     
     const addressDetails = wallet.utils.getAddressDetails(address);
     const beneficiary = addressDetails.paymentCredential.hash;
@@ -76,7 +77,7 @@ export default function CreateSoulToken() {
       const success = await provider.awaitTx(txHash);
       console.log('Success?', success);
 
-      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata , aikenCourseApproved });
+      const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata });
       collection.tokens.push(token);
       closeDrawer();
       setLoading(false);
@@ -140,30 +141,6 @@ export default function CreateSoulToken() {
                 onChange={(event) => setAddress(event.target.value)}
               />
             </div>
-            {collection.aikenCourse && (
-              <>
-              <div className='col-12 mt-4 mb-2 border'></div>
-              <div className="col-10">
-                <h6
-                  className="py-2"                
-                >
-                  Has the student passed the final exam?
-                </h6> 
-              </div>  
-              <div className="col-2">
-                <div className="form-check form-switch">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id="flexSwitchCheckDefault"
-                    name='aikenCourseApproved'
-                    onChange={() => toggleAikenCourseApproved()}
-                  />                  
-                </div>
-              </div>
-              </>
-            )}
-                         
             <div className='col-12 mt-4 mb-2 border'></div>            
             <div className="col-12">
             <Form.Label>Metadata</Form.Label>
@@ -179,7 +156,7 @@ export default function CreateSoulToken() {
               <textarea value={metadata}  onChange={(event) => setMetadata(event.target.value)} />
             </label> */}
             </div>
-            {isMetadataValidJson ? <p>Valid JSON</p> : <p>Invalid JSON</p>}
+            {isMetadataValidJson ? <p>Valid JSON</p> : <p style={{color: "red"}}>Invalid JSON</p>}
             <div className='col-12 mt-4 mb-2 border'></div>                      
             <div className='drawer-footer'>
               {loading ? (

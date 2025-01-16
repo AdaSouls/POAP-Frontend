@@ -1,4 +1,4 @@
-import { Data, MintingPolicy, SpendingValidator } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
+import { Data, MintingPolicy, SpendingValidator } from "https://unpkg.com/lucid-cardano@0.10.10/web/mod.js"
 
 export type AppliedValidators = {
     mint: MintingPolicy;

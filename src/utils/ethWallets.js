@@ -23,17 +23,20 @@ import trustIcon from "../images/wallets/trust.jpg";
 // };
 
 export const getEthereumWallet = (wallet) => {
+  console.log(window.ethereum.providers);
+  
+  console.log("🚀 ~ getEthereumWal ~ window.ethereum:", window.ethereum.selectedAddress)
+
   switch(wallet.name) {
     case "Coinbase":
-      return window.ethereum?.providers?.find((p) => !!p.isCoinbaseWallet) ?? console.log("install")
-      break;
+        return window.ethereum;
       case "MetaMask":
-      return window.ethereum?.providers?.find((p) => !!p.isMetaMask) ?? console.log("install")
-      break;
+        return window.ethereum;
+        //return window.ethereum?.providers?.find((p) => !!p.isMetaMask) ?? console.log("install")
       case "Trust":
-      return window.ethereum?.providers?.find((p) => !!p.isTrustWallet) ?? console.log("install")
-      break;
+        return window.ethereum;
     default:
+        return console.log("install a web3 wallet");
       // code block
   }
 };

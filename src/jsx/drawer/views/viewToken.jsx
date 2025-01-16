@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import collectionNormalImage from "../../../images/svg/collection-normal.svg";
 import collectionMultisigImage from "../../../images/svg/collection-multisig.svg";
@@ -8,10 +9,36 @@ import tokenAikenNormal from "../../../images/svg/aiken-normal.svg";
 import tokenAikenMultisig from "../../../images/svg/aiken-multisig.svg";
 import tokenSoulNormal from "../../../images/svg/soul-normal.svg";
 import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
+import PerfectScrollbar from "react-perfect-scrollbar";
+import { PhotoProvider, PhotoView } from 'react-photo-view';
+import 'react-photo-view/dist/react-photo-view.css';
+import { getPinataUrl } from "../../../services/pinata.service";
+import loadingGif from "../../../images/loading.gif";
+import { TwitterShareButton, XIcon } from 'react-share';
+import noImage from "../../../images/collections/no-image.png";
 
 export default function ViewToken() {
   const { token } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const [ url, setUrl ] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    
+    const getUrl = async() => {  
+      setLoading(true);
+      const _url = await getPinataUrl(token.token.metadata.image);
+      setUrl(_url);      
+    }  
+    
+    if (!url){
+      getUrl();
+      setTimeout(() => {
+        setLoading(false);
+      }, 4000);      
+    }
+    
+  }, []);
 
   const closeDrawer = () => {
     dispatch({
@@ -28,7 +55,7 @@ export default function ViewToken() {
             </div>          
         </div>      
         <div className="drawer-body">
-
+        <PerfectScrollbar>
           {token.collection && (            
             <div className={"card card-button"}>                                 
               <div className="card-body top-area d-flex cursor-default">
@@ -66,37 +93,50 @@ export default function ViewToken() {
                 </div>
               </div>             
             </div>
-          )}            
-          {token.collection.aikenCourse && (            
-            <div className={"card card-small"}>                                 
-              <div className="card-body top-area d-flex cursor-default">
-                <div className="d-flex align-items-center">
-                  <img
-                    className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
-                    width="60"
-                    height="60"
-                    alt=""
-                  /> 
-                  <div className="media-body">
-                    <p className='m-0 small gray'>Collection</p>
-                    <h4 className="mb-0">{token.collection.name}</h4>                    
-                  </div>
-                </div>
-              </div>             
+          )}    
+               
+          { loading && (
+            <div className='ipfs-container-loading'> 
+              <div className="loading-card">
+                <img                        
+                  src={loadingGif}
+                  width="50"
+                  height="50"
+                  alt=""
+                />
+              </div> 
             </div>
+          )} 
+
+          <div className='ipfs-container'> 
+          { url?.status == "ok" ? (
+                            
+              <PhotoProvider maskOpacity={0.5} bannerVisible={false}>
+                <PhotoView src={url.url}>
+                  <img
+                  className="cursor-pointer"
+                  src={url.url}
+                  alt=""
+                  />
+                </PhotoView>
+              </PhotoProvider>               
+            ):(
+              <img
+                src={noImage}
+                alt=""
+              />
+            )
+          }
+          </div>
+          
+          { url?.status == "ok" && (
+            <TwitterShareButton url={"https://app.adasouls.io/"} title={"AdaSouls is the first open platform to create Soulbound Tokens and POAPs in Cardano"} className='mt-2'>
+              <XIcon size={32} round={true} />
+            </TwitterShareButton>
           )}
-          <div className='text-break'>
-            <a class="twitter-share-button"
-              href="https://twitter.com/intent/tweet?text=This%20is%20a%20test%20tweet"
-              data-size="large"
-              data-text="custom share text"
-              data-url="https://dev.twitter.com/web/tweet-button"
-              data-hashtags="example,demo"
-              data-via="twitterdev"
-              data-related="twitterapi,twitter">
-            Share on Twitter
-            </a>
+          
+
+          <div className='text-break'>  
             <br /><br />
             <h4 className='pb-3 max-width'>Details</h4>
             <p className="m-0 small gray">Soulbound ID</p>
@@ -114,7 +154,7 @@ export default function ViewToken() {
             <p className="m-0 small gray">Updated</p>
             <p className="m-0 mb-2">{token.token.updatedAt}</p>
           </div>
-        
+          </PerfectScrollbar>
         </div>
         {/* <div className='drawer-footer'>
           <Link to={"#"} className="btn btn-gradient btn-block">

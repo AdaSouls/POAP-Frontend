@@ -3,7 +3,7 @@ import useCardano from './useCardano';
 import useEthereum from './useEthereum';
 import {
   Blockfrost
-} from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js";
+} from "https://unpkg.com/lucid-cardano@0.10.10/web/mod.js";
 
 const DrawerContext = createContext(null);
 const DrawerDispatchContext = createContext(null);
@@ -29,6 +29,7 @@ export function DrawerProvider({ children }) {
     createSoul: false,
     createSoulToken: false,
     createPoap: false,
+    createEvent: false,
     checkCollection: false,
     viewToken: false,
     open: false
@@ -83,6 +84,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true,
@@ -95,6 +97,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true
@@ -107,6 +110,7 @@ function drawerReducer(state, action) {
         createSoul: true,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true
@@ -119,6 +123,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: true,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: true,
@@ -132,6 +137,7 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: true,
         viewToken: false,
         open: true, 
@@ -145,6 +151,7 @@ function drawerReducer(state, action) {
           createSoul: false,
           createSoulToken: false,
           createPoap: false,
+          createEvent: false,
           checkCollection: false,
           viewToken: true,
           open: true, 
@@ -158,9 +165,36 @@ function drawerReducer(state, action) {
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
+        createEvent: false,
         checkCollection: false,
         viewToken: false,
         open: false
+      };
+    case 'CREATE_POAP':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: true,
+        createEvent: false,
+        checkCollection: false,
+        viewToken: false,
+        open: true
+      };
+    case 'CREATE_EVENT':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: true,
+        checkCollection: false,
+        viewToken: false,
+        open: true
       };
     default:
       return state;

@@ -4,6 +4,7 @@ import CardanoWallet from './views/cardanoWallet.jsx';
 import EthereumWallet from './views/ethereumWallet.jsx';
 import CreateSoul from './views/createSoul.jsx';
 import CreatePoap from './views/createPoap.jsx';
+import CreateEvent from './views/createEvent.jsx';
 import CreateSoulToken from './views/createSoulToken.jsx';
 import CheckCollection from './views/checkCollection.jsx';
 import ViewToken from './views/viewToken.jsx';
@@ -33,6 +34,10 @@ export const Drawer = () => {
       return <CreatePoap />;
     }
 
+    if (state?.createEvent === true) {
+      return <CreateEvent />;
+    }
+
     if (state?.checkCollection === true) {
       return <CheckCollection />;
     }
@@ -45,10 +50,13 @@ export const Drawer = () => {
 
   return (
     
-    <React.Fragment>  
+    <React.Fragment>
+      <>
+      <div className={`background-drawer ${state?.open === true ? 'open' : ''}`}></div>
       <div className={`drawer drawer-cart ${state?.open === true ? 'open' : ''}`}>
         {drawerComponent(state)}
       </div>
+      </>
     </React.Fragment>
 
   );

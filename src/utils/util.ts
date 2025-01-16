@@ -1,4 +1,4 @@
-import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromText, UTxO, TxSigned, TxComplete, C, M, SignedMessage } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js"
+import { Lucid, applyParamsToScript, applyDoubleCborEncoding, Data, SpendingValidator, MintingPolicy, toHex, fromHex as fromHexLucid, fromText, UTxO, TxSigned, TxComplete, C, M, SignedMessage } from "https://unpkg.com/lucid-cardano@0.10.10/web/mod.js"
 import * as CBOR from "cbor-js";
 import blueprint from "./plutus.json";
 import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadata, ClaimRedeemer, SigStructure, CoseSignature, Signatures } from "./types";
@@ -269,13 +269,19 @@ export const buildCollectionContracts = (mint_script: string, redeem_script: str
     };
 }
 
+export function getMaxUtxo(utxos: UTxO[]): UTxO {
+    return utxos.reduce((maxItem, currentItem) =>
+        currentItem.assets.lovelace > maxItem.assets.lovelace ? currentItem : maxItem
+    );
+}
 
-export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signatures: {[key: string]: string}, smartContract: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<{ txComplete: TxComplete, mintUtxo: UTxO }> => {
+
+export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signatures: { [key: string]: string }, smartContract: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<{ txComplete: TxComplete, mintUtxo: UTxO }> => {
     const lovelace = 1_000_000;
     const assetName = `${policyId}${fromText(tokenName)}`;
     const msg = fromText("Issued");
     console.log('Signatures', signatures);
-    
+
     const _signatures: Signatures = new Map(
         Object.entries(signatures).map(([key, s]) => [key, Data.from(s, CoseSignature)])
     )
@@ -284,13 +290,15 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
     console.log('Redeemer:', mintRedeemer);
 
     const data = Data.fromJson({
-        [policyId]: {
-            [tokenName]: {
-                name: tokenName,
-                ...metadata
+        721: {
+            [policyId]: {
+                [tokenName]: {
+                    name: tokenName,
+                    ...metadata
+                }
             }
         }
-    })
+    });
 
     const d: DatumMetadata = {
         policyId: policyHash,
@@ -329,8 +337,9 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
         )
         // .addSignerKey(signerKey)
         .validTo(validTo)
-        .complete();
+        .complete({ nativeUplc: false });
     const txComplete = await tx.sign();
+    console.log("TX JSON: ", C.Transaction.from_bytes(fromHexLucid(txComplete.toString())).to_json());
     const lovelaceOut = findLockedLovelace(smartContract, txComplete.txComplete.body().outputs());
     const mintUtxo: UTxO = {
         txCbor: txComplete.toString(),
@@ -346,19 +355,11 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
     // console.log('Success?', success);
 }
 
-export const claimToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, smartContract: string, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<{ txSigned: TxSigned, claimUtxo: UTxO }> => {
+export const claimToken = async (tokenName: string, policyId: string, policyHash: string, beneficiary: string, smartContract: string, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<{ txSigned: TxSigned, claimUtxo: UTxO }> => {
     const lovelace = 1_000_000;
     const assetName = `${policyId}${fromText(tokenName)}`;
     const msg = fromText("Claimed");
-
-    const data = Data.fromJson({
-        [policyId]: {
-            [tokenName]: {
-                name: tokenName,
-                ...metadata
-            }
-        }
-    });
+    const data = Data.from(tokenUtxo.datum, DatumMetadata).metadata.data;
 
     const d: DatumMetadata = {
         policyId: policyHash,
@@ -372,7 +373,7 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
     }
 
     const datum = Data.to(d, DatumMetadata);
-    // console.log('Datum', datum);
+
     const claimer: ClaimRedeemer = "ClaimToken";
     const claimRedeemer = Data.to(claimer, ClaimRedeemer);
 
@@ -395,7 +396,7 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
             }
         )
         .validTo(validTo)
-        .complete();
+        .complete({ nativeUplc: false });
     const txSigned = await tx.sign().complete();
     const lovelaceOut = findLockedLovelace(smartContract, txSigned.txSigned.body().outputs());
     const claimUtxo: UTxO = {
@@ -408,7 +409,7 @@ export const claimToken = async (tokenName: string, metadata: any, policyId: str
     return { txSigned, claimUtxo };
 }
 
-export const burnToken = async (tokenName: string, policy: Policy, policyId: string, signatures: {[key: string]: string}, mint: MintingPolicy, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<TxSigned> => {
+export const burnToken = async (tokenName: string, policy: Policy, policyId: string, signatures: { [key: string]: string }, mint: MintingPolicy, redeem: SpendingValidator, tokenUtxo: UTxO, utxo: UTxO, lucid: Lucid): Promise<TxSigned> => {
     const assetName = `${policyId}${fromText(tokenName)}`;
 
     const _signatures: Signatures = new Map(
@@ -434,7 +435,7 @@ export const burnToken = async (tokenName: string, policy: Policy, policyId: str
         .attachSpendingValidator(redeem)
         // .addSignerKey(signerKey)
         .validTo(validTo)
-        .complete();
+        .complete({ nativeUplc: false });
     const txSigned = await tx.sign().complete();
     return txSigned;
 }
@@ -471,7 +472,7 @@ export const getStakeAddress = (address: string): string | null => {
         return stakeAddr;
     } catch (err) {
         console.log('Error (getStakeAddress):', err);
-        
+
         return null;
     }
 }
@@ -484,7 +485,7 @@ export const getAddressPaymentKeyHash = (address: string | C.Address | any): str
         return baseAddr?.payment_cred()?.to_keyhash().to_hex();
     } catch (err) {
         console.log('Error (getAddressPaymentKeyHash):', err);
-        
+
         return null;
     }
 }
@@ -505,7 +506,7 @@ export const buildSignature = (addr: string, message: string, signedMessage: Sig
         ))?.as_bytes()!,
     )
     const signature = C.Ed25519Signature.from_bytes(cose.signature()).to_hex();
-  
+
     const sigStruct: SigStructure = {
         context: fromText("Signature1"),
         body_protected: toHex(cose.headers().protected().deserialized_headers().to_bytes()),
@@ -513,7 +514,7 @@ export const buildSignature = (addr: string, message: string, signedMessage: Sig
         external_aad: "",
         payload: message
     };
-  
+
     const coseSig: CoseSignature = {
         key: toHex(pubKey.as_bytes()),
         address: addr,
@@ -521,4 +522,4 @@ export const buildSignature = (addr: string, message: string, signedMessage: Sig
         signature: signature
     };
     return Data.to(coseSig, CoseSignature);
-  }
+}

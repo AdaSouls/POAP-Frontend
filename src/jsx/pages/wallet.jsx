@@ -84,7 +84,7 @@ const Wallet = () => {
                         className="btn btn-gradient btn-small"
                         onClick={showCardanoWallet}
                       >
-                        Connect
+                        Connect Cardano Wallet
                       </button>
                     </div>                  
                   </div>
@@ -94,7 +94,7 @@ const Wallet = () => {
             </div>
           </div>
         </div>
-        <div className="col-xxl-6 col-xl-6 col-lg-12">
+        {/* <div className="col-xxl-6 col-xl-6 col-lg-12">
           <div className="card card-small">
             <div className="card-wallet">
               { ethereum.provider && 
@@ -110,7 +110,6 @@ const Wallet = () => {
                     />
                     <div className="media-body">
                       <h4 className="mb-0 text-capitalize">{ethereum.provider.wallet.name}</h4>
-                      {/* <p className="mb-0">Text</p> */}
                     </div>
                   </div>
                 </div>                                  
@@ -175,7 +174,7 @@ const Wallet = () => {
                         className="btn btn-gradient btn-small"
                         onClick={showEthereumWallet}
                       >
-                        Connect
+                        Connect Ethereum Wallet
                       </button>
                     </div>                  
                   </div>
@@ -184,7 +183,7 @@ const Wallet = () => {
               }
             </div>
           </div>
-        </div>       
+        </div>        */}
       </div>  
       
     </Layout>
