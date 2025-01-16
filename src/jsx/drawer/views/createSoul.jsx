@@ -119,6 +119,7 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Name</label> */}
               <input
+                required
                 type="text"
                 className="form-control"
                 placeholder="Name"
@@ -130,6 +131,7 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Symbol</label> */}
               <input
+                required
                 type="text"
                 className="form-control"
                 placeholder="Symbol"
@@ -141,6 +143,7 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Description</label> */}
               <input
+                required
                 type="text"
                 className="form-control"
                 placeholder="Description"
