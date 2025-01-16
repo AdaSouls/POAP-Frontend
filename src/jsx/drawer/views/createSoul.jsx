@@ -154,7 +154,7 @@ export default function CreateSoul() {
             </div>
             <div className="col-12">
               {/* <label className="form-label">Type</label> */}
-              <select className="form-select" onChange={(event) => setMultisig(event.target.value == 'multisig')}>
+              <select required className="form-select" onChange={(event) => setMultisig(event.target.value == 'multisig')}>
                 <option value="">Choose a Type...</option>
                 <option value="normal">Normal</option>
                 <option value="multisig">Multisig</option>
