@@ -119,6 +119,7 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Name</label> */}
               <input
+                required
                 type="text"
                 className="form-control"
                 placeholder="Name"
@@ -130,6 +131,7 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Symbol</label> */}
               <input
+                required
                 type="text"
                 className="form-control"
                 placeholder="Symbol"
@@ -141,6 +143,7 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Description</label> */}
               <input
+                required
                 type="text"
                 className="form-control"
                 placeholder="Description"
@@ -151,7 +154,7 @@ export default function CreateSoul() {
             </div>
             <div className="col-12">
               {/* <label className="form-label">Type</label> */}
-              <select className="form-select" onChange={(event) => setMultisig(event.target.value == 'multisig')}>
+              <select required className="form-select" onChange={(event) => setMultisig(event.target.value == 'multisig')}>
                 <option value="">Choose a Type...</option>
                 <option value="normal">Normal</option>
                 <option value="multisig">Multisig</option>

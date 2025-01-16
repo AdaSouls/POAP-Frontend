@@ -46,6 +46,7 @@ export async function get(id: string, owner?: string) {
 }
 
 export async function insert(owner: string, payload: any) {
+    console.log("this is the paylooad: ", payload);
     try {
         const response = await fetch(`${API_BASE_URL}/collections/${owner}?code=${CODE_MASTER}`, {
             method: 'POST',
