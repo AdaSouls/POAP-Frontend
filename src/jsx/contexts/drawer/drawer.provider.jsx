@@ -30,6 +30,7 @@ export function DrawerProvider({ children }) {
     createSoulToken: false,
     createPoap: false,
     createEvent: false,
+    createIssuer: false,
     checkCollection: false,
     viewToken: false,
     open: false,
@@ -87,7 +88,11 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         createEvent: false,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: true,
       };
@@ -100,7 +105,11 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         createEvent: false,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: true
       };
@@ -113,7 +122,11 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         createEvent: false,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: true
       };
@@ -126,7 +139,11 @@ function drawerReducer(state, action) {
         createSoulToken: true,
         createPoap: false,
         createEvent: false,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: true,
         collection: action.payload
@@ -140,7 +157,11 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         createEvent: false,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: true,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: true, 
         items: action.payload
@@ -154,7 +175,11 @@ function drawerReducer(state, action) {
           createSoulToken: false,
           createPoap: false,
           createEvent: false,
+          createIssuer: false,
+          createOwner: false,
           checkCollection: false,
+          viewEvent: false,
+          viewPoapToken: false,
           viewToken: true,
           open: true, 
           token: action.payload
@@ -168,11 +193,32 @@ function drawerReducer(state, action) {
           createSoulToken: false,
           createPoap: false,
           createEvent: false,
+          createIssuer: false,
+          createOwner: false,
           checkCollection: false,
-          viewToken: false,
           viewEvent: true,
+          viewPoapToken: true,
+          viewToken: false,
           open: true, 
           event: action.payload
+        };
+    case 'VIEW_POAP_TOKEN':
+        return {
+          ...state,
+          showCardanoWallet: false,
+          showEthereumWallet: false,
+          createSoul: false,
+          createSoulToken: false,
+          createPoap: false,
+          createEvent: false,
+          createIssuer: false,
+          createOwner: false,
+          checkCollection: false,
+          viewEvent: false,
+          viewPoapToken: true,
+          viewToken: false,
+          open: true, 
+          poap: action.payload
         };
     case 'CLOSE_DRAWER':
       return {
@@ -183,7 +229,11 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         createEvent: false,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: false
       };
@@ -196,7 +246,11 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: true,
         createEvent: false,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: true
       };
@@ -209,7 +263,45 @@ function drawerReducer(state, action) {
         createSoulToken: false,
         createPoap: false,
         createEvent: true,
+        createIssuer: false,
+        createOwner: false,
         checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
+        viewToken: false,
+        open: true
+      };
+    case 'CREATE_ISSUER':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: true,
+        createOwner: false,
+        checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
+        viewToken: false,
+        open: true
+      };
+    case 'CREATE_OWNER':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showEthereumWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: false,
+        createOwner: true,
+        checkCollection: false,
+        viewEvent: false,
+        viewPoapToken: false,
         viewToken: false,
         open: true
       };
@@ -217,6 +309,16 @@ function drawerReducer(state, action) {
       return {
         ...state,
         poapEvents: action.payload
+      };
+    case 'UPDATE_ISSUER':
+      return {
+        ...state,
+        poapIssuer: action.payload
+      };
+    case 'UPDATE_OWNER':
+      return {
+        ...state,
+        poapOwner: action.payload
       };
     case 'UPDATE_POAPS':
       return {

@@ -14,7 +14,7 @@ export const connectedToWalletFunction = (address) => {
     // html: `<a href="${link}" target="_blank" style="font-size:0.75em">See on explorer</a>`,
     timer: 5000,
     timerProgressBar: true,
-    heightAuto: true,
+    // heightAuto: true,
     width: "26em",
     didOpen: () => {
       let child = MySwal.getContainer().querySelector(".swal2-title");
@@ -26,7 +26,7 @@ export const connectedToWalletFunction = (address) => {
   })
 };
 
-export const succesfullActionFunction = (title, message, link) => {
+export const succesfullBlockchainCreation = (title, message, link) => {
   MySwal.fire({
     title: title,
     icon: "success",
@@ -37,7 +37,27 @@ export const succesfullActionFunction = (title, message, link) => {
     html: `<a href="${link}" target="_blank" style="font-size:0.75em">See on explorer</a>`,
     timer: 5000,
     timerProgressBar: true,
-    heightAuto: true,
+    // heightAuto: true,
+    width: "26em",
+    didOpen: () => {
+      let child = MySwal.getContainer().querySelector(".swal2-title");
+      let parent = child.parentElement;
+      parent.classList.add("p-2");
+    },
+  })
+};
+export const succesfullMessage = (title, message) => {
+  MySwal.fire({
+    title: title,
+    icon: "success",
+    toast: true,
+    text: message,
+    position: "bottom-right",
+    showConfirmButton: false,
+    // html: `<a href="${link}" target="_blank" style="font-size:0.75em">See on explorer</a>`,
+    timer: 5000,
+    timerProgressBar: true,
+    // heightAuto: true,
     width: "26em",
     didOpen: () => {
       let child = MySwal.getContainer().querySelector(".swal2-title");
@@ -47,7 +67,7 @@ export const succesfullActionFunction = (title, message, link) => {
   })
 };
 
-export const loadingFunction = (title, message, link) => {
+export const loadingFunction = (title, message) => {
   MySwal.fire({
     title: title,
     icon: "info",
@@ -58,7 +78,27 @@ export const loadingFunction = (title, message, link) => {
     // html: `<a href="${link}" target="_blank" style="font-size:0.75em">See on explorer</a>`,
     timer: 5000,
     timerProgressBar: true,
-    heightAuto: true,
+    // heightAuto: true,
+    width: "26em",
+    didOpen: () => {
+      let child = MySwal.getContainer().querySelector(".swal2-title");
+      let parent = child.parentElement;
+      parent.classList.add("p-2");
+    },
+  })
+};
+export const informationFunction = (title, message) => {
+  MySwal.fire({
+    title: title,
+    icon: "info",
+    toast: true,
+    text: message,
+    position: "bottom-right",
+    showConfirmButton: false,
+    // html: `<a href="${link}" target="_blank" style="font-size:0.75em">See on explorer</a>`,
+    timer: 5000,
+    timerProgressBar: true,
+    // heightAuto: true,
     width: "26em",
     didOpen: () => {
       let child = MySwal.getContainer().querySelector(".swal2-title");

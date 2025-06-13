@@ -3,12 +3,11 @@ import {
   useDrawer
 } from "../contexts/drawer/drawer.provider";
 import PoapEvent from "../components/poapEvent";
-import { checkEventsMintedByAddress } from "../../utils/poapContractInteractions";
 
 const Search = () => {
   const { poapEvents, poapCollection } = useDrawer();
 
-  const events = checkEventsMintedByAddress(poapEvents, poapCollection)
+  const approvedEvents = poapEvents.filter(event => event.approved === "Approved");
 
   return (
     <Layout activeMenu={2}>
@@ -27,7 +26,7 @@ const Search = () => {
                     <td>No events found</td>
                   </tr>
                 ) : (
-                  events.map((event, index) => (
+                  approvedEvents.map((event, index) => (
                     <PoapEvent event={event} index={index} key={index} owned={event.isMinted}/>
                   ))
                 )}

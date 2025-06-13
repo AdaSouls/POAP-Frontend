@@ -9,6 +9,9 @@ import CreateSoulToken from './views/createSoulToken.jsx';
 import CheckCollection from './views/checkCollection.jsx';
 import ViewToken from './views/viewToken.jsx';
 import ViewEvent from './views/viewEvent.jsx';
+import CreateIssuer from './views/createIssuer.jsx';
+import CreateOwner from './views/createOwner.jsx';
+import ViewPoap from './views/viewPoap.jsx';
 
 export const Drawer = () => {
 
@@ -39,6 +42,14 @@ export const Drawer = () => {
       return <CreateEvent />;
     }
 
+    if (state?.createIssuer === true) {
+      return <CreateIssuer />;
+    }
+
+    if (state?.createOwner === true) {
+      return <CreateOwner />;
+    }
+
     if (state?.checkCollection === true) {
       return <CheckCollection />;
     }
@@ -49,6 +60,10 @@ export const Drawer = () => {
 
     if (state?.viewEvent === true) {
       return <ViewEvent />;
+    }
+
+    if (state?.viewPoapToken === true) {
+      return <ViewPoap />;
     }
 
   };  

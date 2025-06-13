@@ -36,8 +36,9 @@ const useEthereum = () => {
   //   blockExplorerUrls: ["https://explorer-devnet-cardano-evm.c1.milkomeda.com"],
   // };
 
+  /** 
   // POLYGON AMOY TESTNET
-  //
+
   const DESIRED_CHAIN_ID = "0x13882";
   const DESIRED_CHAIN_PARAMS = {
     chainId: DESIRED_CHAIN_ID,
@@ -49,6 +50,25 @@ const useEthereum = () => {
     },
     rpcUrls: [REACT_APP_POLYGON_AMOY_RPC],
     blockExplorerUrls: ["https://amoy.polygonscan.com/"],
+  };
+   */
+
+
+  /**
+  // HARDHAT LOCALHOST
+   */
+  // chain id: 31337
+  const DESIRED_CHAIN_ID = "0x7a69";
+  const DESIRED_CHAIN_PARAMS = {
+    chainId: DESIRED_CHAIN_ID,
+    chainName: "Localhost 8545",
+    nativeCurrency: {
+      name: "ETH",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpcUrls: ["http://localhost:8545"],
+    // blockExplorerUrls: ["https://amoy.polygonscan.com/"],
   };
 
   const setProvider = useCallback(async (provider, wallet) => {

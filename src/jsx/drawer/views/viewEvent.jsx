@@ -5,46 +5,33 @@ import {
 import collectionMultisigImage from "../../../images/svg/collection-multisig.svg";
 import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
 import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
-import { mintToken, getMintedTokensByAddress } from "../../../utils/poapContractInteractions";
+import { mintToken } from "../../../utils/poapContractInteractions";
+import { isPoapMintable } from "../../../utils/mitableChecks";
+import { Button } from "react-bootstrap";
+import {
+  createOwnerService,
+  getOwnerPoapsService,
+} from "../../../services/paima.service";
+import EventBody from "../../components/eventBody";
 
 export default function ViewEvent() {
   const {
     event,
     ethereum: { provider },
     poapEvents,
+    poapOwner,
   } = useDrawer();
-  // console.log("🚀 ~ ViewEvent ~ event:", event);
   const dispatch = useDrawerDispatch();
-  // event: {
-  //     title,
-  //     description,
-  //     city: "San Francisco",
-  //     country: "USA",
-  //     startDate: "2024-06-15T09:00:00Z",
-  //     endDate: "2024-08-13T17:00:00Z",
-  //     expiryDate: date ? expiryDate : undefined,
-  //     year: 2024,
-  //     eventUrl: "https://www.techinnovationsconf.com",
-  //     virtualEvent: false,
-  //     image: "https://www.example.com/event-image.jpg",
-  //     secretCode: 12345,
-  //     eventTemplateId: 101,
-  //     email: "info@techinnovationsconf.com",
-  //     requestedCodes: 500,
-  //     privateEvent: true,
-  //     purpose: "Networking and knowledge sharing",
-  //     platform: "Eventbrite",
-  //     amountOfAttendees: 300,
-  //     account: "TechCon2024",
-  //     eventType: "Virtual",
-  //     poapType: "Poap",
-  //     poapsToBeMinted: 50,
-  //     mintedPoaps: 0,
-  //   }
 
   const closeDrawer = () => {
     dispatch({
       type: "CLOSE_DRAWER",
+    });
+  };
+
+  const showEthereumWallet = () => {
+    dispatch({
+      type: "SHOW_ETHEREUM_WALLET",
     });
   };
 
@@ -55,25 +42,54 @@ export default function ViewEvent() {
     });
   };
 
+  const updateOwner = (owner) => {
+    dispatch({
+      type: "UPDATE_OWNER",
+      payload: owner,
+    });
+  };
+
   const mintPoap = async (issuerId, eventId) => {
+    if (!poapOwner) {
+      console.log("🚀 ~ mintPoap ~ poapOwner:", poapOwner);
+      const newOwner = await createOwnerService({
+        address: provider.address.toLowerCase(),
+      });
+      console.log("🚀 ~ mintPoap ~ newOwner:", newOwner);
+      if (!newOwner) {
+        console.error("Error creating owner on DB");
+        return;
+      } else {
+        console.log("🚀 ~ mintPoap ~ updating owner context");
+        updateOwner(newOwner);
+      }
+    }
     const minting = await mintToken(
       issuerId,
       eventId,
       provider.address,
-      provider.signer
+      provider
     );
-    const poaps = await getMintedTokensByAddress(
-      provider.address,
-      provider.signer,
-      poapEvents
-    );
-    updatePoaps(poaps);
+    console.log("🚀 ~ mintPoap ~ minting:", minting);
+    if (!minting) {
+      console.error("Error minting POAP");
+      return;
+    } else {
+      const poaps = await getOwnerPoapsService(provider.address.toLowerCase());
+      updatePoaps(poaps);
+    }
+    closeDrawer();
+  };
+
+  // Helper function to check if a value should be displayed
+  const hasValue = (value) => {
+    return value !== null && value !== undefined && value !== "";
   };
 
   return (
-    <div className="d-flex flex-column w-100 h-100 p-3">
+    <div className="container absolute top-0 start-0 w-100 h-100 p-3 overflow-auto">
       <div className="drawer-header">
-        <div className="d-flex justify-content-start ">
+        <div className="d-flex justify-content-start">
           <button
             className="btn btn-close align-content-center px-1 mt-2 position-absolute"
             onClick={closeDrawer}
@@ -84,89 +100,35 @@ export default function ViewEvent() {
           </h4>
         </div>
       </div>
+
       <div className="drawer-body">
-        <div className="card card-button">
-          <div className="card-body top-area d-flex cursor-default">
-            <div className="d-flex align-items-center">
-              {/* Modificar la img */}
-              <img
-                className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-                src={collectionMultisigImage}
-                width="60"
-                height="60"
-                alt=""
-              />
-              <div className="media-body">
-                <p className="m-0 small gray">Event Title</p>
-                <h4 className="mb-0">{event.mockData.title}</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="card card-button">
-          <div className="card-body top-area d-flex cursor-default">
-            <div className="d-flex align-items-center">
-              {/* Modificar la img */}
-              <img
-                className="mr-3 mr-0 mr-sm-3"
-                src={tokenSoulMultisig}
-                width="60"
-                height="60"
-                alt=""
-              />
-              <div className="media-body">
-                <p className="m-0 small gray">Poap Token</p>
-                <h4 className="mb-0">"Something to see"</h4>
-                {/* <h4 className="mb-0">{event.mockData.description}</h4> */}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="text-break p-4">
-          <h4 className="pb-3 max-width">Details</h4>
-          <p className="m-0 small gray">Event ID</p>
-          <p className="m-0 mb-3">{event.event.eventId}</p>
-          <p className="m-0 small gray">Event Organizer</p>
-          <p className="m-0 mb-3">{event.event.eventOrganizer}</p>
-          {event.event.txHash && (
-            <>
-              <p className="m-0 small gray">Creation Hash</p>
-              <a
-                href={`https://amoy.polygonscan.com/tx/${event.event.txHash}`}
-                target="_blank"
-              >
-                <p className="m-0 mb-3">Link to Amoy Polygon Scan</p>
-              </a>
-            </>
-          )}
-          <p className="m-0 small gray">Expiration</p>
-          <p className="m-0 mb-3">
-            {formatDateToDDMMYYYY(event.event.mintExpiration * 1000)}
-          </p>
-          <p className="m-0 small gray">Start Date</p>
-          <p className="m-0 mb-3">
-            {formatDateToDDMMYYYY(event.mockData.startDate)}
-          </p>
-          <p className="m-0 small gray">End Date</p>
-          <p className="m-0 mb-3">
-            {formatDateToDDMMYYYY(event.mockData.endDate)}
-          </p>
+        <EventBody event={event.event} />
+      </div>
+
+      <div className="drawer-footer">
+        <div className="d-flex justify-content-center">
+          <Button
+            className="btn btn-gradient btn-block"
+            onClick={() => {
+              if (!provider?.address) {
+                showEthereumWallet();
+              } else {
+                mintPoap(
+                  event.event.issuerIdInContract,
+                  event.event.eventIdInContract
+                );
+              }
+            }}
+            disabled={!provider?.address ? false : !isPoapMintable(event.event)}
+          >
+            {!provider?.address
+              ? "Connect to wallet"
+              : isPoapMintable(event.event)
+              ? "Mint Poap"
+              : "Already Minted"}
+          </Button>
         </div>
       </div>
-      {event.mintable && (
-        <div className="drawer-footer">
-          <div className="d-flex justify-content-center">
-            <button
-              className="btn btn-primary w-100"
-              onClick={() => {
-                mintPoap(event.event.issuerId, event.event.eventId);
-              }}
-            >
-              Mint Poap
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

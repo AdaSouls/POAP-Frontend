@@ -9,10 +9,9 @@ import { Drawer } from "./drawer/drawer";
 import Collection from "./pages/collection-details";
 import SoulboundClaim from "./pages/soulbound-claim";
 import Collections from "./pages/collections";
-// import Events from "./components/events";
 import { useDrawerDispatch } from "./contexts/drawer/drawer.provider";
-import { getEvents } from "../utils/poapContractInteractions";
 import ClaimMint from "./pages/claim-mint";
+import { getAllEventsService, getAllPoapsService } from "../services/paima.service";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -25,7 +24,8 @@ const Router = () => {
 
   useEffect(() => {
     async function fetchData() {
-      const events = await getEvents();
+      const events = await getAllEventsService();
+      await getAllPoapsService();
       updateEvents(events);
     }
     fetchData();

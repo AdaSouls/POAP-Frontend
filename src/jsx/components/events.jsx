@@ -6,16 +6,47 @@ import {
   useDrawerDispatch,
 } from "../contexts/drawer/drawer.provider";
 import PoapEvents from "./poapEvents";
+import {
+  getIssuerByAddressService,
+  getOwnerPoapsService,
+  getOwnerByAddressService
+} from "../../services/paima.service";
+import { informationFunction } from "../toasts/sweetAlerts";
 
 const Events = () => {
   const [addressEvents, setAddressEvents] = useState([]);
   const {
     ethereum: { provider },
     poapEvents,
+    poapIssuer,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
 
-  const createEvent = () => {
+  const createEvent = async () => {
+    if (provider && poapIssuer === null) {
+      console.log(
+        "🚀 ~ createEvent ~ poapIssuer === null:",
+        poapIssuer === null
+      );
+      const issuer = await getIssuerByAddressService(
+        provider.address.toLowerCase()
+      );
+      if (!issuer) {
+        informationFunction(
+          "Wallet has no Issuer profile",
+          "Please create an Issuer profile to create POAP events."
+        );
+        dispatch({
+          type: "CREATE_ISSUER",
+        });
+        return;
+      } else {
+        dispatch({
+          type: "UPDATE_ISSUER",
+          payload: issuer,
+        });
+      }
+    }
     dispatch({
       type: "CREATE_EVENT",
     });
@@ -27,17 +58,82 @@ const Events = () => {
     });
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      if (provider && poapEvents.length > 0) {
-        setAddressEvents(
-          poapEvents.filter(
-            (event) => event.eventOrganizer === provider.address
-          )
+  const updateIssuer = (issuer) => {
+    dispatch({
+      type: "UPDATE_ISSUER",
+      payload: issuer,
+    });
+  };
+
+  const updatePoaps = (poaps) => {
+    dispatch({
+      type: "UPDATE_POAPS",
+      payload: poaps,
+    });
+  };
+
+  const updateOwner = (owner) => {
+    dispatch({
+      type: "UPDATE_OWNER",
+      payload: owner,
+    });
+  };
+
+  function updateIssuersEvents() {
+    if (provider && poapEvents.length > 0) {
+      console.log(
+        "🚀 ~ updateIssuersEvents ~ poapEvents.length:",
+        poapEvents.length
+      );
+      const ownersEvents = poapEvents.filter((event) => {
+        return (
+          event?.issuerUuid === poapIssuer?.issuerUuid &&
+          event?.approved === "Approved"
         );
-      }
+      });
+      console.log("🚀 ~ ownersEvents ~ ownersEvents:", ownersEvents);
+      setAddressEvents(ownersEvents);
     }
-    fetchData();
+  }
+
+  async function fetchIssuer() {
+    if (provider && provider.address) {
+      const issuer = await getIssuerByAddressService(
+        provider.address.toLowerCase()
+      );
+      updateIssuer(issuer);
+    }
+  }
+
+  async function fetchOwner() {
+    if (provider && provider.address) {
+      const owner = await getOwnerByAddressService(
+        provider.address.toLowerCase()
+      );
+      updateOwner(owner);
+    }
+  }
+
+  async function getOwnerPoaps() {
+    if (provider && provider.address) {
+      const poaps = await getOwnerPoapsService(provider.address);
+      if (!poaps) {
+        console.error("Error getting POAPs for address", provider.address);
+        return;
+      }
+      updatePoaps(poaps);
+    }
+  }
+
+  useEffect(() => {
+    console.log("Inside useEffect for fetching address events");
+    updateIssuersEvents();
+  }, [provider, poapEvents, poapIssuer]);
+
+  useEffect(() => {
+    fetchIssuer();
+    fetchOwner();
+    getOwnerPoaps();
   }, [provider, poapEvents]);
 
   return (
@@ -46,7 +142,7 @@ const Events = () => {
         <div className="card card-create bg-poap card-classic">
           <div
             className="card-body card-classic-max-height"
-            onClick={provider ? createEvent : console.log("nada")}
+            onClick={provider && createEvent}
           >
             <h4>
               CREATE <span> POAP EVENT</span>

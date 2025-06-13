@@ -5,7 +5,7 @@ import { ethers } from "ethers";
 import poapContractJson from "./Poap.json";
 import {
   errorFunction,
-  succesfullActionFunction,
+  succesfullBlockchainCreation,
   loadingFunction,
 } from "../jsx/toasts/sweetAlerts";
 // const poapContractJson = require('./Poap.json');
@@ -17,32 +17,41 @@ const {
   REACT_APP_POAP_CONTRACT_ADDRESS_POLYGON_AMOY,
   REACT_APP_MNEMONIC_DEVNET,
   REACT_APP_POLYGON_AMOY_RPC,
+  REACT_APP_POAP_CONTRACT_ADDRESS_HARDHAT,
+  REACT_APP_HARDHAT_PK_0,
 } = process.env;
 
-// const providerRPC = {
-//   name: "localhost",
-//   rpc: "http://localhost:8545",
-//   chainId: 31337,
-// };
+// Hardhat Localhost Provider
 const providerRPC = {
-  name: "Amoy",
-  rpc: REACT_APP_POLYGON_AMOY_RPC,
-  chainId: 80002,
+  name: "localhost",
+  rpc: "http://localhost:8545",
+  chainId: 31337,
 };
+
+// Polygon Amoy Provider
+// const providerRPC = {
+//   name: "Amoy",
+//   rpc: REACT_APP_POLYGON_AMOY_RPC,
+//   chainId: 80002,
+// };
 
 const provider = new ethers.JsonRpcProvider(providerRPC.rpc, {
   chainId: providerRPC.chainId,
   name: providerRPC.name,
 });
 
-const poapContractAbi = poapContractJson.abi;
-const poapContractAddress = REACT_APP_POAP_CONTRACT_ADDRESS_POLYGON_AMOY;
+const poapContractAbi = poapContractJson;
+const poapContractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+// const poapContractAddress = REACT_APP_POAP_CONTRACT_ADDRESS_POLYGON_AMOY;
 
-// let wallet = new ethers.Wallet(accountFrom.privateKey, provider);
-let wallet = ethers.Wallet.fromPhrase(REACT_APP_MNEMONIC_DEVNET);
-wallet = wallet.connect(provider);
+// let wallet = ethers.Wallet.fromPhrase(REACT_APP_MNEMONIC_DEVNET);
+// wallet = wallet.connect(provider);
 
-// const poap = new ethers.Contract(poapContractAddress, poapContractAbi, wallet);
+// Create a wallet instance from private key
+const wallet = new ethers.Wallet(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  provider
+);
 
 /**
  *
@@ -59,15 +68,27 @@ export const createEventId = async (
   maxSupply,
   mintExpiration,
   eventOrganizer,
-  signer
+  ethereum
 ) => {
+  // console.log("🚀 ~ issuerId:", issuerId);
+  // console.log("🚀 ~ eventId:", eventId);
+  // console.log("🚀 ~ maxSupply:", maxSupply);
+  // console.log("🚀 ~ mintExpiration:", mintExpiration);
+  // console.log("🚀 ~ eventOrganizer:", eventOrganizer);
+
+  // 1. Connect to MetaMask
+  const provider = new ethers.BrowserProvider(ethereum);
+  await provider.send("eth_requestAccounts", []);
+
+  // 2. Get the connected signer
+  const signer = await provider.getSigner();
   try {
     const poapContract = await new ethers.Contract(
       poapContractAddress,
       poapContractAbi,
       signer
     );
-    const gasPrice = (await provider.getFeeData()).gasPrice;
+    // const gasPrice = (await provider.getFeeData()).gasPrice;
     const createReceipt = await poapContract.createEventId(
       issuerId,
       eventId,
@@ -75,18 +96,19 @@ export const createEventId = async (
       mintExpiration,
       eventOrganizer,
       {
-        gasPrice,
-        gasLimit: 800000,
+        // gasPrice,
+        gasLimit: 1000000,
         // gasLimit: ethers.parseUnits('800000', 'wei'),
         //value: tokenPrice.toString(),
       }
     );
+    console.log("🚀 ~ createReceipt:", createReceipt);
     loadingFunction("Creating Event", "Please wait...", "");
-    
+
     const receipt = await createReceipt.wait();
-    // console.log("Transaction submitted:", receipt);
-    // console.log("Transaction confirmed in block:", receipt.blockNumber);
-    succesfullActionFunction(
+    console.log("🚀 ~ receipt:", receipt);
+
+    succesfullBlockchainCreation(
       "Event Created",
       "Event created successfully.",
       `https://amoy.polygonscan.com/tx/${receipt.transactionHash}`
@@ -102,14 +124,13 @@ export const createEventId = async (
         ""
       );
     } else {
-      // Handle other errors
       console.error("Failed to create event ID:", error);
+      console.error("Error message:", error.message);
       errorFunction(
         "Error",
         "An error occurred while creating the event. Please try again.",
         ""
       );
-      // alert("An error occurred while creating the event. Please try again.");
     }
   }
 };
@@ -170,29 +191,34 @@ export const isAdmin = async (address, signer) => {
 // eventId: number,
 // to: string,
 // // initialData: string
-export const mintToken = async (
-  issuerId,
-  eventId,
-  to,
-  // initialData
-  signer
-) => {
+export const mintToken = async (issuerId, eventId, to, ethereum) => {
+  // 1. Connect to MetaMask
+  const provider = new ethers.BrowserProvider(ethereum);
+  await provider.send("eth_requestAccounts", []);
+
+  // 2. Get the connected signer
+  const signer = await provider.getSigner();
   try {
-    // const txResponse = await poapContract.mintToken(issuerId, eventId, to, initialData);
     const poapContract = new ethers.Contract(
       poapContractAddress,
       poapContractAbi,
       signer
     );
-    const gasPrice = (await provider.getFeeData()).gasPrice;
+    // const gasPrice = (await provider.getFeeData()).gasPrice;
     const createReceipt = await poapContract.mintToken(issuerId, eventId, to, {
-      gasPrice,
+      // gasPrice,
       gasLimit: 800000,
     });
+    console.log("🚀 ~ createReceipt:", createReceipt);
     loadingFunction("Minting Token", "Please wait...", "");
     const receipt = await createReceipt.wait();
+    console.log("🚀 ~ receipt:", receipt);
     // console.log("mintToken Transaction response:", receipt);
-    succesfullActionFunction("Token Minted", "Token minted successfully.", `https://amoy.polygonscan.com/tx/${receipt.transactionHash}`);
+    succesfullBlockchainCreation(
+      "Token Minted",
+      "Token minted successfully.",
+      `https://amoy.polygonscan.com/tx/${receipt.transactionHash}`
+    );
     return receipt;
   } catch (error) {
     if (error.code === 4001) {
@@ -208,7 +234,11 @@ export const mintToken = async (
     } else {
       // Handle other errors
       console.error("Failed to create event ID:", error);
-      errorFunction("Error", "An error occurred while creating the event. Please try again.", "");
+      errorFunction(
+        "Error",
+        "An error occurred while creating the event. Please try again.",
+        ""
+      );
       // alert("An error occurred while creating the event. Please try again.");
     }
   }
@@ -297,7 +327,8 @@ export const getEvents = async () => {
     // Get all past EventCreated events
     const events = await poapContract.queryFilter(
       "EventCreated",
-      12722760,
+      1,
+      // 12722760,
       "latest"
     );
     // console.log("🚀 ~ getEvents ~ events:", events[0])

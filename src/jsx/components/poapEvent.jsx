@@ -13,37 +13,10 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
     ethereum: { provider },
   } = useDrawer();
 
-  const mockData = {
-    title: "Tech Innovations Conference",
-    description:
-      "The Tech Innovations Conference is a gathering of the brightest minds in the tech industry.",
-    city: "San Francisco",
-    country: "USA",
-    startDate: "2024-06-15T09:00:00Z",
-    endDate: "2024-08-13T17:00:00Z",
-    year: 2024,
-    eventUrl: "https://www.techinnovationsconf.com",
-    virtualEvent: false,
-    image: "https://www.example.com/event-image.jpg",
-    secretCode: 12345,
-    eventTemplateId: 101,
-    email: "info@techinnovationsconf.com",
-    requestedCodes: 500,
-    privateEvent: true,
-    purpose: "Networking and knowledge sharing",
-    platform: "Eventbrite",
-    amountOfAttendees: 300,
-    account: "TechCon2024",
-    eventType: "Virtual",
-    poapType: "Poap",
-    poapsToBeMinted: 50,
-    mintedPoaps: 0,
-  };
-
   const viewEvent = () => {
     dispatch({
       type: "VIEW_EVENT",
-      payload: { event, mockData, mintable },
+      payload: { event, mintable },
     });
   };
 
@@ -62,10 +35,11 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
           alt="Poap Event"
         />
       </td>
-      <td className="col-2">Event ID: {event.eventId}</td>
-      <td className="col-2">Issuer ID: {event.issuerId}</td>
+      <td className="col-2">Event ID: {event.eventIdInContract}</td>
+      <td className="col-2">Issuer ID: {event.issuerIdInContract}</td>
       <td className="col-3">
-        Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)}
+        {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
+        Expiration: {formatDateToDDMMYYYY(event.expiryDate)}
         {event.isExpired && (
           <span
             alt="Expired"
@@ -84,7 +58,7 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
         )}
       </td>
       <td className="col-3">
-        Minted: {event.totalSupply} of {event.maxSupply}
+        Minted: {event.mintedPoaps} of {event.poapsToBeMinted}
         {owned && (
           <span
             alt="Already minted"
@@ -110,8 +84,6 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
             border: "none",
             backgroundColor: "rgba(0, 0, 0, 0)",
             color: "rgba(0, 0, 0, 0)",
-            // width: "auto",
-            // height: "auto",
           }}
         >
           <img
@@ -126,7 +98,7 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
                 ? mintTokenButton
                 : circleArrow
             }
-            alt=""
+            alt="View Event"
           />
         </button>
       </td>

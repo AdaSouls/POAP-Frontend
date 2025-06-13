@@ -20,8 +20,8 @@ export default function EthereumWallet() {
   const onSelectWallet = async (provider, wallet) => {
     const newWalletState = await ethereum.setProvider(provider, wallet);
     dispatch({ type: "UPDATE_ETHEREUM_WALLET", payload: newWalletState });
-    if(newWalletState){
-      connectedToWalletFunction(newWalletState.address)
+    if (newWalletState) {
+      connectedToWalletFunction(newWalletState.address);
     }
     closeDrawer();
   };

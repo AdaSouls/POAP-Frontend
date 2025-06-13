@@ -17,7 +17,7 @@ const PoapEvents = ({ addressEvents }) => {
           {poapEvents.length > 0 ? (
             <tbody>
               {addressEvents.map((event, index) => {
-                return <PoapEvent event={event} index={index} key={index}/>;
+                return <PoapEvent event={event} index={index} key={index} />;
               })}
             </tbody>
           ) : (
