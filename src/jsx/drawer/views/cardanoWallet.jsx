@@ -18,7 +18,7 @@ export default function CardanoWallet() {
 }
 
   const supportedWallets = (wallets) => {
-    if (typeof window.cardano ==== 'undefined') {
+    if (typeof window.cardano === 'undefined') {
       return [];
     }
     const supportedWallets = wallets.filter(w => window.cardano[w.code]).map(w => ({ code: w.code, icon: w.icon, ...window.cardano[w.code] }));

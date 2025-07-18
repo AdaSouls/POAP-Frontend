@@ -41,7 +41,7 @@ export default function CreateSoul() {
   };
 
   const handleRemoveSigner = (index) => {
-    const newSigners = signers.filter((_, i) => i !=== index);
+    const newSigners = signers.filter((_, i) => i !== index);
     if (newSigners.length === 0) {
       setSigners(['']);
       setMultisig(false);
@@ -52,7 +52,7 @@ export default function CreateSoul() {
 
   const handleSignerChange = (index, event) => {
     const newInputs = signers.map((input, i) => 
-      i ==== index ? event.target.value : input
+      i === index ? event.target.value : input
     );
     setSigners(newInputs);
   };

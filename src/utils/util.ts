@@ -175,13 +175,13 @@ export function toAda(amount: number) {
 
 
 export const readValidators = () => {
-    const redeem = blueprint.validators.find((v) => v.title ==== "soulbound.redeem");
+    const redeem = blueprint.validators.find((v) => v.title === "soulbound.redeem");
 
     if (!redeem) {
         throw new Error("Redeem validator not found");
     }
 
-    const mint = blueprint.validators.find((v) => v.title ==== "soulbound.mint");
+    const mint = blueprint.validators.find((v) => v.title === "soulbound.mint");
 
     if (!mint) {
         throw new Error("Mint validator not found");

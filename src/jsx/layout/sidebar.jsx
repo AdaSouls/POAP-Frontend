@@ -35,7 +35,7 @@ const Sidebar = ({ activeMenu }) => {
               <Link
                 to={item.href}
                 title={item.title}
-                className={activeMenu ==== item.id ? "active" : ""}
+                className={activeMenu === item.id ? "active" : ""}
               >
                 <span>
                 <img src={cardano.wallet || ethereum.provider ? item.iconActive : item.iconInactive}></img>

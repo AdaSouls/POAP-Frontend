@@ -6,7 +6,7 @@ import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 const EventBody = ({ event }) => {
   // Helper function to check if a value should be displayed
   const hasValue = (value) => {
-    return value !=== null && value !=== undefined && value !=== "";
+    return value !== null && value !== undefined && value !== "";
   };
 
   return (

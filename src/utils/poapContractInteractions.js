@@ -116,7 +116,7 @@ export const createEventId = async (
 
     return receipt;
   } catch (error) {
-    if (error.code ==== 4001) {
+    if (error.code === 4001) {
       console.error("User denied transaction signature:", error);
       errorFunction(
         "Transaction Rejected",
@@ -221,7 +221,7 @@ export const mintToken = async (issuerId, eventId, to, ethereum) => {
     );
     return receipt;
   } catch (error) {
-    if (error.code ==== 4001) {
+    if (error.code === 4001) {
       console.error("User denied transaction signature:", error);
       // alert(
       //   "Transaction was rejected. Please approve the transaction in MetaMask."

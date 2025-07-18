@@ -83,7 +83,7 @@ export default function ViewEvent() {
 
   // Helper function to check if a value should be displayed
   const hasValue = (value) => {
-    return value !=== null && value !=== undefined && value !=== "";
+    return value !== null && value !== undefined && value !== "";
   };
 
   return (
