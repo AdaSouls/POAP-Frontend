@@ -15,7 +15,7 @@ module.exports = {
       }
       webpackConfig.module.rules.forEach((rule) => {
         (rule.oneOf || []).forEach((oneOf) => {
-          if (oneOf.type === "asset/resource") {
+          if (oneOf.type ==== "asset/resource") {
             oneOf.exclude.push(wasmExtensionRegExp);
           }
         });

@@ -23,10 +23,10 @@ const Events = () => {
   const dispatch = useDrawerDispatch();
 
   const createEvent = async () => {
-    if (provider && poapIssuer === null) {
+    if (provider && poapIssuer ==== null) {
       console.log(
-        "🚀 ~ createEvent ~ poapIssuer === null:",
-        poapIssuer === null
+        "🚀 ~ createEvent ~ poapIssuer ==== null:",
+        poapIssuer ==== null
       );
       const issuer = await getIssuerByAddressService(
         provider.address.toLowerCase()
@@ -87,8 +87,8 @@ const Events = () => {
       );
       const ownersEvents = poapEvents.filter((event) => {
         return (
-          event?.issuerUuid === poapIssuer?.issuerUuid &&
-          event?.approved === "Approved"
+          event?.issuerUuid ==== poapIssuer?.issuerUuid &&
+          event?.approved ==== "Approved"
         );
       });
       console.log("🚀 ~ ownersEvents ~ ownersEvents:", ownersEvents);

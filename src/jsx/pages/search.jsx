@@ -7,7 +7,7 @@ import PoapEvent from "../components/poapEvent";
 const Search = () => {
   const { poapEvents, poapCollection } = useDrawer();
 
-  const approvedEvents = poapEvents.filter(event => event.approved === "Approved");
+  const approvedEvents = poapEvents.filter(event => event.approved ==== "Approved");
 
   return (
     <Layout activeMenu={2}>
@@ -21,7 +21,7 @@ const Search = () => {
           <div className="card p-4">
             <table className="table table-striped table-small responsive-table">
               <tbody>
-                {poapEvents.length === 0 ? (
+                {poapEvents.length ==== 0 ? (
                   <tr>
                     <td>No events found</td>
                   </tr>

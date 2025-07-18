@@ -41,8 +41,8 @@ export default function CreateSoul() {
   };
 
   const handleRemoveSigner = (index) => {
-    const newSigners = signers.filter((_, i) => i !== index);
-    if (newSigners.length == 0) {
+    const newSigners = signers.filter((_, i) => i !=== index);
+    if (newSigners.length === 0) {
       setSigners(['']);
       setMultisig(false);
     } else {
@@ -52,7 +52,7 @@ export default function CreateSoul() {
 
   const handleSignerChange = (index, event) => {
     const newInputs = signers.map((input, i) => 
-      i === index ? event.target.value : input
+      i ==== index ? event.target.value : input
     );
     setSigners(newInputs);
   };
@@ -151,7 +151,7 @@ export default function CreateSoul() {
             </div>
             <div className="col-12">
               {/* <label className="form-label">Type</label> */}
-              <select className="form-select" onChange={(event) => setMultisig(event.target.value == 'multisig')}>
+              <select className="form-select" onChange={(event) => setMultisig(event.target.value === 'multisig')}>
                 <option value="">Choose a Type...</option>
                 <option value="normal">Normal</option>
                 <option value="multisig">Multisig</option>

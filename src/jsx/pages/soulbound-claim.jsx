@@ -117,7 +117,7 @@ const SoulboundClaim = () => {
                                     <td className="table-image">                      
                                       <img
                                         className=""
-                                        src={ t.collection.invited.length == 1 ? (t.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (t.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
+                                        src={ t.collection.invited.length === 1 ? (t.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (t.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
                                         width="50"
                                         height="50"
                                         alt=""
@@ -155,7 +155,7 @@ const SoulboundClaim = () => {
                               </div>
                             )}
                             { wallet && (
-                              tokens.filter(claimUtxo => !claimUtxo.claimUtxo) == '' && (
+                              tokens.filter(claimUtxo => !claimUtxo.claimUtxo) === '' && (
                                 <tr>
                                   <td>                      
                                   <div className="d-flex justify-content-start">
@@ -182,7 +182,7 @@ const SoulboundClaim = () => {
                               <div className="d-flex align-items-center">
                                 <img
                                   className="mr-3 mr-0 mr-sm-3"
-                                  src={ t.collection.invited.length == 1 ? (t.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (t.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
+                                  src={ t.collection.invited.length === 1 ? (t.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (t.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
                                   width="100"
                                   height="100"
                                   alt=""

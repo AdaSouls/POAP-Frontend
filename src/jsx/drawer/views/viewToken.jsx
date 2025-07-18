@@ -35,7 +35,7 @@ export default function ViewToken() {
                 <div className="d-flex align-items-center">
                   <img
                     className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                    src={ token.collection.invited.length === 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
                     width="60"
                     height="60"
                     alt=""
@@ -54,7 +54,7 @@ export default function ViewToken() {
                 <div className="d-flex align-items-center">
                   <img
                     className="mr-3 mr-0 mr-sm-3"
-                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (token.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
+                    src={ token.collection.invited.length === 1 ? (token.collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (token.collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
                     width="60"
                     height="60"
                     alt=""
@@ -73,7 +73,7 @@ export default function ViewToken() {
                 <div className="d-flex align-items-center">
                   <img
                     className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-                    src={ token.collection.invited.length == 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                    src={ token.collection.invited.length === 1 ? (token.collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (token.collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
                     width="60"
                     height="60"
                     alt=""

@@ -18,7 +18,7 @@ export default function CardanoWallet() {
 }
 
   const supportedWallets = (wallets) => {
-    if (typeof window.cardano === 'undefined') {
+    if (typeof window.cardano ==== 'undefined') {
       return [];
     }
     const supportedWallets = wallets.filter(w => window.cardano[w.code]).map(w => ({ code: w.code, icon: w.icon, ...window.cardano[w.code] }));
@@ -53,7 +53,7 @@ export default function CardanoWallet() {
           <div style={{ display: 'flex', 'flexDirection': 'column' }}>
               {supportedWallets(wallets).map((w, i) => {
                   return (
-                    <div key={i} className={"card card-button"+(selectedWallet.code == w.code ? " selected" : "")+( cardano.wallet ? (cardano.wallet.code == w.code ? " connected" : "") : ("") )}>
+                    <div key={i} className={"card card-button"+(selectedWallet.code === w.code ? " selected" : "")+( cardano.wallet ? (cardano.wallet.code === w.code ? " connected" : "") : ("") )}>
                                  
                       <div className="card-body top-area d-flex" onClick={() => setSelectedWallet(w)}>
                         <div className="d-flex align-items-center">
@@ -75,7 +75,7 @@ export default function CardanoWallet() {
                             <span className="verified">
                               <i className="icofont-check-alt"></i>
                             </span>
-                            { cardano.wallet && ( w.icon == cardano.wallet.icon && "Connected" )}
+                            { cardano.wallet && ( w.icon === cardano.wallet.icon && "Connected" )}
                           </div>
                           <div></div>                  
                         </div>
@@ -87,7 +87,7 @@ export default function CardanoWallet() {
         </div>
         { selectedWallet.code ? (
             cardano.wallet ? (
-              cardano.wallet.code == selectedWallet.code ? (
+              cardano.wallet.code === selectedWallet.code ? (
                 <div className='drawer-footer d-flex flex-column'>
                   <button className="btn btn-danger" onClick={() => onSelectWallet(null)}>
                     Disconnect

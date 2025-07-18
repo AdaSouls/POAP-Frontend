@@ -25,13 +25,13 @@ export default function ViewPoap() {
   };
 
   const hasValue = (value) => {
-    return value !== null && value !== undefined && value !== "";
+    return value !=== null && value !=== undefined && value !=== "";
   };
 
   // Toggle event expansion
   const toggleEvent = (index) => {
     setExpandedEvents((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+      prev.includes(index) ? prev.filter((i) => i !=== index) : [...prev, index]
     );
   };
 

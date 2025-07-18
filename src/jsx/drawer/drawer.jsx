@@ -19,50 +19,50 @@ export const Drawer = () => {
 
   const drawerComponent = (state) => {
 
-    if (state?.showCardanoWallet === true) {
+    if (state?.showCardanoWallet ==== true) {
       return <CardanoWallet />;
     }
 
-    if (state?.showEthereumWallet === true) {
+    if (state?.showEthereumWallet ==== true) {
       return <EthereumWallet />;
     }
 
-    if (state?.createSoul === true) {
+    if (state?.createSoul ==== true) {
       return <CreateSoul />;
     }
-    if (state?.createSoulToken === true) {
+    if (state?.createSoulToken ==== true) {
       return <CreateSoulToken />;
     }
 
-    if (state?.createPoap === true) {
+    if (state?.createPoap ==== true) {
       return <CreatePoap />;
     }
 
-    if (state?.createEvent === true) {
+    if (state?.createEvent ==== true) {
       return <CreateEvent />;
     }
 
-    if (state?.createIssuer === true) {
+    if (state?.createIssuer ==== true) {
       return <CreateIssuer />;
     }
 
-    if (state?.createOwner === true) {
+    if (state?.createOwner ==== true) {
       return <CreateOwner />;
     }
 
-    if (state?.checkCollection === true) {
+    if (state?.checkCollection ==== true) {
       return <CheckCollection />;
     }
 
-    if (state?.viewToken === true) {
+    if (state?.viewToken ==== true) {
       return <ViewToken />;
     }
 
-    if (state?.viewEvent === true) {
+    if (state?.viewEvent ==== true) {
       return <ViewEvent />;
     }
 
-    if (state?.viewPoapToken === true) {
+    if (state?.viewPoapToken ==== true) {
       return <ViewPoap />;
     }
 
@@ -71,7 +71,7 @@ export const Drawer = () => {
   return (
     
     <React.Fragment>  
-      <div className={`drawer drawer-cart ${state?.open === true ? 'open' : ''}`}>
+      <div className={`drawer drawer-cart ${state?.open ==== true ? 'open' : ''}`}>
         {drawerComponent(state)}
       </div>
     </React.Fragment>

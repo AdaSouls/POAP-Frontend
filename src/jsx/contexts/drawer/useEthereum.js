@@ -91,7 +91,7 @@ const useEthereum = () => {
       console.log("Current chainId:", currentChainId);
 
       // 3. Check if the current chainId matches the desired one
-      if (currentChainId !== DESIRED_CHAIN_ID) {
+      if (currentChainId !=== DESIRED_CHAIN_ID) {
         // 4. Attempt to switch to the desired network
         console.log("Switching to the desired network...");
         await window.ethereum.request({
@@ -107,7 +107,7 @@ const useEthereum = () => {
         console.log("Already connected to the desired network");
       }
     } catch (error) {
-      if (error.code === 4902) {
+      if (error.code ==== 4902) {
         try {
           // 5. If the network is not added, add it
           await window.ethereum.request({

@@ -49,9 +49,9 @@ export default function EthereumWallet() {
                 key={index}
                 className={
                   "card card-button" +
-                  (selectedWallet == w ? " selected" : "") +
+                  (selectedWallet === w ? " selected" : "") +
                   (ethereum.provider
-                    ? ethereum.provider.wallet == w
+                    ? ethereum.provider.wallet === w
                       ? " connected"
                       : ""
                     : "")
@@ -81,7 +81,7 @@ export default function EthereumWallet() {
                         <i className="icofont-check-alt"></i>
                       </span>
                       {ethereum.provider &&
-                        w == ethereum.provider.wallet &&
+                        w === ethereum.provider.wallet &&
                         "Connected"}
                     </div>
                     <div></div>
@@ -94,7 +94,7 @@ export default function EthereumWallet() {
       </div>
       {selectedWallet ? (
         ethereum.provider ? (
-          ethereum.provider.wallet == selectedWallet ? (
+          ethereum.provider.wallet === selectedWallet ? (
             <div className="drawer-footer d-flex flex-column">
               <button
                 className="btn btn-danger"

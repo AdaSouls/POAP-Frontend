@@ -58,12 +58,12 @@ const Collections = () => {
 
   const getInvitation = (collection) => {
     const { invited } = collection;
-    return invited.find(i => i.user == wallet.stake_address);
+    return invited.find(i => i.user === wallet.stake_address);
   }
 
   const isUnsigned = (collection) => {
     const invitation = getInvitation(collection);
-    return invitation && invitation.signature == '';
+    return invitation && invitation.signature === '';
   }
 
   const allSigned = (collection) => {
@@ -79,12 +79,12 @@ const Collections = () => {
     const coseSig = buildSignature(addr, message, signature);
     const col = await sign(collection.collectionId, user, coseSig);
     if (invited) {
-      const index = invitedCollections.findIndex(c => c.collectionId == col.collectionId);
+      const index = invitedCollections.findIndex(c => c.collectionId === col.collectionId);
       const updatedCollections = [...invitedCollections];
       updatedCollections[index] = col;
       setInvitedCollections(updatedCollections);
     } else {
-      const index = collections.findIndex(c => c.collectionId == col.collectionId);
+      const index = collections.findIndex(c => c.collectionId === col.collectionId);
       const updatedCollections = [...collections];
       updatedCollections[index] = col;
       setCollections(updatedCollections);
@@ -150,11 +150,11 @@ const Collections = () => {
             console.log(c);
             return (
               <div key={c.collectionId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
-                <div className={ (c.invited.length == 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
+                <div className={ (c.invited.length === 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
                   <div className="card-body card-classic-max-height d-flex justify-content-start">
                     <img
                         className="mr-3 rounded-circle mr-0 mr-sm-3"
-                        src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                        src={ c.invited.length === 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
                         width="50"
                         height="50"
                         alt=""
@@ -167,12 +167,12 @@ const Collections = () => {
                         <li className="d-flex justify-content-start">
                           <img
                             className="mr-2"
-                            src={ c.invited.length == 1 ? (collectionNormalIcon) : (collectionMultisigIcon) }
+                            src={ c.invited.length === 1 ? (collectionNormalIcon) : (collectionMultisigIcon) }
                             width="25"
                             height="25"
                             alt=""
                           />
-                         { c.invited.length == 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
+                         { c.invited.length === 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
                         </li>
                         <li className="d-flex justify-content-start">
                           <img
@@ -221,11 +221,11 @@ const Collections = () => {
             console.log(c);
             return (
               <div key={c.collectionId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
-                <div className={ (c.invited.length == 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
+                <div className={ (c.invited.length === 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
                   <div className="card-body card-classic-max-height d-flex justify-content-start">
                     <img
                         className="mr-3 rounded-circle mr-0 mr-sm-3"
-                        src={ c.invited.length == 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                        src={ c.invited.length === 1 ? (c.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (c.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
                         width="50"
                         height="50"
                         alt=""

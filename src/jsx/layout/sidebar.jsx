@@ -31,11 +31,11 @@ const Sidebar = ({ activeMenu }) => {
       <div className="menu">
         <ul>
           {menus.map((item) => (
-            <li key={item.id} className={activeMenu == item.id ? "active" : ""}>
+            <li key={item.id} className={activeMenu === item.id ? "active" : ""}>
               <Link
                 to={item.href}
                 title={item.title}
-                className={activeMenu === item.id ? "active" : ""}
+                className={activeMenu ==== item.id ? "active" : ""}
               >
                 <span>
                 <img src={cardano.wallet || ethereum.provider ? item.iconActive : item.iconInactive}></img>

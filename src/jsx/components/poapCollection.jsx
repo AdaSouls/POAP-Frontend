@@ -70,7 +70,7 @@ const PoapCollection = () => {
           <div className="table-responsive">
             {provider ? (
               <table className="table table-striped table-small responsive-table">
-                {loading && poapCollection.length === 0 && (
+                {loading && poapCollection.length ==== 0 && (
                   <tbody>
                     <tr key={0}>
                       <td className="table-image">
@@ -150,7 +150,7 @@ const PoapCollection = () => {
                       </tbody>
                     );
                   })}
-                {poapCollection.length === 0 && !loading && (
+                {poapCollection.length ==== 0 && !loading && (
                   <tbody>
                     <tr>
                       <td className="table-image">

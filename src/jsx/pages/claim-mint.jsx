@@ -18,7 +18,7 @@ const ClaimMint = () => {
       <div className="card p-4 table-responsive">
         <table className="table table-small table-striped">
           <tbody>
-            {poapEvents.length === 0 ? (
+            {poapEvents.length ==== 0 ? (
               <tr>
                 <td>No events found</td>
               </tr>

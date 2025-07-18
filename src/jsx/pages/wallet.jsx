@@ -118,7 +118,7 @@ const Wallet = () => {
                       </div>
                     </div>
                   </div>
-                  {ethereum.provider.chainId == 200101 ? (
+                  {ethereum.provider.chainId === 200101 ? (
                     <div className="bottom-area border-top align-content-center">
                       <div className="card-body d-flex justify-content-between">
                         <div className="align-content-center wallet-status">

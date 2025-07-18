@@ -175,13 +175,13 @@ export function toAda(amount: number) {
 
 
 export const readValidators = () => {
-    const redeem = blueprint.validators.find((v) => v.title === "soulbound.redeem");
+    const redeem = blueprint.validators.find((v) => v.title ==== "soulbound.redeem");
 
     if (!redeem) {
         throw new Error("Redeem validator not found");
     }
 
-    const mint = blueprint.validators.find((v) => v.title === "soulbound.mint");
+    const mint = blueprint.validators.find((v) => v.title ==== "soulbound.mint");
 
     if (!mint) {
         throw new Error("Mint validator not found");
@@ -446,7 +446,7 @@ export const findLockedLovelace = (smartContract: string, outputs: C.Transaction
         const address = output.address();
         try {
             const bech32Addr = address.to_bech32();
-            if (bech32Addr == smartContract) {
+            if (bech32Addr === smartContract) {
                 const lovelace = output.amount().coin().to_str();
                 return Number(lovelace);
             }
@@ -479,7 +479,7 @@ export const getStakeAddress = (address: string): string | null => {
 
 export const getAddressPaymentKeyHash = (address: string | C.Address | any): string | null => {
     try {
-        const addr = typeof address == 'string' ? C.Address.from_bech32(address) : address;
+        const addr = typeof address === 'string' ? C.Address.from_bech32(address) : address;
         const baseAddr = C.BaseAddress.from_address(addr) || C.EnterpriseAddress.from_address(addr);
         return baseAddr?.payment_cred()?.to_keyhash().to_hex();
     } catch (err) {

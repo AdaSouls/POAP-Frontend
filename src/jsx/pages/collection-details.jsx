@@ -145,11 +145,11 @@ const Collection = () => {
                   </div>
                   {/* COLLECTION BANNER */}
                   <div className="col-xxl-5 col-xl-5 col-lg-4 col-md-7 col-sm-12">
-                    <div className={ (collection.invited.length == 1 ? (collection.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (collection.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
+                    <div className={ (collection.invited.length === 1 ? (collection.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (collection.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
                       <div className="card-body card-classic-max-height d-flex justify-content-start">
                         <img
                             className="mr-3 rounded-circle mr-0 mr-sm-3"
-                            src={ collection.invited.length == 1 ? (collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
+                            src={ collection.invited.length === 1 ? (collection.aikenCourse ? (collectionAikenNormalIcon):(collectionNormalImage)) : (collection.aikenCourse ? (collectionAikenMultisigIcon):(collectionMultisigImage)) }
                             width="50"
                             height="50"
                             alt=""
@@ -162,15 +162,15 @@ const Collection = () => {
                             <li className="d-flex justify-content-start">
                               <img
                                 className="mr-2"
-                                src={ collection.invited.length == 1 ? (collectionNormalIcon) : (collectionMultisigIcon) }
+                                src={ collection.invited.length === 1 ? (collectionNormalIcon) : (collectionMultisigIcon) }
                                 width="25"
                                 height="25"
                                 alt=""
                               />
-                            { collection.invited.length == 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
+                            { collection.invited.length === 1 ?  (<p className="pt-1">Simple</p>) :  (<p className="pt-1">Multisig</p>) }
                             </li>
                             <li className="d-flex justify-content-start">                              
-                              {wallet.stake_address == collection.owner ? (
+                              {wallet.stake_address === collection.owner ? (
                                 <>
                                   <img
                                     className="mr-2"
@@ -249,7 +249,7 @@ const Collection = () => {
                                   <div className="d-flex align-items-center">
                                     <img
                                       className="mr-3 mr-0 mr-sm-3"
-                                      src={ collection.invited.length == 1 ? (collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
+                                      src={ collection.invited.length === 1 ? (collection.aikenCourse ? (tokenAikenNormal):(tokenSoulNormal)) : (collection.aikenCourse ? (tokenAikenMultisig):(tokenSoulMultisig)) }
                                       width="100"
                                       height="100"
                                       alt=""
