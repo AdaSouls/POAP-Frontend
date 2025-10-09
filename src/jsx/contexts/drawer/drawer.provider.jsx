@@ -36,6 +36,7 @@ export function DrawerProvider({ children }) {
     open: false,
     poapEvents: [],
     poapCollection: [],
+    poapIssuer: null,
   };
 
   const [state, dispatch] = useReducer(

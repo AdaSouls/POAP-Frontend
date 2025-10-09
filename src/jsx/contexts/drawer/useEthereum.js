@@ -1,7 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { ethers, formatEther } from "ethers";
 
-const { REACT_APP_POLYGON_AMOY_RPC } = process.env;
+const { REACT_APP_POLYGON_AMOY_RPC, 
+  REACT_APP_POLYGON_AMOY_CHAIN_ID, 
+  REACT_APP_POLYGON_AMOY_CHAIN_NAME,
+  REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_NAME,
+  REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_SYMBOL,
+  REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL } = process.env;
 
 const useEthereum = () => {
   const [provider, setCurrentProvider] = useState(null);
@@ -36,39 +41,38 @@ const useEthereum = () => {
   //   blockExplorerUrls: ["https://explorer-devnet-cardano-evm.c1.milkomeda.com"],
   // };
 
-  /** 
+  
   // POLYGON AMOY TESTNET
-
-  const DESIRED_CHAIN_ID = "0x13882";
+  const DESIRED_CHAIN_ID = REACT_APP_POLYGON_AMOY_CHAIN_ID;
   const DESIRED_CHAIN_PARAMS = {
     chainId: DESIRED_CHAIN_ID,
-    chainName: "Polygon Amoy Testnet",
+    chainName: REACT_APP_POLYGON_AMOY_CHAIN_NAME,
     nativeCurrency: {
-      name: "MATIC",
-      symbol: "MATIC",
+      name: REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_NAME,
+      symbol: REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_SYMBOL,
       decimals: 18,
     },
     rpcUrls: [REACT_APP_POLYGON_AMOY_RPC],
-    blockExplorerUrls: ["https://amoy.polygonscan.com/"],
+    blockExplorerUrls: [REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL],
   };
-   */
+   
 
   /**
   // HARDHAT LOCALHOST
    */
   // chain id: 31337
-  const DESIRED_CHAIN_ID = "0x7a69";
-  const DESIRED_CHAIN_PARAMS = {
-    chainId: DESIRED_CHAIN_ID,
-    chainName: "Localhost 8545",
-    nativeCurrency: {
-      name: "ETH",
-      symbol: "ETH",
-      decimals: 18,
-    },
-    rpcUrls: ["http://localhost:8545"],
-    // blockExplorerUrls: ["https://amoy.polygonscan.com/"],
-  };
+  // const DESIRED_CHAIN_ID = "0x7a69";
+  // const DESIRED_CHAIN_PARAMS = {
+  //   chainId: DESIRED_CHAIN_ID,
+  //   chainName: "Localhost 8545",
+  //   nativeCurrency: {
+  //     name: "ETH",
+  //     symbol: "ETH",
+  //     decimals: 18,
+  //   },
+  //   rpcUrls: ["http://localhost:8545"],
+  //   // blockExplorerUrls: ["https://amoy.polygonscan.com/"],
+  // };
 
   const setProvider = useCallback(async (provider, wallet) => {
     if (!provider) {
