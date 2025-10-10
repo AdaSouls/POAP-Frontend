@@ -45,6 +45,8 @@ export class MVPSmartContractService {
   // Get all events from blockchain
   async getAllEvents() {
     try {
+      console.log("Getting all events...");
+      
       // Use static provider for read operations
       const staticProvider = new ethers.JsonRpcProvider(providerRPC.rpc, {
         chainId: providerRPC.chainId,
@@ -57,10 +59,14 @@ export class MVPSmartContractService {
         staticProvider
       );
       
+      console.log("Contract address:", POAP_CONTRACT_ADDRESS);
+      console.log("Provider RPC:", providerRPC.rpc);
+      
       // Get current block and query from a reasonable range
       const currentBlock = await staticProvider.getBlockNumber();
-      const fromBlock = Math.max(1, currentBlock - 5000); // Last 5000 blocks
+      console.log("Current block:", currentBlock);
       
+      const fromBlock = Math.max(1, currentBlock - 5000); // Last 5000 blocks
       console.log(`Querying events from block ${fromBlock} to ${currentBlock}`);
       
       const events = await staticContract.queryFilter(
@@ -69,7 +75,7 @@ export class MVPSmartContractService {
         "latest"
       );
       
-      console.log("🚀 ~ getAllEvents ~ events:=========================", events);
+      console.log("Raw events from blockchain:", events);
       
       const eventData = [];
       for (const event of events) {
@@ -90,8 +96,24 @@ export class MVPSmartContractService {
           return mintExpiration * 1000 <= Date.now();
         };
   
+        console.log(`Processing event ${eventIdNumber}:`, {
+          issuerId: issuerIdNumber,
+          eventId: eventIdNumber,
+          maxSupply,
+          mintExpiration,
+          eventOrganizer,
+          isExpired: isExpired()
+        });
+  
         if (maxSupply > 0) {
           const eventTotalSupply = await staticContract.getEventTotalSupply(eventId);
+          const available = maxSupply - Number(eventTotalSupply);
+          
+          console.log(`Event ${eventIdNumber} supply info:`, {
+            maxSupply,
+            totalSupply: Number(eventTotalSupply),
+            available
+          });
           
           eventData.push({
             issuerId: issuerIdNumber,
@@ -103,11 +125,12 @@ export class MVPSmartContractService {
             txHash: event.transactionHash,
             blockNumber: event.blockNumber,
             isExpired: isExpired(),
-            available: maxSupply - Number(eventTotalSupply),
+            available: available,
           });
         }
       }
   
+      console.log("Final event data:", eventData);
       return eventData.sort((a, b) => a.isExpired - b.isExpired);
     } catch (error) {
       console.error("Failed to get events:", error);
@@ -179,6 +202,43 @@ export class MVPSmartContractService {
     }
   }
 
+  async checkEventsExist() {
+    try {
+      const staticProvider = new ethers.JsonRpcProvider(providerRPC.rpc, {
+        chainId: providerRPC.chainId,
+        name: providerRPC.name,
+      });
+      
+      const staticContract = new ethers.Contract(
+        POAP_CONTRACT_ADDRESS,
+        POAP_CONTRACT_ABI,
+        staticProvider
+      );
+      
+      // Check if contract exists
+      const code = await staticProvider.getCode(POAP_CONTRACT_ADDRESS);
+      console.log("Contract code exists:", code !== "0x");
+      
+      if (code === "0x") {
+        console.error("Contract not deployed at address:", POAP_CONTRACT_ADDRESS);
+        return false;
+      }
+      
+      // Try to get total supply
+      try {
+        const totalSupply = await staticContract.totalSupply();
+        console.log("Total supply:", totalSupply.toString());
+      } catch (error) {
+        console.error("Failed to get total supply:", error);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Failed to check events:", error);
+      return false;
+    }
+  }
+
   // Check if user is admin
   async isAdmin(address) {
     try {
@@ -208,6 +268,32 @@ export class MVPSmartContractService {
     } catch (error) {
       console.error("Failed to get event details:", error);
       return null;
+    }
+  }
+
+  async testContract() {
+    try {
+      const staticProvider = new ethers.JsonRpcProvider(providerRPC.rpc, {
+        chainId: providerRPC.chainId,
+        name: providerRPC.name,
+      });
+      
+      const staticContract = new ethers.Contract(
+        POAP_CONTRACT_ADDRESS,
+        POAP_CONTRACT_ABI,
+        staticProvider
+      );
+      
+      // Test basic contract calls
+      const name = await staticContract.name();
+      const symbol = await staticContract.symbol();
+      const totalSupply = await staticContract.totalSupply();
+      
+      console.log("Contract info:", { name, symbol, totalSupply: totalSupply.toString() });
+      return { name, symbol, totalSupply: totalSupply.toString() };
+    } catch (error) {
+      console.error("Contract test failed:", error);
+      throw error;
     }
   }
 }

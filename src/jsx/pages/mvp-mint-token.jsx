@@ -9,6 +9,8 @@ const MVPMintToken = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [debugInfo, setDebugInfo] = useState("");
   const [formData, setFormData] = useState({
     issuerId: "",
     eventId: "",
@@ -17,6 +19,7 @@ const MVPMintToken = () => {
 
   useEffect(() => {
     if (provider && provider.address) {
+      mvpSmartContractService.testContract().then(console.log);
       loadEvents();
       setFormData(prev => ({
         ...prev,
@@ -27,10 +30,31 @@ const MVPMintToken = () => {
 
   const loadEvents = async () => {
     try {
+      setLoadingEvents(true);
+      setDebugInfo("Loading events...");
+      
+      // Check if service is initialized
+      if (!mvpSmartContractService.contract) {
+        setDebugInfo("Initializing smart contract service...");
+        await mvpSmartContractService.initialize(window.ethereum);
+      }
+      
+      // Check if events exist
+      const eventsExist = await mvpSmartContractService.checkEventsExist();
+      setDebugInfo(`Events exist check: ${eventsExist}`);
+      
       const eventsData = await mvpSmartContractService.getAllEvents();
-      setEvents(eventsData.filter(event => !event.isExpired && event.available > 0));
+      setDebugInfo(`Loaded ${eventsData.length} events from blockchain`);
+      
+      const filteredEvents = eventsData.filter(event => !event.isExpired && event.available > 0);
+      setDebugInfo(`Filtered to ${filteredEvents.length} available events`);
+      
+      setEvents(eventsData);
     } catch (error) {
       console.error("Failed to load events:", error);
+      setDebugInfo(`Error: ${error.message}`);
+    } finally {
+      setLoadingEvents(false);
     }
   };
 
@@ -58,6 +82,11 @@ const MVPMintToken = () => {
     
     if (!provider || !provider.address) {
       alert("Please connect your Ethereum wallet first.");
+      return;
+    }
+
+    if (!formData.eventId || !formData.issuerId) {
+      alert("Please select an event first.");
       return;
     }
 
@@ -106,6 +135,30 @@ const MVPMintToken = () => {
                 Mint a POAP token for an existing event.
               </p>
 
+              {/* Show loading state */}
+              {loadingEvents && (
+                <div className="alert alert-info">
+                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                    <span className="sr-only">Loading...</span>
+                  </div>
+                  Loading events...
+                </div>
+              )}
+
+              {/* Show no events message */}
+              {!loadingEvents && events.length === 0 && (
+                <div className="alert alert-warning">
+                  <h5>No events available</h5>
+                  <p>You need to create an event first before you can mint tokens.</p>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => navigate("/mvp/create-event")}
+                  >
+                    Create Event
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit}>
                 <div className="form-group mb-3">
                   <label htmlFor="eventId">Select Event</label>
@@ -116,6 +169,7 @@ const MVPMintToken = () => {
                     value={formData.eventId}
                     onChange={handleEventChange}
                     required
+                    disabled={loadingEvents || events.length === 0}
                   >
                     <option value="">Select an event...</option>
                     {events.map((event) => (
@@ -170,7 +224,6 @@ const MVPMintToken = () => {
                   </button>
                 </div>
               </form>
-
               {events.length === 0 && (
                 <div className="alert alert-warning mt-3">
                   No active events with available tokens found.
