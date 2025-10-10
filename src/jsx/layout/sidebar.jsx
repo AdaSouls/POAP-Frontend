@@ -22,6 +22,7 @@ const Sidebar = ({ activeMenu }) => {
     { id: 4, href: "/soulbounds-claim", title: "Claim", iconActive: adaSoulsIconActive, iconInactive: adaSoulsIconInactive },
     { id: 8, href: "/claim-mint", title: "Claim-Mint", iconActive: adaSoulsIconActive, iconInactive: adaSoulsIconInactive },
     { id: 5, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive },
+    { id: 9, href: "/mvp", title: "MVP", iconActive: adaSoulsIconActive, iconInactive: adaSoulsIconInactive },
     // { id: 6, href: "/settings-profile", title: "Settings", iconActive: settingsIcon, iconInactive: settingsIcon }
     
   ];
