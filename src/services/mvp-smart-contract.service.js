@@ -174,7 +174,7 @@ export class MVPSmartContractService {
       const receipt = await tx.wait();
       return {
         success: true,
-        txHash: receipt.transactionHash,
+        txHash: receipt.hash,
         blockNumber: receipt.blockNumber,
       };
     } catch (error) {
@@ -193,7 +193,7 @@ export class MVPSmartContractService {
       const receipt = await tx.wait();
       return {
         success: true,
-        txHash: receipt.transactionHash,
+        txHash: receipt.hash,
         blockNumber: receipt.blockNumber,
       };
     } catch (error) {

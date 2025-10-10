@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   informationFunction, 
   errorFunction, 
-  succesfullMessage 
+  succesfullBlockchainCreation
 } from "../toasts/sweetAlerts";
 
 const MVPCreateEvent = () => {
@@ -40,6 +40,14 @@ const MVPCreateEvent = () => {
       return;
     }
 
+    if (!formData.eventId || !formData.issuerId) {
+      informationFunction(
+        "Event Selection Required",
+        "Please select an event first."
+      );
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -52,9 +60,12 @@ const MVPCreateEvent = () => {
       );
 
       if (result.success) {
-        succesfullMessage(
+        const explorerUrl = `${process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL}/tx/${result.txHash}`;
+        
+        succesfullBlockchainCreation(
           "Event Created Successfully",
-          `Transaction: ${result.txHash}`
+          `Transaction: ${result.txHash}`,
+          explorerUrl
         );
         navigate("/mvp");
       }

@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   informationFunction, 
   errorFunction, 
-  succesfullMessage 
+  succesfullBlockchainCreation
 } from "../toasts/sweetAlerts";
 
 const MVPMintToken = () => {
@@ -111,9 +111,12 @@ const MVPMintToken = () => {
       );
 
       if (result.success) {
-        succesfullMessage(
+        const explorerUrl = `${process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL}/tx/${result.txHash}`;
+        
+        succesfullBlockchainCreation(
           "Token Minted Successfully",
-          `Transaction: ${result.txHash}`
+          `Transaction: ${result.txHash}`,
+          explorerUrl
         );
         navigate("/mvp");
       }
