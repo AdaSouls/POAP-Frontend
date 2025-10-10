@@ -96,7 +96,7 @@ const MVPEvents = () => {
                           </td>
                           <td>{event.eventOrganizer}</td>
                           <td>
-                            <span className={`badge ${event.isExpired ? 'badge-danger' : 'badge-success'}`}>
+                            <span className={`badge ${event.isExpired ? 'btn-danger' : 'btn-success'}`}>
                               {event.isExpired ? 'Expired' : 'Active'}
                             </span>
                           </td>
