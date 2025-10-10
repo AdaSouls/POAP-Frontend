@@ -2,11 +2,14 @@ import React, { useState, useEffect } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
+import EventDetailsModal from "../components/EventDetailsModal";
 
 const MVPEvents = () => {
   const { ethereum: { provider } } = useDrawer();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (provider && provider.address) {
@@ -24,6 +27,16 @@ const MVPEvents = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDetails = (event) => {
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEvent(null);
   };
 
   if (!provider) {
@@ -103,10 +116,7 @@ const MVPEvents = () => {
                           <td>
                             <button 
                               className="btn btn-sm btn-info"
-                              onClick={() => {
-                                // Navigate to event details or mint token
-                                console.log("View event details:", event.eventId);
-                              }}
+                              onClick={() => handleViewDetails(event)}
                             >
                               View Details
                             </button>
@@ -121,6 +131,12 @@ const MVPEvents = () => {
           </div>
         </div>
       </div>
+
+      <EventDetailsModal 
+        event={selectedEvent}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </Layout>
   );
 };

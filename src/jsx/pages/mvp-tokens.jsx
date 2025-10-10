@@ -2,11 +2,14 @@ import React, { useState, useEffect } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
+import TokenDetailsModal from "../components/TokenDetailsModal";
 
 const MVPTokens = () => {
   const { ethereum: { provider } } = useDrawer();
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedToken, setSelectedToken] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (provider && provider.address) {
@@ -24,6 +27,16 @@ const MVPTokens = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDetails = (token) => {
+    setSelectedToken(token);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedToken(null);
   };
 
   if (!provider) {
@@ -77,10 +90,7 @@ const MVPTokens = () => {
                           <p className="text-muted">Event ID: {token.eventId}</p>
                           <button 
                             className="btn btn-sm btn-info"
-                            onClick={() => {
-                              // View token details
-                              console.log("View token details:", token.tokenId);
-                            }}
+                            onClick={() => handleViewDetails(token)}
                           >
                             View Details
                           </button>
@@ -94,6 +104,12 @@ const MVPTokens = () => {
           </div>
         </div>
       </div>
+
+      <TokenDetailsModal 
+        token={selectedToken}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </Layout>
   );
 };
