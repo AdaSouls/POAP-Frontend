@@ -115,6 +115,27 @@ export class MVPSmartContractService {
     }
   }
 
+  // Get user's tokens
+  async getUserTokens(userAddress) {
+    try {
+      const balance = await this.contract.balanceOf(userAddress);
+      const tokens = [];
+
+      for (let i = 0; i < balance; i++) {
+        const { tokenId, eventId } = await this.contract.tokenDetailsOfOwnerByIndex(userAddress, i);
+        tokens.push({
+          tokenId: Number(tokenId),
+          eventId: Number(eventId),
+        });
+      }
+
+      return tokens;
+    } catch (error) {
+      console.error("Failed to get user tokens:", error);
+      return [];
+    }
+  }
+
   // Create event
   async createEvent(issuerId, eventId, maxSupply, mintExpiration, eventOrganizer) {
     try {
@@ -135,6 +156,25 @@ export class MVPSmartContractService {
       };
     } catch (error) {
       console.error("Failed to create event:", error);
+      throw error;
+    }
+  }
+
+  // Mint token
+  async mintToken(issuerId, eventId, to) {
+    try {
+      const tx = await this.contract.mintToken(issuerId, eventId, to, {
+        gasLimit: 800000,
+      });
+      
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        txHash: receipt.transactionHash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error) {
+      console.error("Failed to mint token:", error);
       throw error;
     }
   }
