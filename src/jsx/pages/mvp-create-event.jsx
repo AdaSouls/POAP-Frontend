@@ -3,6 +3,11 @@ import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
 import { useNavigate } from "react-router-dom";
+import { 
+  informationFunction, 
+  errorFunction, 
+  succesfullMessage 
+} from "../toasts/sweetAlerts";
 
 const MVPCreateEvent = () => {
   const { ethereum: { provider } } = useDrawer();
@@ -28,7 +33,10 @@ const MVPCreateEvent = () => {
     e.preventDefault();
     
     if (!provider || !provider.address) {
-      alert("Please connect your Ethereum wallet first.");
+      informationFunction(
+        "Wallet Required",
+        "Please connect your Ethereum wallet first."
+      );
       return;
     }
 
@@ -44,12 +52,18 @@ const MVPCreateEvent = () => {
       );
 
       if (result.success) {
-        alert(`Event created successfully! Transaction: ${result.txHash}`);
+        succesfullMessage(
+          "Event Created Successfully",
+          `Transaction: ${result.txHash}`
+        );
         navigate("/mvp");
       }
     } catch (error) {
       console.error("Failed to create event:", error);
-      alert(`Failed to create event: ${error.message}`);
+      errorFunction(
+        "Event Creation Failed",
+        `Failed to create event: ${error.message}`
+      );
     } finally {
       setLoading(false);
     }

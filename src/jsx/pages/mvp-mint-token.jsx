@@ -3,6 +3,11 @@ import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
 import { useNavigate } from "react-router-dom";
+import { 
+  informationFunction, 
+  errorFunction, 
+  succesfullMessage 
+} from "../toasts/sweetAlerts";
 
 const MVPMintToken = () => {
   const { ethereum: { provider } } = useDrawer();
@@ -81,12 +86,18 @@ const MVPMintToken = () => {
     e.preventDefault();
     
     if (!provider || !provider.address) {
-      alert("Please connect your Ethereum wallet first.");
+      informationFunction(
+        "Wallet Required",
+        "Please connect your Ethereum wallet first."
+      );
       return;
     }
 
     if (!formData.eventId || !formData.issuerId) {
-      alert("Please select an event first.");
+      informationFunction(
+        "Event Selection Required",
+        "Please select an event first."
+      );
       return;
     }
 
@@ -100,12 +111,18 @@ const MVPMintToken = () => {
       );
 
       if (result.success) {
-        alert(`Token minted successfully! Transaction: ${result.txHash}`);
+        succesfullMessage(
+          "Token Minted Successfully",
+          `Transaction: ${result.txHash}`
+        );
         navigate("/mvp");
       }
     } catch (error) {
       console.error("Failed to mint token:", error);
-      alert(`Failed to mint token: ${error.message}`);
+      errorFunction(
+        "Mint Failed",
+        `Failed to mint token: ${error.message}`
+      );
     } finally {
       setLoading(false);
     }
