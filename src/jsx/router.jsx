@@ -17,6 +17,10 @@ import MVPEvents from "./pages/mvp-events";
 import MVPTokens from "./pages/mvp-tokens";
 import MVPCreateEvent from "./pages/mvp-create-event";
 import MVPMintToken from "./pages/mvp-mint-token";
+import MVPOrganizer from "./pages/mvp-organizer";
+import MVPAttendee from "./pages/mvp-attendee";
+import MVPMangeMinters from "./pages/mvp-manage-minters";
+import MVPBulkDistribute from "./pages/mvp-bulk-distribute";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -60,6 +64,10 @@ const Router = () => {
           <Route path="/mvp/tokens" element={<MVPTokens />} />
           <Route path="/mvp/create-event" element={<MVPCreateEvent />} />
           <Route path="/mvp/mint-token" element={<MVPMintToken />} />
+          <Route path="/mvp/organizer" element={<MVPOrganizer />} />
+          <Route path="/mvp/attendee" element={<MVPAttendee />} />
+          <Route path="/mvp/manage-minters" element={<MVPMangeMinters />} />
+          <Route path="/mvp/bulk-distribute" element={<MVPBulkDistribute />} />
         </Routes>
       </div>
     </BrowserRouter>
