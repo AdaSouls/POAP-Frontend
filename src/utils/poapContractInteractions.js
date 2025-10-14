@@ -61,11 +61,6 @@ export const createEventId = async (
   eventOrganizer,
   ethereum
 ) => {
-  // console.log("🚀 ~ issuerId:", issuerId);
-  // console.log("🚀 ~ eventId:", eventId);
-  // console.log("🚀 ~ maxSupply:", maxSupply);
-  // console.log("🚀 ~ mintExpiration:", mintExpiration);
-  // console.log("🚀 ~ eventOrganizer:", eventOrganizer);
 
   // 1. Connect to MetaMask
   const provider = new ethers.BrowserProvider(ethereum);
@@ -93,11 +88,9 @@ export const createEventId = async (
         //value: tokenPrice.toString(),
       }
     );
-    console.log("🚀 ~ createReceipt:", createReceipt);
     loadingFunction("Creating Event", "Please wait...", "");
 
     const receipt = await createReceipt.wait();
-    console.log("🚀 ~ receipt:", receipt);
 
     succesfullBlockchainCreation(
       "Event Created",
@@ -135,9 +128,7 @@ export const getTokenEventId = async (tokenId, signer) => {
       signer
     );
     const txResponse = await poapContract.tokenEvent(tokenId);
-    console.log("Transaction submitted:", txResponse.hash);
     const receipt = await txResponse.wait();
-    console.log("Transaction confirmed in block:", receipt.blockNumber);
     return receipt;
   } catch (error) {
     console.error("Failed to get Token Event ID:", error);
@@ -153,7 +144,6 @@ export const getOwner = async (signer) => {
       signer
     );
     const txResponse = await poapContract.owner();
-    console.log("getOwner Transaction response:", txResponse);
     return txResponse;
   } catch (error) {
     console.error("Failed to get Owner:", error);
@@ -170,7 +160,6 @@ export const isAdmin = async (address, signer) => {
       signer
     );
     const txResponse = await poapContract.isAdmin(address);
-    console.log("isAdmin Transaction response:", txResponse);
     return txResponse;
   } catch (error) {
     console.error("Failed to check if is Admin:", error);
@@ -200,11 +189,8 @@ export const mintToken = async (issuerId, eventId, to, ethereum) => {
       // gasPrice,
       gasLimit: 800000,
     });
-    console.log("🚀 ~ createReceipt:", createReceipt);
     loadingFunction("Minting Token", "Please wait...", "");
     const receipt = await createReceipt.wait();
-    console.log("🚀 ~ receipt:", receipt);
-    // console.log("mintToken Transaction response:", receipt);
     succesfullBlockchainCreation(
       "Token Minted",
       "Token minted successfully.",
@@ -214,9 +200,6 @@ export const mintToken = async (issuerId, eventId, to, ethereum) => {
   } catch (error) {
     if (error.code === 4001) {
       console.error("User denied transaction signature:", error);
-      // alert(
-      //   "Transaction was rejected. Please approve the transaction in MetaMask."
-      // );
       errorFunction(
         "Transaction Rejected",
         "Please approve the transaction in MetaMask.",
@@ -230,7 +213,6 @@ export const mintToken = async (issuerId, eventId, to, ethereum) => {
         "An error occurred while creating the event. Please try again.",
         ""
       );
-      // alert("An error occurred while creating the event. Please try again.");
     }
   }
 };
@@ -251,7 +233,6 @@ export const mintEventToManyUsers = async (
       signer
     );
     const txResponse = await poapContract.mintToken(eventId, to, initialData);
-    console.log("mintToken Transaction response:", txResponse);
     return txResponse;
   } catch (error) {
     console.error("Failed to mint Event to many Users:", error);
@@ -275,7 +256,6 @@ export const mintUserToManyEvents = async (
       signer
     );
     const txResponse = await poapContract.mintToken(eventIds, to, initialData);
-    console.log("mintToken Transaction response:", txResponse);
     return txResponse;
   } catch (error) {
     console.error("Failed to mint User to many Events:", error);
@@ -292,7 +272,6 @@ export const ownerOf = async (tokenId, signer) => {
       signer
     );
     const txResponse = await poapContract.ownerOf(tokenId);
-    console.log("mintToken Transaction response:", txResponse);
     return txResponse;
   } catch (error) {
     console.error("Failed to create event ID:", error);
@@ -306,15 +285,8 @@ export const getEvents = async () => {
     poapContractAbi,
     wallet
   );
-  console.log("In getEvents");
 
   try {
-    // Create a filter for the EventCreated event
-    // const eventFilter = poapContract.filters;
-    // console.log("🚀 ~ getEvents ~ eventFilter:", eventFilter);
-    // const eventCreated = poapContract.filters.EventCreated();
-    // console.log("🚀 ~ getEvents ~ eventFilter:", eventCreated);
-
     // Get all past EventCreated events
     const events = await poapContract.queryFilter(
       "EventCreated",
@@ -322,8 +294,6 @@ export const getEvents = async () => {
       // 12722760,
       "latest"
     );
-    // console.log("🚀 ~ getEvents ~ events:", events[0])
-    // console.log("🚀 ~ getEvents ~ events:", events);
 
     const eventData = [];
 
@@ -366,7 +336,6 @@ export const getEvents = async () => {
 
     eventData.sort((a, b) => a.isExpired - b.isExpired);
 
-    // console.log("Events with non-zero max supply:", eventData);
     return eventData;
   } catch (error) {
     console.error("Failed to get Events:", error);
@@ -380,14 +349,11 @@ export const getPoaps = async (signer) => {
     poapContractAbi,
     signer
   );
-  console.log("In getPoaps");
 
   try {
     // Create a filter for the EventCreated event
     const poapFilter = poapContract.filters;
-    console.log("🚀 ~ getPoaps ~ poapFilter:", poapFilter);
     const poapMinted = poapContract.filters.TokenMinted();
-    console.log("🚀 ~ getPoaps ~ eventFilter:", poapMinted);
 
     // Get all past EventCreated events
     const poaps = await poapContract.queryFilter(
@@ -395,13 +361,11 @@ export const getPoaps = async (signer) => {
       12722760,
       "latest"
     );
-    console.log("🚀 ~ getPoaps ~ poaps:", poaps);
 
     const poapData = [];
 
     for (const poap of poaps) {
       const { issuerId, eventId, tokenId } = poap.args;
-      console.log("🚀 ~ getPoaps ~ poap.args:", poap.args);
 
       const issuerIdNumber = Number(issuerId);
       const eventIdNumber = Number(eventId);
@@ -413,7 +377,6 @@ export const getPoaps = async (signer) => {
         tokenId: tokenIdNumber,
       });
     }
-    console.log("Events with non-zero max supply:", poapData);
     return poapData;
   } catch (error) {
     console.error("Failed to get Events:", error);
@@ -432,7 +395,6 @@ export const getMintedTokensByAddress = async (address, signer, events) => {
   try {
     // Get the number of tokens owned by the address
     const balance = await poapContract.balanceOf(address);
-    console.log(`Address ${address} owns ${balance.toString()} tokens.`);
 
     const tokens = [];
 
@@ -471,6 +433,5 @@ export const checkEventsMintedByAddress = (events, mintedTokens) => {
     };
   });
 
-  // console.log("Events with mint status:", eventsWithMintStatus);
   return eventsWithMintStatus;
 };

@@ -60,7 +60,6 @@ export class MVPSmartContractService {
       
       // Get current block and query from a reasonable range
       const currentBlock = await staticProvider.getBlockNumber();
-      console.log("Current block:", currentBlock);
       
       const fromBlock = Math.max(1, currentBlock - 50000);
       
@@ -69,8 +68,6 @@ export class MVPSmartContractService {
         fromBlock, 
         "latest"
       );
-      
-      console.log("Raw events from blockchain:", events);
       
       const eventData = [];
       for (const event of events) {
@@ -91,24 +88,9 @@ export class MVPSmartContractService {
           return mintExpiration * 1000 <= Date.now();
         };
   
-        console.log(`Processing event ${eventIdNumber}:`, {
-          issuerId: issuerIdNumber,
-          eventId: eventIdNumber,
-          maxSupply,
-          mintExpiration,
-          eventOrganizer,
-          isExpired: isExpired()
-        });
-  
         if (maxSupply > 0) {
           const eventTotalSupply = await staticContract.eventTotalSupply(eventId);
           const available = maxSupply - Number(eventTotalSupply);
-          
-          console.log(`Event ${eventIdNumber} supply info:`, {
-            maxSupply,
-            totalSupply: Number(eventTotalSupply),
-            available
-          });
           
           eventData.push({
             issuerId: issuerIdNumber,
@@ -125,7 +107,6 @@ export class MVPSmartContractService {
         }
       }
   
-      console.log("Final event data:", eventData);
       return eventData.sort((a, b) => a.isExpired - b.isExpired);
     } catch (error) {
       console.error("Failed to get events:", error);
@@ -212,7 +193,6 @@ export class MVPSmartContractService {
       
       // Check if contract exists
       const code = await staticProvider.getCode(POAP_CONTRACT_ADDRESS);
-      console.log("Contract code exists:", code !== "0x");
       
       if (code === "0x") {
         console.error("Contract not deployed at address:", POAP_CONTRACT_ADDRESS);
@@ -222,7 +202,6 @@ export class MVPSmartContractService {
       // Try to get total supply
       try {
         const totalSupply = await staticContract.totalSupply();
-        console.log("Total supply:", totalSupply.toString());
       } catch (error) {
         console.error("Failed to get total supply:", error);
       }
@@ -474,7 +453,6 @@ export class MVPSmartContractService {
       const symbol = await staticContract.symbol();
       const totalSupply = await staticContract.totalSupply();
       
-      console.log("Contract info:", { name, symbol, totalSupply: totalSupply.toString() });
       return { name, symbol, totalSupply: totalSupply.toString() };
     } catch (error) {
       console.error("Contract test failed:", error);
