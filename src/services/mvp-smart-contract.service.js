@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import poapContractJson from "../utils/Poap.json";
 
-const POAP_CONTRACT_ADDRESS = "0xD2f00C7e3Ae394B860d9077B26B9e07d6746D20A";
+const POAP_CONTRACT_ADDRESS = "0x68FF54eCa3C4b71ecE479306F199816f5f4c17d0";
 const POAP_CONTRACT_ABI = poapContractJson;
 
 // Provider configuration
@@ -45,7 +45,6 @@ export class MVPSmartContractService {
   // Get all events from blockchain
   async getAllEvents() {
     try {
-      console.log("Getting all events...");
       
       // Use static provider for read operations
       const staticProvider = new ethers.JsonRpcProvider(providerRPC.rpc, {
@@ -59,15 +58,11 @@ export class MVPSmartContractService {
         staticProvider
       );
       
-      console.log("Contract address:", POAP_CONTRACT_ADDRESS);
-      console.log("Provider RPC:", providerRPC.rpc);
-      
       // Get current block and query from a reasonable range
       const currentBlock = await staticProvider.getBlockNumber();
       console.log("Current block:", currentBlock);
       
-      const fromBlock = Math.max(1, currentBlock - 5000); // Last 5000 blocks
-      console.log(`Querying events from block ${fromBlock} to ${currentBlock}`);
+      const fromBlock = Math.max(1, currentBlock - 50000);
       
       const events = await staticContract.queryFilter(
         "EventCreated", 
@@ -106,7 +101,7 @@ export class MVPSmartContractService {
         });
   
         if (maxSupply > 0) {
-          const eventTotalSupply = await staticContract.getEventTotalSupply(eventId);
+          const eventTotalSupply = await staticContract.eventTotalSupply(eventId);
           const available = maxSupply - Number(eventTotalSupply);
           
           console.log(`Event ${eventIdNumber} supply info:`, {
@@ -249,13 +244,200 @@ export class MVPSmartContractService {
     }
   }
 
+  // Check if user is an issuer
+  async isIssuer(address) {
+    const issuerId = await this.contract.issuersById(address);
+    return {
+      isIssuer: issuerId > 0,
+      issuerId: Number(issuerId)
+    };
+  }
+
+  // Get all events for an issuer
+  async getIssuerEvents(issuerId) {
+    const events = [];
+    let index = 0;
+    
+    while (true) {
+      try {
+        const eventId = await this.contract.issuerEvents(issuerId, index);
+        if (eventId > 0) {
+          events.push(Number(eventId));
+          index++;
+        } else {
+          break;
+        }
+      } catch (error) {
+        break;
+      }
+    }
+    
+    return events;
+  }
   // Get event details
   async getEventDetails(eventId) {
+    const [maxSupply, totalSupply, mintExpiration] = await Promise.all([
+      this.contract.eventMaxSupply(eventId),
+      this.contract.eventTotalSupply(eventId),
+      this.contract.eventMintExpiration(eventId),
+    ]);
+    
+    return {
+      eventId: Number(eventId),
+      maxSupply: Number(maxSupply),
+      totalSupply: Number(totalSupply),
+      mintExpiration: Number(mintExpiration),
+      available: Number(maxSupply) - Number(totalSupply),
+    };
+  }
+
+  // Check if user can mint for specific event
+  async canMintForEvent(eventId, address) {
+    return await this.contract.isEventMinter(eventId, address);
+  }
+
+  // Get events for organizer
+  async getOrganizerEvents(organizerAddress) {
+    const { isIssuer, issuerId } = await this.isIssuer(organizerAddress);
+    if (!isIssuer) return [];
+    
+    const eventIds = await this.getIssuerEvents(issuerId);
+    const events = [];
+    
+    for (const eventId of eventIds) {
+      const eventDetails = await this.getEventDetails(eventId);
+      events.push(eventDetails);
+    }
+    
+    return events;
+  }
+
+  // Get events for attendee (events they have tokens for)
+  async getAttendeeEvents(attendeeAddress) {
+    const tokens = await this.getUserTokens(attendeeAddress);
+    const eventIds = [...new Set(tokens.map(token => token.eventId))];
+    const events = [];
+    
+    for (const eventId of eventIds) {
+      const eventDetails = await this.getEventDetails(eventId);
+      events.push(eventDetails);
+    }
+    
+    return events;
+  }
+
+  // Add event minter to specific event
+  async addEventMinter(eventId, address) {
     try {
-      const [maxSupply, totalSupply, mintExpiration] = await Promise.all([
-        this.contract.getEventMaxSupply(eventId),
-        this.contract.getEventTotalSupply(eventId),
-        this.contract.getEventMintExpiration(eventId),
+      const tx = await this.contract.addEventMinter(eventId, address, {
+        gasLimit: 500000,
+      });
+      
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error) {
+      console.error("Failed to add event minter:", error);
+      throw error;
+    }
+  }
+
+  // Remove event minter from specific event
+  async removeEventMinter(eventId, address) {
+    try {
+      const tx = await this.contract.removeEventMinter(eventId, address, {
+        gasLimit: 500000,
+      });
+      
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error) {
+      console.error("Failed to remove event minter:", error);
+      throw error;
+    }
+  }
+
+  // Bulk mint tokens to multiple addresses
+  async bulkMintTokens(issuerId, eventId, addresses) {
+    try {
+      const tx = await this.contract.mintEventToManyUsers(
+        issuerId,
+        eventId,
+        addresses,
+        { gasLimit: 2000000 }
+      );
+      
+      const receipt = await tx.wait();
+      return {
+        success: true,
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error) {
+      console.error("Failed to bulk mint tokens:", error);
+      throw error;
+    }
+  }
+
+  // Get event organizer address
+  async getEventOrganizer(eventId) {
+    try {
+      return await this.contract.eventOrganizer(eventId);
+    } catch (error) {
+      console.error("Failed to get event organizer:", error);
+      return null;
+    }
+  }
+
+  // Get issuer address by issuer ID
+  async getIssuerAddress(issuerId) {
+    try {
+      return await this.contract.issuerHolders(issuerId, 0);
+    } catch (error) {
+      console.error("Failed to get issuer address:", error);
+      return null;
+    }
+  }
+
+  // Get all tokens for a user with detailed information
+  async getUserTokensDetailed(userAddress) {
+    try {
+      const balance = await this.contract.balanceOf(userAddress);
+      const tokens = [];
+
+      for (let i = 0; i < balance; i++) {
+        const { tokenId, eventId } = await this.contract.tokenDetailsOfOwnerByIndex(userAddress, i);
+        const eventDetails = await this.getEventDetails(eventId);
+        
+        tokens.push({
+          tokenId: Number(tokenId),
+          eventId: Number(eventId),
+          ...eventDetails
+        });
+      }
+
+      return tokens;
+    } catch (error) {
+      console.error("Failed to get user tokens detailed:", error);
+      return [];
+    }
+  }
+
+  // Get event statistics
+  async getEventStatistics(eventId) {
+    try {
+      const [maxSupply, totalSupply, mintExpiration, organizer] = await Promise.all([
+        this.contract.eventMaxSupply(eventId),
+        this.contract.eventTotalSupply(eventId),
+        this.contract.eventMintExpiration(eventId),
+        this.getEventOrganizer(eventId)
       ]);
 
       return {
@@ -264,9 +446,12 @@ export class MVPSmartContractService {
         totalSupply: Number(totalSupply),
         mintExpiration: Number(mintExpiration),
         available: Number(maxSupply) - Number(totalSupply),
+        organizer,
+        mintedPercentage: Number(totalSupply) / Number(maxSupply) * 100,
+        isExpired: Number(mintExpiration) > 0 && Number(mintExpiration) * 1000 <= Date.now()
       };
     } catch (error) {
-      console.error("Failed to get event details:", error);
+      console.error("Failed to get event statistics:", error);
       return null;
     }
   }

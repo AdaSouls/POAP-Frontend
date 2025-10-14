@@ -12,28 +12,19 @@ import {
 
 // dotenv.config({ path: path.join(__dirname, "../.././env") });
 
-const {
-  // REACT_APP_DEV_OWNER_ADDRESS,
-  REACT_APP_POAP_CONTRACT_ADDRESS_POLYGON_AMOY,
-  REACT_APP_MNEMONIC_DEVNET,
-  REACT_APP_POLYGON_AMOY_RPC,
-  REACT_APP_POAP_CONTRACT_ADDRESS_HARDHAT,
-  REACT_APP_HARDHAT_PK_0,
-} = process.env;
-
 // Hardhat Localhost Provider
-const providerRPC = {
-  name: "localhost",
-  rpc: "http://localhost:8545",
-  chainId: 31337,
-};
+// const providerRPC = {
+//   name: "localhost",
+//   rpc: "http://localhost:8545",
+//   chainId: 31337,
+// };
 
 // Polygon Amoy Provider
-// const providerRPC = {
-//   name: "Amoy",
-//   rpc: REACT_APP_POLYGON_AMOY_RPC,
-//   chainId: 80002,
-// };
+const providerRPC = {
+  name: "Amoy",
+  rpc: "https://rpc-amoy.polygon.technology",
+  chainId: 80002,
+};
 
 const provider = new ethers.JsonRpcProvider(providerRPC.rpc, {
   chainId: providerRPC.chainId,
@@ -41,7 +32,7 @@ const provider = new ethers.JsonRpcProvider(providerRPC.rpc, {
 });
 
 const poapContractAbi = poapContractJson;
-const poapContractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const poapContractAddress = "0x68FF54eCa3C4b71ecE479306F199816f5f4c17d0";
 // const poapContractAddress = REACT_APP_POAP_CONTRACT_ADDRESS_POLYGON_AMOY;
 
 // let wallet = ethers.Wallet.fromPhrase(REACT_APP_MNEMONIC_DEVNET);
