@@ -10,17 +10,63 @@ const MVPEvents = () => {
   const [loading, setLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('all'); // 'all', 'organizer', 'attendee'
+  const [userRole, setUserRole] = useState('attendee');
+  const [isIssuer, setIsIssuer] = useState(false);
+
+  useEffect(() => {
+    if (provider && provider.address) {
+      initializeUserRole();
+    }
+  }, [provider]);
 
   useEffect(() => {
     if (provider && provider.address) {
       loadEvents();
     }
-  }, [provider]);
+  }, [viewMode, provider]);
+
+  const initializeUserRole = async () => {
+    try {
+      await mvpSmartContractService.initialize(provider);
+      
+      // Check user roles
+      const [adminStatus, issuerInfo] = await Promise.all([
+        mvpSmartContractService.isAdmin(provider.address),
+        mvpSmartContractService.isIssuer(provider.address)
+      ]);
+      
+      setIsIssuer(issuerInfo.isIssuer);
+      
+      // Determine user role
+      if (adminStatus) {
+        setUserRole('admin');
+      } else if (issuerInfo.isIssuer) {
+        setUserRole('organizer');
+      } else {
+        setUserRole('attendee');
+      }
+    } catch (error) {
+      console.error("Failed to initialize user role:", error);
+    }
+  };
 
   const loadEvents = async () => {
     try {
       setLoading(true);
-      const eventsData = await mvpSmartContractService.getAllEvents();
+      let eventsData = [];
+      
+      switch(viewMode) {
+        case 'organizer':
+          eventsData = await mvpSmartContractService.getOrganizerEvents(provider.address);
+          break;
+        case 'attendee':
+          eventsData = await mvpSmartContractService.getAttendeeEvents(provider.address);
+          break;
+        default:
+          eventsData = await mvpSmartContractService.getAllEvents();
+      }
+      
       setEvents(eventsData);
     } catch (error) {
       console.error("Failed to load events:", error);
@@ -59,14 +105,45 @@ const MVPEvents = () => {
           <div className="card">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h4>All Events</h4>
-                <button 
-                  className="btn btn-primary" 
-                  onClick={loadEvents}
-                  disabled={loading}
-                >
-                  {loading ? "Loading..." : "Refresh"}
-                </button>
+                <h4>
+                  {viewMode === 'organizer' ? 'My Events' : 
+                   viewMode === 'attendee' ? 'Events I Participated In' : 
+                   'All Events'}
+                </h4>
+                <div className="d-flex align-items-center">
+                  <div className="btn-group mr-3" role="group">
+                    <button
+                      type="button"
+                      className={`btn ${viewMode === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setViewMode('all')}
+                    >
+                      All Events
+                    </button>
+                    {userRole === 'organizer' && (
+                      <button
+                        type="button"
+                        className={`btn ${viewMode === 'organizer' ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => setViewMode('organizer')}
+                      >
+                        My Events
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={`btn ${viewMode === 'attendee' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setViewMode('attendee')}
+                    >
+                      My Participation
+                    </button>
+                  </div>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={loadEvents}
+                    disabled={loading}
+                  >
+                    {loading ? "Loading..." : "Refresh"}
+                  </button>
+                </div>
               </div>
 
               {loading ? (
@@ -83,12 +160,12 @@ const MVPEvents = () => {
                     <thead>
                       <tr>
                         <th>Event ID</th>
-                        <th>Issuer ID</th>
+                        {viewMode === 'all' && <th>Issuer ID</th>}
                         <th>Max Supply</th>
                         <th>Total Supply</th>
                         <th>Available</th>
                         <th>Mint Expiration</th>
-                        <th>Organizer</th>
+                        {viewMode === 'all' && <th>Organizer</th>}
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
@@ -97,7 +174,7 @@ const MVPEvents = () => {
                       {events.map((event) => (
                         <tr key={event.eventId}>
                           <td>{event.eventId}</td>
-                          <td>{event.issuerId}</td>
+                          {viewMode === 'all' && <td>{event.issuerId}</td>}
                           <td>{event.maxSupply}</td>
                           <td>{event.totalSupply}</td>
                           <td>{event.available}</td>
@@ -107,19 +184,37 @@ const MVPEvents = () => {
                               : 'No expiration'
                             }
                           </td>
-                          <td>{event.eventOrganizer}</td>
+                          {viewMode === 'all' && <td>{event.eventOrganizer}</td>}
                           <td>
                             <span className={`badge ${event.isExpired ? 'btn-danger' : 'btn-success'}`}>
                               {event.isExpired ? 'Expired' : 'Active'}
                             </span>
                           </td>
                           <td>
-                            <button 
-                              className="btn btn-sm btn-info"
-                              onClick={() => handleViewDetails(event)}
-                            >
-                              View Details
-                            </button>
+                            <div className="btn-group" role="group">
+                              <button 
+                                className="btn btn-sm btn-info"
+                                onClick={() => handleViewDetails(event)}
+                              >
+                                View Details
+                              </button>
+                              {viewMode === 'organizer' && (
+                                <>
+                                  <button 
+                                    className="btn btn-sm btn-warning"
+                                    onClick={() => window.location.href = `/mvp/manage-minters?eventId=${event.eventId}`}
+                                  >
+                                    Minters
+                                  </button>
+                                  {/* <button 
+                                    className="btn btn-sm btn-secondary"
+                                    onClick={() => window.location.href = `/mvp/bulk-distribute?eventId=${event.eventId}`}
+                                  >
+                                    Distribute
+                                  </button> */}
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

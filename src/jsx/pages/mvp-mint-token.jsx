@@ -16,6 +16,8 @@ const MVPMintToken = () => {
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [debugInfo, setDebugInfo] = useState("");
+  const [canMint, setCanMint] = useState(false);
+  const [mintingRestrictions, setMintingRestrictions] = useState([]);
   const [formData, setFormData] = useState({
     issuerId: "",
     eventId: "",
@@ -71,7 +73,7 @@ const MVPMintToken = () => {
     }));
   };
 
-  const handleEventChange = (e) => {
+  const handleEventChange = async (e) => {
     const eventId = parseInt(e.target.value);
     const selectedEvent = events.find(event => event.eventId === eventId);
     
@@ -80,6 +82,31 @@ const MVPMintToken = () => {
       eventId: eventId,
       issuerId: selectedEvent ? selectedEvent.issuerId : ""
     }));
+
+    // Check minting permissions for this event
+    if (eventId && provider && provider.address) {
+      await checkMintingPermissions(eventId);
+    }
+  };
+
+  const checkMintingPermissions = async (eventId) => {
+    try {
+      const canMintForEvent = await mvpSmartContractService.canMintForEvent(eventId, provider.address);
+      setCanMint(canMintForEvent);
+      
+      if (!canMintForEvent) {
+        setMintingRestrictions([
+          'You are not authorized to mint tokens for this event.',
+          'Contact the event organizer to be added as a minter.'
+        ]);
+      } else {
+        setMintingRestrictions([]);
+      }
+    } catch (error) {
+      console.error("Failed to check minting permissions:", error);
+      setCanMint(false);
+      setMintingRestrictions(['Unable to verify minting permissions.']);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -97,6 +124,14 @@ const MVPMintToken = () => {
       informationFunction(
         "Event Selection Required",
         "Please select an event first."
+      );
+      return;
+    }
+
+    if (!canMint) {
+      informationFunction(
+        "Minting Not Authorized",
+        "You are not authorized to mint tokens for this event. Contact the event organizer to be added as a minter."
       );
       return;
     }
@@ -200,6 +235,29 @@ const MVPMintToken = () => {
                   </select>
                 </div>
 
+                {/* Minting Permission Status */}
+                {formData.eventId && (
+                  <div className="form-group mb-3">
+                    <div className={`alert ${canMint ? 'alert-success' : 'alert-warning'}`}>
+                      <strong>Minting Status:</strong> 
+                      {canMint ? (
+                        <span className="text-success"> ✓ You are authorized to mint tokens for this event</span>
+                      ) : (
+                        <div>
+                          <span className="text-warning"> ⚠ You are not authorized to mint tokens for this event</span>
+                          {mintingRestrictions.length > 0 && (
+                            <ul className="mb-0 mt-2">
+                              {mintingRestrictions.map((restriction, index) => (
+                                <li key={index}>{restriction}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="form-group mb-3">
                   <label htmlFor="issuerId">Issuer ID (auto-filled from event)</label>
                   <input
@@ -231,7 +289,7 @@ const MVPMintToken = () => {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={loading || events.length === 0}
+                    disabled={loading || events.length === 0 || !canMint}
                   >
                     {loading ? "Minting Token..." : "Mint Token"}
                   </button>
