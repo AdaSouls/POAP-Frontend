@@ -28,7 +28,7 @@ const Wallet = () => {
   return (
     <Layout activeMenu={5}>
       <div className="row">
-        <div className="col-xxl-6 col-xl-6 col-lg-12">
+        {/* <div className="col-xxl-6 col-xl-6 col-lg-12">
           <div className="card card-small">
             <div className="card-wallet">
               {cardano.wallet && (
@@ -96,7 +96,7 @@ const Wallet = () => {
               )}
             </div>
           </div>
-        </div>
+        </div> */}
         <div className="col-xxl-6 col-xl-6 col-lg-12">
           <div className="card card-small">
             <div className="card-wallet">
@@ -141,17 +141,17 @@ const Wallet = () => {
                     <div className="bottom-area border-top align-content-center">
                       <div className="card-body d-flex justify-content-between">
                         <div className="align-content-center wallet-status">
-                          <span className="alert-verified">
-                            <i className="icofont-exclamation"></i>
+                          <span className="verified">
+                            <i className="icofont-check"></i>
                           </span>
-                          Connected - Change chain ID
+                          Connected 
                         </div>
                         <div>
                           <button
                             className="btn btn-danger btn-small"
                             onClick={showEthereumWallet}
                           >
-                            Change Chain
+                            Change Wallet
                           </button>
                         </div>
                       </div>
@@ -190,7 +190,7 @@ const Wallet = () => {
           </div>
         </div>
       </div>
-      {ethereum.provider && (
+      {/* {ethereum.provider && (
         // This elements should have a gap between them of 20px
         <div className="row">
           <div className="col-xxl-4 col-xl-4 col-lg-5 col-md-5">
@@ -200,7 +200,7 @@ const Wallet = () => {
             <PoapCollection />
           </div>
         </div>
-      )}
+      )} */}
     </Layout>
   );
 };
