@@ -4,12 +4,15 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { DrawerProvider } from "./jsx/contexts/drawer/drawer.provider";
+import { UserRolesProvider } from "./jsx/contexts/user-roles/user-roles.provider";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <DrawerProvider>
-      <App />
+      <UserRolesProvider>
+        <App />
+      </UserRolesProvider>
     </DrawerProvider>  
   </React.StrictMode>
 );
