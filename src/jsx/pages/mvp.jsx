@@ -248,39 +248,31 @@ const MVP = () => {
           <div className="card">
             <div className="card-body">
               <h4>Actions</h4>
-              <div className="row row-gap">
-                <div className="col-md-3">
-                  <Link to="/mvp/events" className="btn btn-primary btn-block">
+              <div className="row g-2 justify-content-around">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                  <Link to="/mvp/events" className="btn btn-primary w-100">
                     View Events
                   </Link>
                 </div>
-                <div className="col-md-3">
-                  <Link to="/mvp/tokens" className="btn btn-info btn-block">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                  <Link to="/mvp/tokens" className="btn btn-info w-100">
                     View My Tokens
                   </Link>
                 </div>
-                <div className="col-md-3">
-                  <Link to="/mvp/create-event" className="btn btn-success btn-block">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                  <Link to="/mvp/create-event" className="btn btn-success w-100">
                     Create Event
                   </Link>
                 </div>
                 {userRoles.includes('organizer') && (
-                  <>
-                    <div className="col-md-3">
-                      <Link to="/mvp/manage-minters" className="btn btn-warning btn-block">
-                        Manage Minters
-                      </Link>
-                    </div>
-                    
-                    {/* <div className="col-md-3">
-                      <Link to="/mvp/bulk-distribute" className="btn btn-secondary btn-block">
-                        Bulk Distribute
-                      </Link>
-                    </div> */}
-                  </>
+                  <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                    <Link to="/mvp/manage-minters" className="btn btn-warning w-100">
+                      Manage Minters
+                    </Link>
+                  </div>
                 )}
-                <div className="col-md-3">
-                  <Link to="/mvp/mint-token" className="btn btn-warning btn-block">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                  <Link to="/mvp/mint-token" className="btn btn-warning w-100">
                     Mint Token
                   </Link>
                 </div>

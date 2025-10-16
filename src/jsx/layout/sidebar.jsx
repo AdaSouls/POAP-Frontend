@@ -21,7 +21,10 @@ import manageUsersIconActive from "../../icons/svg/collection-multisig.svg";
 
 const Sidebar = ({ activeMenu }) => {
   const { cardano, ethereum } = useDrawer(); 
-  const [userRole, setUserRole] = useState('attendee');
+  const [userRoles, setUserRoles] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isIssuer, setIsIssuer] = useState(false);
+  const [isAttendee, setIsAttendee] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   
   useEffect(() => {
@@ -35,20 +38,38 @@ const Sidebar = ({ activeMenu }) => {
       await mvpSmartContractService.initialize(ethereum.provider);
       setIsInitialized(true);
       
-      // Check user roles
-      const [adminStatus, issuerInfo] = await Promise.all([
+      // Check all possible roles
+      const [adminStatus, issuerInfo, userTokens] = await Promise.all([
         mvpSmartContractService.isAdmin(ethereum.provider.address),
-        mvpSmartContractService.isIssuer(ethereum.provider.address)
+        mvpSmartContractService.isIssuer(ethereum.provider.address),
+        mvpSmartContractService.getUserTokens(ethereum.provider.address)
       ]);
       
-      // Determine user role
+      // Determine all applicable roles
+      const roles = [];
+      
       if (adminStatus) {
-        setUserRole('admin');
-      } else if (issuerInfo.isIssuer) {
-        setUserRole('organizer');
-      } else {
-        setUserRole('attendee');
+        roles.push('admin');
+        setIsAdmin(true);
       }
+      
+      if (issuerInfo.isIssuer) {
+        roles.push('organizer');
+        setIsIssuer(true);
+      }
+      
+      if (userTokens.length > 0) {
+        roles.push('attendee');
+        setIsAttendee(true);
+      }
+      
+      // If no specific roles, default to attendee
+      if (roles.length === 0) {
+        roles.push('attendee');
+        setIsAttendee(true);
+      }
+      
+      setUserRoles(roles);
     } catch (error) {
       console.error("Failed to initialize user role:", error);
     }
@@ -62,13 +83,17 @@ const Sidebar = ({ activeMenu }) => {
     ];
 
     if (isInitialized && ethereum && ethereum.provider) {
-      if (userRole === 'organizer') {
+      // Show organizer menus if user has organizer role
+      if (userRoles.includes('organizer')) {
         baseMenus.push(
           { id: 10, href: "/mvp/organizer", title: "My Events", iconActive: collectionOwnerIconActive, iconInactive: collectionOwnerIconInactive },
           { id: 11, href: "/mvp/manage-minters", title: "Manage Minters", iconActive: manageUsersIconActive, iconInactive: manageUsersIconActive },
           // { id: 12, href: "/mvp/bulk-distribute", title: "Bulk Distribute", iconActive: adaSoulsIconActive, iconInactive: poapIconInactive }
         );
-      } else if (userRole === 'attendee') {
+      }
+      
+      // Show attendee menus if user has attendee role
+      if (userRoles.includes('attendee')) {
         baseMenus.push(
           { id: 13, href: "/mvp/attendee", title: "My Participation", iconActive: collectionInvitedIconActive, iconInactive: collectionInvitedIconInactive }
         );
