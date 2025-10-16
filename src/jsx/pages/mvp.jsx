@@ -2,16 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
 
 const MVP = () => {
   const { ethereum: { provider } } = useDrawer();
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isIssuer, setIsIssuer] = useState(false);
-  const [isAttendee, setIsAttendee] = useState(false);
-  const [issuerId, setIssuerId] = useState(null);
-  const [userRoles, setUserRoles] = useState([]);
+  const { userRoles, isAdmin, isIssuer, issuerId, isInitialized, isLoading } = useUserRoles();
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [attendeeEvents, setAttendeeEvents] = useState([]);
   const [userTokens, setUserTokens] = useState([]);
@@ -26,43 +22,6 @@ const MVP = () => {
   const initializeService = async () => {
     try {
       setLoading(true);
-      await mvpSmartContractService.initialize(provider);
-      setIsInitialized(true);
-      
-      // Check all possible roles
-      const [adminStatus, issuerInfo, userTokens] = await Promise.all([
-        mvpSmartContractService.isAdmin(provider.address),
-        mvpSmartContractService.isIssuer(provider.address),
-        mvpSmartContractService.getUserTokens(provider.address)
-      ]);
-      
-      // Determine all applicable roles
-      const roles = [];
-      
-      if (adminStatus) {
-        roles.push('admin');
-        setIsAdmin(true);
-      }
-      
-      if (issuerInfo.isIssuer) {
-        roles.push('organizer');
-        setIsIssuer(true);
-        setIssuerId(issuerInfo.issuerId);
-      }
-      
-      if (userTokens.length > 0) {
-        roles.push('attendee');
-        setIsAttendee(true);
-      }
-      
-      // If no specific roles, default to attendee
-      if (roles.length === 0) {
-        roles.push('attendee');
-        setIsAttendee(true);
-      }
-      
-      setUserRoles(roles);
-      
       // Load role-specific data
       await loadData();
     } catch (error) {
@@ -123,7 +82,7 @@ const MVP = () => {
     );
   }
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <Layout activeMenu={9}>
         <div className="row">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import homeIcon from "../../icons/menu/home.png";
 import searchIcon from "../../icons/menu/search.png";
@@ -12,7 +12,7 @@ import adaSoulsIconInactive from "../../icons/menu/ada-souls-inactive.png";
 import poapIconActive from "../../icons/svg/poap-active.svg";
 import poapIconInactive from "../../icons/svg/poap-inactive.svg";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
-import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
+import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import collectionOwnerIconActive from "../../icons/svg/collection-owner.svg";
 import collectionOwnerIconInactive from "../../icons/svg/collection-owner.svg";
 import collectionInvitedIconActive from "../../icons/svg/collection-invited.svg";
@@ -21,59 +21,7 @@ import manageUsersIconActive from "../../icons/svg/collection-multisig.svg";
 
 const Sidebar = ({ activeMenu }) => {
   const { cardano, ethereum } = useDrawer(); 
-  const [userRoles, setUserRoles] = useState([]);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isIssuer, setIsIssuer] = useState(false);
-  const [isAttendee, setIsAttendee] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  
-  useEffect(() => {
-    if (ethereum && ethereum.provider) {
-      initializeUserRole();
-    }
-  }, [ethereum]);
-
-  const initializeUserRole = async () => {
-    try {
-      await mvpSmartContractService.initialize(ethereum.provider);
-      setIsInitialized(true);
-      
-      // Check all possible roles
-      const [adminStatus, issuerInfo, userTokens] = await Promise.all([
-        mvpSmartContractService.isAdmin(ethereum.provider.address),
-        mvpSmartContractService.isIssuer(ethereum.provider.address),
-        mvpSmartContractService.getUserTokens(ethereum.provider.address)
-      ]);
-      
-      // Determine all applicable roles
-      const roles = [];
-      
-      if (adminStatus) {
-        roles.push('admin');
-        setIsAdmin(true);
-      }
-      
-      if (issuerInfo.isIssuer) {
-        roles.push('organizer');
-        setIsIssuer(true);
-      }
-      
-      if (userTokens.length > 0) {
-        roles.push('attendee');
-        setIsAttendee(true);
-      }
-      
-      // If no specific roles, default to attendee
-      if (roles.length === 0) {
-        roles.push('attendee');
-        setIsAttendee(true);
-      }
-      
-      setUserRoles(roles);
-    } catch (error) {
-      console.error("Failed to initialize user role:", error);
-    }
-  };
+  const { userRoles, isInitialized } = useUserRoles();
 
   const getMenus = () => {
     const baseMenus = [
