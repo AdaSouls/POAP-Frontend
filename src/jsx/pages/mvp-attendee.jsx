@@ -138,23 +138,28 @@ const MVPAttendee = () => {
           <div className="card">
             <div className="card-body">
               <h4>Quick Actions</h4>
-              <div className="row">
-                <div className="col-md-3">
+              <div className="row g-2 justify-content-around">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
                   <Link to="/mvp/events" className="btn btn-primary btn-block">
                     Browse All Events
                   </Link>
                 </div>
-                <div className="col-md-3">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                  <Link to="/mvp/create-event" className="btn btn-success btn-block">
+                    Create New Event
+                  </Link>
+                </div>
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
                   <Link to="/mvp/mint-token" className="btn btn-warning btn-block">
                     Mint Token
                   </Link>
                 </div>
-                <div className="col-md-3">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
                   <Link to="/mvp/tokens" className="btn btn-info btn-block">
                     View My Tokens
                   </Link>
                 </div>
-                <div className="col-md-3">
+                <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
                   <button 
                     className="btn btn-secondary btn-block"
                     onClick={loadData}
