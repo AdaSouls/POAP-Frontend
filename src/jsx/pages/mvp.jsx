@@ -9,8 +9,9 @@ const MVP = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isIssuer, setIsIssuer] = useState(false);
+  const [isAttendee, setIsAttendee] = useState(false);
   const [issuerId, setIssuerId] = useState(null);
-  const [userRole, setUserRole] = useState('attendee'); // 'organizer', 'attendee', 'admin'
+  const [userRoles, setUserRoles] = useState([]);
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [attendeeEvents, setAttendeeEvents] = useState([]);
   const [userTokens, setUserTokens] = useState([]);
@@ -28,24 +29,39 @@ const MVP = () => {
       await mvpSmartContractService.initialize(provider);
       setIsInitialized(true);
       
-      // Check user roles
-      const [adminStatus, issuerInfo] = await Promise.all([
+      // Check all possible roles
+      const [adminStatus, issuerInfo, userTokens] = await Promise.all([
         mvpSmartContractService.isAdmin(provider.address),
-        mvpSmartContractService.isIssuer(provider.address)
+        mvpSmartContractService.isIssuer(provider.address),
+        mvpSmartContractService.getUserTokens(provider.address)
       ]);
       
-      setIsAdmin(adminStatus);
-      setIsIssuer(issuerInfo.isIssuer);
-      setIssuerId(issuerInfo.issuerId);
+      // Determine all applicable roles
+      const roles = [];
       
-      // Determine user role
       if (adminStatus) {
-        setUserRole('admin');
-      } else if (issuerInfo.isIssuer) {
-        setUserRole('organizer');
-      } else {
-        setUserRole('attendee');
+        roles.push('admin');
+        setIsAdmin(true);
       }
+      
+      if (issuerInfo.isIssuer) {
+        roles.push('organizer');
+        setIsIssuer(true);
+        setIssuerId(issuerInfo.issuerId);
+      }
+      
+      if (userTokens.length > 0) {
+        roles.push('attendee');
+        setIsAttendee(true);
+      }
+      
+      // If no specific roles, default to attendee
+      if (roles.length === 0) {
+        roles.push('attendee');
+        setIsAttendee(true);
+      }
+      
+      setUserRoles(roles);
       
       // Load role-specific data
       await loadData();
@@ -58,11 +74,26 @@ const MVP = () => {
 
   const loadData = async () => {
     try {
-      const [tokensData, organizerEventsData, attendeeEventsData] = await Promise.all([
-        mvpSmartContractService.getUserTokens(provider.address),
-        userRole === 'organizer' ? mvpSmartContractService.getOrganizerEvents(provider.address) : Promise.resolve([]),
-        mvpSmartContractService.getAttendeeEvents(provider.address)
-      ]);
+      const promises = [];
+      
+      // Always load user tokens
+      promises.push(mvpSmartContractService.getUserTokens(provider.address));
+      
+      // Load organizer data if user is organizer
+      if (userRoles.includes('organizer')) {
+        promises.push(mvpSmartContractService.getOrganizerEvents(provider.address));
+      } else {
+        promises.push(Promise.resolve([]));
+      }
+      
+      // Load attendee data if user is attendee
+      if (userRoles.includes('attendee')) {
+        promises.push(mvpSmartContractService.getAttendeeEvents(provider.address));
+      } else {
+        promises.push(Promise.resolve([]));
+      }
+      
+      const [tokensData, organizerEventsData, attendeeEventsData] = await Promise.all(promises);
       
       setUserTokens(tokensData);
       setOrganizerEvents(organizerEventsData);
@@ -128,10 +159,12 @@ const MVP = () => {
                   <p><strong>Connected Wallet:</strong> {provider.address}</p>
                 </div>
                 <div className="col-md-4">
-                  <p><strong>Role:</strong> 
-                    <span className={`badge ${userRole === 'admin' ? 'btn-danger' : userRole === 'organizer' ? 'btn-success' : 'btn-info'} ml-2`}>
-                      {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-                    </span>
+                  <p><strong>Role(s):</strong> 
+                    {userRoles.map((role, index) => (
+                      <span key={role} className={`badge ${role === 'admin' ? 'btn-danger' : role === 'organizer' ? 'btn-success' : 'btn-info'} ml-1`}>
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </span>
+                    ))}
                   </p>
                 </div>
                 <div className="col-md-4">
@@ -153,7 +186,7 @@ const MVP = () => {
             </div>
           </div>
         </div>
-        {userRole === 'organizer' && (
+        {userRoles.includes('organizer') && (
           <>
             <div className="col-md-3">
               <div className="card">
@@ -181,7 +214,7 @@ const MVP = () => {
             </div>
           </>
         )}
-        {userRole === 'attendee' && (
+        {userRoles.includes('attendee') && (
           <>
             <div className="col-md-3">
               <div className="card">
@@ -226,19 +259,19 @@ const MVP = () => {
                     View My Tokens
                   </Link>
                 </div>
-                
-                {userRole === 'organizer' && (
+                <div className="col-md-3">
+                  <Link to="/mvp/create-event" className="btn btn-success btn-block">
+                    Create Event
+                  </Link>
+                </div>
+                {userRoles.includes('organizer') && (
                   <>
                     <div className="col-md-3">
                       <Link to="/mvp/manage-minters" className="btn btn-warning btn-block">
                         Manage Minters
                       </Link>
                     </div>
-                    <div className="col-md-3">
-                      <Link to="/mvp/create-event" className="btn btn-success btn-block">
-                        Create Event
-                      </Link>
-                    </div>
+                    
                     {/* <div className="col-md-3">
                       <Link to="/mvp/bulk-distribute" className="btn btn-secondary btn-block">
                         Bulk Distribute
@@ -246,14 +279,11 @@ const MVP = () => {
                     </div> */}
                   </>
                 )}
-                
-                {userRole === 'attendee' && (
-                  <div className="col-md-3">
-                    <Link to="/mvp/mint-token" className="btn btn-warning btn-block">
-                      Mint Token
-                    </Link>
-                  </div>
-                )}
+                <div className="col-md-3">
+                  <Link to="/mvp/mint-token" className="btn btn-warning btn-block">
+                    Mint Token
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -264,13 +294,13 @@ const MVP = () => {
           <div className="card">
             <div className="card-body">
               <h4>
-                {userRole === 'organizer' ? 'My Events' : 
-                 userRole === 'attendee' ? 'Events I Participated In' : 
+                {userRoles.includes('organizer') ? 'My Events' : 
+                 userRoles.includes('attendee') ? 'Events I Participated In' : 
                  'Recent Events'}
               </h4>
               {(() => {
-                const eventsToShow = userRole === 'organizer' ? organizerEvents : 
-                                   userRole === 'attendee' ? attendeeEvents : [];
+                const eventsToShow = userRoles.includes('organizer') ? organizerEvents : 
+                                   userRoles.includes('attendee') ? attendeeEvents : [];
                 
                 if (eventsToShow.length === 0) {
                   return <p>No events found.</p>;

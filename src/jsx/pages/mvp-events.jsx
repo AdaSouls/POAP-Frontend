@@ -11,7 +11,7 @@ const MVPEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('all'); // 'all', 'organizer', 'attendee'
-  const [userRole, setUserRole] = useState('attendee');
+  const [userRoles, setUserRoles] = useState([]);
   const [isIssuer, setIsIssuer] = useState(false);
 
   useEffect(() => {
@@ -30,22 +30,35 @@ const MVPEvents = () => {
     try {
       await mvpSmartContractService.initialize(provider);
       
-      // Check user roles
-      const [adminStatus, issuerInfo] = await Promise.all([
+      // Check all possible roles
+      const [adminStatus, issuerInfo, userTokens] = await Promise.all([
         mvpSmartContractService.isAdmin(provider.address),
-        mvpSmartContractService.isIssuer(provider.address)
+        mvpSmartContractService.isIssuer(provider.address),
+        mvpSmartContractService.getUserTokens(provider.address)
       ]);
       
-      setIsIssuer(issuerInfo.isIssuer);
+      // Determine all applicable roles
+      const roles = [];
       
-      // Determine user role
       if (adminStatus) {
-        setUserRole('admin');
-      } else if (issuerInfo.isIssuer) {
-        setUserRole('organizer');
-      } else {
-        setUserRole('attendee');
+        roles.push('admin');
       }
+      
+      if (issuerInfo.isIssuer) {
+        roles.push('organizer');
+        setIsIssuer(true);
+      }
+      
+      if (userTokens.length > 0) {
+        roles.push('attendee');
+      }
+      
+      // If no specific roles, default to attendee
+      if (roles.length === 0) {
+        roles.push('attendee');
+      }
+      
+      setUserRoles(roles);
     } catch (error) {
       console.error("Failed to initialize user role:", error);
     }
@@ -119,7 +132,7 @@ const MVPEvents = () => {
                     >
                       All Events
                     </button>
-                    {userRole === 'organizer' && (
+                    {userRoles.includes('organizer') && (
                       <button
                         type="button"
                         className={`btn ${viewMode === 'organizer' ? 'btn-primary' : 'btn-outline-primary'}`}
@@ -128,13 +141,15 @@ const MVPEvents = () => {
                         My Events
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className={`btn ${viewMode === 'attendee' ? 'btn-primary' : 'btn-outline-primary'}`}
-                      onClick={() => setViewMode('attendee')}
-                    >
-                      My Participation
-                    </button>
+                    {userRoles.includes('attendee') && (
+                      <button
+                        type="button"
+                        className={`btn ${viewMode === 'attendee' ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => setViewMode('attendee')}
+                      >
+                        My Participation
+                      </button>
+                    )}
                   </div>
                   <button 
                     className="btn btn-secondary" 
