@@ -47,7 +47,7 @@ const MVPAttendee = () => {
 
   if (!provider) {
     return (
-      <Layout activeMenu={1}>
+      <Layout activeMenu={13}>
         <div className="card">
           <div className="card-body text-center">
             <h4>Connect Your Ethereum Wallet</h4>
@@ -60,7 +60,7 @@ const MVPAttendee = () => {
 
   if (loading) {
     return (
-      <Layout activeMenu={1}>
+      <Layout activeMenu={13}>
         <div className="card">
           <div className="card-body text-center">
             <div className="spinner-border" role="status">
@@ -74,7 +74,7 @@ const MVPAttendee = () => {
   }
 
   return (
-    <Layout activeMenu={1}>
+    <Layout activeMenu={13}>
       <div className="row">
         {/* Header */}
         <div className="col-12">

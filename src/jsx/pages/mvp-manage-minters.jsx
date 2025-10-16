@@ -171,7 +171,7 @@ const MVPMangeMinters = () => {
 
   if (!provider) {
     return (
-      <Layout activeMenu={1}>
+      <Layout activeMenu={11}>
         <div className="card">
           <div className="card-body text-center">
             <h4>Connect Your Ethereum Wallet</h4>
@@ -184,7 +184,7 @@ const MVPMangeMinters = () => {
 
   if (loading) {
     return (
-      <Layout activeMenu={1}>
+      <Layout activeMenu={11}>
         <div className="card">
           <div className="card-body text-center">
             <div className="spinner-border" role="status">
@@ -199,7 +199,7 @@ const MVPMangeMinters = () => {
 
   if (!isIssuer) {
     return (
-      <Layout activeMenu={1}>
+      <Layout activeMenu={11}>
         <div className="card">
           <div className="card-body text-center">
             <h4>Access Denied</h4>
@@ -214,7 +214,7 @@ const MVPMangeMinters = () => {
   }
 
   return (
-    <Layout activeMenu={1}>
+    <Layout activeMenu={11}>
       <div className="row">
         {/* Header */}
         <div className="col-12">

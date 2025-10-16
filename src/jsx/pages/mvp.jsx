@@ -105,7 +105,7 @@ const MVP = () => {
 
   if (!provider) {
     return (
-      <Layout activeMenu={1}>
+      <Layout activeMenu={9}>
         <div className="row">
           <div className="col-12">
             <div className="card">
@@ -125,7 +125,7 @@ const MVP = () => {
 
   if (loading) {
     return (
-      <Layout activeMenu={1}>
+      <Layout activeMenu={9}>
         <div className="row">
           <div className="col-12">
             <div className="card">
@@ -143,7 +143,7 @@ const MVP = () => {
   }
 
   return (
-    <Layout activeMenu={1}>
+    <Layout activeMenu={9}>
       <div className="row">
         {/* Header */}
         <div className="col-12">
