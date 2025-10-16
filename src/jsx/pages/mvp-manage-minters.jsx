@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
 import { 
   informationFunction, 
@@ -11,10 +12,8 @@ import {
 
 const MVPMangeMinters = () => {
   const { ethereum: { provider } } = useDrawer();
+  const { isIssuer, issuerId, isInitialized, isLoading } = useUserRoles();
   const [searchParams] = useSearchParams();
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isIssuer, setIsIssuer] = useState(false);
-  const [issuerId, setIssuerId] = useState(null);
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [minters, setMinters] = useState([]);
@@ -34,15 +33,7 @@ const MVPMangeMinters = () => {
   const initializeService = async () => {
     try {
       setLoading(true);
-      await mvpSmartContractService.initialize(provider);
-      setIsInitialized(true);
-      
-      // Check if user is an issuer
-      const issuerInfo = await mvpSmartContractService.isIssuer(provider.address);
-      setIsIssuer(issuerInfo.isIssuer);
-      setIssuerId(issuerInfo.issuerId);
-      
-      if (issuerInfo.isIssuer) {
+      if (isIssuer) {
         await loadEvents();
         
         // If eventId is provided in URL, select that event
@@ -182,7 +173,7 @@ const MVPMangeMinters = () => {
     );
   }
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <Layout activeMenu={11}>
         <div className="card">

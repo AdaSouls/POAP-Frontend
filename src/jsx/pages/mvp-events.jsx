@@ -1,68 +1,24 @@
 import React, { useState, useEffect } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
 import EventDetailsModal from "../components/EventDetailsModal";
 
 const MVPEvents = () => {
   const { ethereum: { provider } } = useDrawer();
+  const { userRoles, isIssuer } = useUserRoles();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('all'); // 'all', 'organizer', 'attendee'
-  const [userRoles, setUserRoles] = useState([]);
-  const [isIssuer, setIsIssuer] = useState(false);
-
-  useEffect(() => {
-    if (provider && provider.address) {
-      initializeUserRole();
-    }
-  }, [provider]);
 
   useEffect(() => {
     if (provider && provider.address) {
       loadEvents();
     }
   }, [viewMode, provider]);
-
-  const initializeUserRole = async () => {
-    try {
-      await mvpSmartContractService.initialize(provider);
-      
-      // Check all possible roles
-      const [adminStatus, issuerInfo, userTokens] = await Promise.all([
-        mvpSmartContractService.isAdmin(provider.address),
-        mvpSmartContractService.isIssuer(provider.address),
-        mvpSmartContractService.getUserTokens(provider.address)
-      ]);
-      
-      // Determine all applicable roles
-      const roles = [];
-      
-      if (adminStatus) {
-        roles.push('admin');
-      }
-      
-      if (issuerInfo.isIssuer) {
-        roles.push('organizer');
-        setIsIssuer(true);
-      }
-      
-      if (userTokens.length > 0) {
-        roles.push('attendee');
-      }
-      
-      // If no specific roles, default to attendee
-      if (roles.length === 0) {
-        roles.push('attendee');
-      }
-      
-      setUserRoles(roles);
-    } catch (error) {
-      console.error("Failed to initialize user role:", error);
-    }
-  };
 
   const loadEvents = async () => {
     try {
