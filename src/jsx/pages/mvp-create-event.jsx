@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -11,6 +12,7 @@ import {
 
 const MVPCreateEvent = () => {
   const { ethereum: { provider } } = useDrawer();
+  const { issuerId, isIssuer, isLoading } = useUserRoles();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,6 +22,26 @@ const MVPCreateEvent = () => {
     mintExpiration: "",
     eventOrganizer: "",
   });
+
+  // Auto-populate issuerId when it becomes available
+  useEffect(() => {
+    if (issuerId && !formData.issuerId) {
+      setFormData(prev => ({
+        ...prev,
+        issuerId: issuerId.toString()
+      }));
+    }
+  }, [issuerId]);
+
+  // Auto-populate eventOrganizer with wallet address
+  useEffect(() => {
+    if (provider?.address && !formData.eventOrganizer) {
+      setFormData(prev => ({
+        ...prev,
+        eventOrganizer: provider.address
+      }));
+    }
+  }, [provider?.address]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -115,6 +137,8 @@ const MVPCreateEvent = () => {
                     value={formData.issuerId}
                     onChange={handleInputChange}
                     required
+                    readOnly
+                    style={{ backgroundColor: '#f8f9fa', cursor: 'not-allowed' }}
                   />
                 </div>
 
