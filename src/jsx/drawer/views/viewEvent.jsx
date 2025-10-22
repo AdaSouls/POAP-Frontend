@@ -13,6 +13,13 @@ import {
   getOwnerPoapsService,
 } from "../../../services/paima.service";
 import EventBody from "../../components/eventBody";
+import { 
+  succesfullMessage, 
+  errorFunction, 
+  loadingFunction 
+} from "../../toasts/sweetAlerts";
+import { useState } from "react";
+import dataSyncService from "../../../services/dataSync.service";
 
 export default function ViewEvent() {
   const {
@@ -22,6 +29,7 @@ export default function ViewEvent() {
     poapOwner,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const [loading, setLoading] = useState(false);
 
   const closeDrawer = () => {
     dispatch({
@@ -50,35 +58,74 @@ export default function ViewEvent() {
   };
 
   const mintPoap = async (issuerId, eventId) => {
-    if (!poapOwner) {
-      console.log("🚀 ~ mintPoap ~ poapOwner:", poapOwner);
-      const newOwner = await createOwnerService({
-        address: provider.address.toLowerCase(),
-      });
-      console.log("🚀 ~ mintPoap ~ newOwner:", newOwner);
-      if (!newOwner) {
-        console.error("Error creating owner on DB");
-        return;
-      } else {
+    setLoading(true);
+
+    try {
+      // Step 1: Create owner if doesn't exist
+      if (!poapOwner) {
+        console.log("🚀 ~ mintPoap ~ poapOwner:", poapOwner);
+        loadingFunction("Creating Owner", "Setting up your account...", "");
+        
+        const newOwner = await createOwnerService({
+          address: provider.address.toLowerCase(),
+        });
+        console.log("🚀 ~ mintPoap ~ newOwner:", newOwner);
+        
+        if (!newOwner) {
+          errorFunction(
+            "Error",
+            "Failed to create owner account. Please try again.",
+            ""
+          );
+          return;
+        }
+        
         console.log("🚀 ~ mintPoap ~ updating owner context");
         updateOwner(newOwner);
       }
+
+      // Step 2: Mint POAP token on blockchain
+      loadingFunction("Minting POAP", "Minting your POAP token...", "");
+      const minting = await mintToken(
+        issuerId,
+        eventId,
+        provider.address,
+        provider
+      );
+      console.log("🚀 ~ mintPoap ~ minting:", minting);
+      
+      if (!minting) {
+        errorFunction(
+          "Error",
+          "Failed to mint POAP token. Please try again.",
+          ""
+        );
+        return;
+      }
+
+      // Step 3: Refresh POAPs list using data sync service
+      try {
+        await dataSyncService.refreshPoaps(updatePoaps);
+      } catch (error) {
+        console.error("Error refreshing POAPs:", error);
+      }
+
+      succesfullMessage(
+        "POAP Minted Successfully",
+        "Your POAP has been minted and added to your collection."
+      );
+      
+      closeDrawer();
+    } catch (error) {
+      console.error("Error minting POAP:", error);
+      errorFunction(
+        "Error",
+        "An error occurred while minting the POAP. Please try again.",
+        ""
+      );
+    } finally {
+      setLoading(false);
     }
-    const minting = await mintToken(
-      issuerId,
-      eventId,
-      provider.address,
-      provider
-    );
-    console.log("🚀 ~ mintPoap ~ minting:", minting);
-    if (!minting) {
-      console.error("Error minting POAP");
-      return;
-    } else {
-      const poaps = await getOwnerPoapsService(provider.address.toLowerCase());
-      updatePoaps(poaps);
-    }
-    closeDrawer();
   };
 
   // Helper function to check if a value should be displayed
@@ -119,9 +166,11 @@ export default function ViewEvent() {
                 );
               }
             }}
-            disabled={!provider?.address ? false : !isPoapMintable(event.event)}
+            disabled={loading || (!provider?.address ? false : !isPoapMintable(event.event))}
           >
-            {!provider?.address
+            {loading
+              ? "Minting..."
+              : !provider?.address
               ? "Connect to wallet"
               : isPoapMintable(event.event)
               ? "Mint Poap"
