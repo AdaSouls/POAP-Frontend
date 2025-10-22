@@ -86,7 +86,7 @@ export async function getAllEventsService() {
     if (!response.ok) {
       throw new Error("Network response was not ok" + response.statusText);
     }
-    const { events } = await response.json();
+    const events = await response.json();
     return events;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -118,7 +118,7 @@ export async function createEventService(eventInfo: ICreateEventParams) {
 export async function getIssuerByAddressService(address: string) {
   try {
     const response = await fetch(
-      `${baseUrl}/get_issuer_by_address?address=${address}`,
+      `${baseUrl}/get_issuer_by_address?walletAddress=${address}`,
       {
         method: "GET",
         headers: {
@@ -184,7 +184,7 @@ export async function createOwnerService(ownerInfo: ICreateOwnerParams) {
 export async function getOwnerPoapsService(ownerAddress: string) {
   try {
     const response = await fetch(
-      `${baseUrl}/owner_poaps?ownerAddress=${ownerAddress}`,
+      `${baseUrl}/owner_poaps?walletAddress=${ownerAddress}`,
       {
         method: "GET",
         headers: {
@@ -207,7 +207,7 @@ export async function getOwnerPoapsService(ownerAddress: string) {
 export async function getOwnerByAddressService(address: string) {
   try {
     const response = await fetch(
-      `${baseUrl}/get_owner_by_address?address=${address}`,
+      `${baseUrl}/get_owner_by_address?walletAddress=${address}`,
       {
         method: "GET",
         headers: {
@@ -215,7 +215,6 @@ export async function getOwnerByAddressService(address: string) {
         },
       }
     );
-    console.log("🚀 ~ getOwnerByAddressService ~ response:", response);
     if (!response.ok) {
       throw new Error("Network response was not ok" + response.statusText);
     }
