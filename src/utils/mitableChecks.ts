@@ -1,11 +1,11 @@
 import { IGetAllEventsResult } from "../services/paima.service";
 
-export function isEventExpired(expiryDate: Date | null): boolean {
-  if (!expiryDate) {
-    return false; // If no expiry date is set, we consider it not expired
+export function isEventExpired(expiration: number | null): boolean {
+  if (!expiration) {
+    return false;
   }
   const currentDate = new Date();
-  return expiryDate < currentDate;
+  return expiration * 1000 < currentDate.getTime();
 }
 
 export function hasPoapsToBeMinted(
@@ -20,7 +20,7 @@ export function hasPoapsToBeMinted(
 // }
 
 export function isPoapMintable(event: IGetAllEventsResult): boolean {
-  const isExpired = isEventExpired(event?.expiryDate);
+  const isExpired = isEventExpired(event?.expiration ?? null);
   const hasMintablePoaps = hasPoapsToBeMinted(
     event.poapsToBeMinted,
     event.mintedPoaps

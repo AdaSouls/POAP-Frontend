@@ -14,9 +14,9 @@ const PoapEvents = ({ addressEvents }) => {
     <>
       {provider ? (
         <table className="table table-striped table-small responsive-table">
-          {poapEvents?.length > 0 ? (
+          {addressEvents?.length > 0 ? (
             <tbody>
-              {poapEvents.map((event, index) => {
+              {addressEvents.map((event, index) => {
                 return <EventItem event={event} index={index} key={index} />;
               })}
             </tbody>

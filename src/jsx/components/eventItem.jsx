@@ -2,6 +2,7 @@ import eventNormal from "../../images/svg/event-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 import mintTokenButton from "../../icons/svg/mint-token-button.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
+import { isEventExpired } from "../../utils/mitableChecks";
 import {
   useDrawerDispatch,
   useDrawer,
@@ -39,8 +40,24 @@ const EventItem = ({ event, index, mintable, owned }) => {
       <td className="col-2">Issuer ID: {event.issuerId}</td>
       <td className="col-3">
         {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
-        Expiration: {formatDateToDDMMYYYY(new Date(event.expiration))}
-        {event.isExpired && (
+        Expiration: {event.expiration ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : 'No expiry'}
+        {/* {event.isExpired && (
+          <span
+            alt="Expired"
+            style={{
+              border: "1px solid rgb(232, 75, 75)",
+              borderRadius: "10px",
+              margin: "2px",
+              marginLeft: "10px",
+              padding: "2px 5px",
+              color: "rgb(232, 75, 75)",
+              fontSize: "10px",
+            }}
+          >
+            Expired
+          </span>
+        )} */}
+        {isEventExpired(event.expiration) && event.expiration !== 0 && (
           <span
             alt="Expired"
             style={{

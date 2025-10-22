@@ -99,8 +99,9 @@ const Create = () => {
       );
       const ownersEvents = poapEvents.filter((event) => {
         return (
-          event?.issuerUuid === poapIssuer?.issuerUuid &&
-          event?.approved === "Approved"
+          // event?.issuerUuid === poapIssuer?.issuerUuid &&
+          // event?.approved === "Approved"
+          event?.issuerId === poapIssuer?.issuerId
         );
       });
       console.log("🚀 ~ ownersEvents ~ ownersEvents:", ownersEvents);

@@ -61,6 +61,7 @@ export interface IGetAllEventsResult {
   updatedAt: Date | null;
   virtualEvent: boolean;
   year: number | null;
+  expiration?: number | null;
 }
 
 export interface ICreateIssuerParams {

@@ -119,12 +119,13 @@ const EventCard = ({ event, index }) => {
               <li className="d-flex justify-content-start">
                 <i className={`icofont ${getStatusIcon(event.status)} mr-2 mt-1`}></i>
                 <p className="pt-1 small">
-                  {event.expiryDate 
+                  {event.expiration == 0 ? 'No expiry' : formatDateToDDMMYYYY(new Date(event.expiration*1000))}
+                    {/* {event.expiryDate
                     ? formatDateToDDMMYYYY(new Date(event.expiryDate))
                     : event.expiration 
                     ? formatDateToDDMMYYYY(event.expiration * 1000)
                     : 'No expiry'
-                  }
+                  } */}
                 </p>
               </li>
             </ul>
