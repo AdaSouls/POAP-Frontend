@@ -94,7 +94,7 @@ const EventBody = ({ event }) => {
       </div> */}
       <div className="col-12 ">
         <p className="m-0 small gray">Expiration</p>
-        <p className="m-0 mb-3">{formatDateToDDMMYYYY(new Date(event.expiration))}</p>
+        <p className="m-0 mb-3">{formatDateToDDMMYYYY(new Date(event.expiration * 1000))}</p>
       </div>
 
       {/* {hasValue(event.city) && (
