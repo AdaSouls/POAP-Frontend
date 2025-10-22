@@ -1,0 +1,150 @@
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import Layout from "../layout/layout";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import EventCard from "../components/eventCard";
+import eventNormal from "../../images/svg/event-normal.svg";
+import loadingGif from "../../images/loading.gif";
+import walletStatus from "../../images/collections/wallet-status.png";
+
+const EventsPage = () => { 
+  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState([]);
+  const [myEvents, setMyEvents] = useState([]);
+  const { poapEvents, ethereum: { provider, address } } = useDrawer();
+  const dispatch = useDrawerDispatch();
+
+  const createEvent = () => {
+    dispatch({
+      type: 'CREATE_EVENT'
+    });
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    // Use events from context (already loaded in router)
+    if (poapEvents && poapEvents.length > 0) {
+      setEvents(poapEvents);
+      
+      // Filter events by current user if wallet is connected
+      if (provider && address) {
+        const userEvents = poapEvents.filter(event => 
+          event.organiserAddress?.toLowerCase() === address.toLowerCase()
+        );
+        setMyEvents(userEvents);
+      }
+    }
+    setLoading(false);
+  }, [poapEvents, provider, address]);
+
+  return (
+    <Layout activeMenu={3}>
+      <>
+        <div className="row">
+          {/* HEADER */}
+          <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
+            <div className="card inner-header">
+              <div className="d-flex justify-content-between m-3">
+                <div className="inner-header-back">
+                  <Link to="/create" className="simple-link">
+                    <i className="icofont-rounded-left"></i>   
+                  </Link>                            
+                </div>
+                <div className="inner-header-title">
+                  <h4>
+                    <span className="text-uppercase"></span>
+                    Events
+                  </h4>
+                </div>
+                <div className="inner-header-buttons">
+                  {/* Future: Add filter buttons */}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="row">
+          {/* CREATE EVENT CARD */}
+          <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
+            <div className="card card-create bg-event card-classic">
+              <div className="card-body card-classic-max-height" onClick={provider ? createEvent : console.log("alert! wallet connect")}>
+                <h4>CREATE <span> EVENT</span></h4>               
+                <div className={(provider ? "plus-button" : "axis-button")+" align-content-center"} >
+                  <div></div><div></div>
+                </div>              
+              </div>
+              <div className="d-flex justify-content-between m-3">
+                <div className="align-content-center mt-4">                    
+                  <span className="verified">
+                    {provider && <i className="icofont-check-alt"></i>}
+                    {!provider && <i className="icofont-close-line"></i>}
+                  </span>     
+                </div>
+                <div className="align-content-center mt-4">
+                  {/* Wallet connection status */}
+                </div> 
+              </div>
+            </div>
+          </div>
+
+          {/* LOADING STATE */}
+          {loading ? (
+            <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
+              <div className="card card-event card-classic">
+                <div className="card-body card-classic-max-height d-flex justify-content-center">
+                  <div className="loading-event-card">
+                    <img                        
+                      src={loadingGif}
+                      width="35"
+                      height="35"
+                      alt=""
+                    />
+                  </div> 
+                </div>
+                <div className="d-flex justify-content-between m-3">
+                  <div className="align-content-center mt-4"></div>
+                  <div className="align-content-center mt-5"></div> 
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* MY EVENTS (if wallet connected) */}
+              {provider && myEvents.length > 0 && (
+                <>
+                  {myEvents.map(event => (
+                    <EventCard key={`my-${event.eventId}`} event={event} index={0} />
+                  ))}
+                </>
+              )}
+
+              {/* ALL EVENTS */}
+              {provider ? (
+                events.map(event => (
+                  <EventCard key={event.eventId} event={event} index={0} />
+                ))
+              ) : (
+                <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
+                  <div className="card card-event card-classic">
+                    <div className="wallet-non-connected">
+                      <img 
+                        className="mt-6"                       
+                        src={walletStatus}
+                        width="150"
+                        height="140"
+                        alt=""
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </>
+    </Layout>
+  );
+};
+
+export default EventsPage;

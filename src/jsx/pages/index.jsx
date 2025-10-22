@@ -35,7 +35,7 @@ const Dashboard = () => {
                 POAP.
               </p>
               <ul>
-                <li>
+                {/* <li>
                   {wallet ? (
                     <span className="verified">
                       <i className="icofont-check-alt"></i>
@@ -46,9 +46,9 @@ const Dashboard = () => {
                     </span>
                   )}
                   Cardano Wallet
-                  {/* <Link to={"#"}> */}
-                  {/* </Link> */}
-                </li>
+                   <Link to={"#"}> 
+                  </Link> 
+                </li> */}
                 <li>
                   {provider ? (
                     <span className="verified">

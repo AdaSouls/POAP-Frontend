@@ -108,10 +108,10 @@ const MVP = () => {
         <div className="col-12">
           <div className="card">
             <div className="card-body">
-              <h2>POAP MVP - Smart Contract Only</h2>
+              <h2>POAP - Smart Contract Only</h2>
               <p className="text-muted">
-                This is a minimal viable product that uses only smart contracts, 
-                bypassing the backend API completely.
+                This version uses only smart contracts, bypassing the backend API completely.
+                For the integrated version (Backend + Smart Contracts), visit the Events page.
               </p>
               <div className="row">
                 <div className="col-md-4">
@@ -202,11 +202,48 @@ const MVP = () => {
           </>
         )}
 
+        {/* Version Selection */}
+        <div className="col-12">
+          <div className="card">
+            <div className="card-body">
+              <h4>Choose Your Version</h4>
+              <div className="row g-2">
+                <div className="col-12 col-md-6">
+                  <div className="card border-primary">
+                    <div className="card-body text-center">
+                      <h5 className="card-title">Integrated Version</h5>
+                      <p className="card-text">
+                        Backend + Smart Contracts integration with real-time data synchronization
+                      </p>
+                      <Link to="/events" className="btn btn-primary">
+                        Go to Events (Integrated)
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-12 col-md-6">
+                  <div className="card border-secondary">
+                    <div className="card-body text-center">
+                      <h5 className="card-title">Smart Contract Only</h5>
+                      <p className="card-text">
+                        Direct smart contract interaction without backend dependency
+                      </p>
+                      <span className="btn btn-secondary disabled">
+                        You are here
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="col-12">
           <div className="card">
             <div className="card-body">
-              <h4>Actions</h4>
+              <h4>Smart Contract Actions</h4>
               <div className="row g-2 justify-content-around">
                 <div className="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
                   <Link to="/mvp/events" className="btn btn-primary w-100">
