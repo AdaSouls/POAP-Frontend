@@ -43,17 +43,17 @@ const useEthereum = () => {
 
   
   // POLYGON AMOY TESTNET
-  const DESIRED_CHAIN_ID = REACT_APP_POLYGON_AMOY_CHAIN_ID;
+  const DESIRED_CHAIN_ID = "80002";
   const DESIRED_CHAIN_PARAMS = {
     chainId: DESIRED_CHAIN_ID,
-    chainName: REACT_APP_POLYGON_AMOY_CHAIN_NAME,
+    chainName: "Amoy",
     nativeCurrency: {
-      name: REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_NAME,
-      symbol: REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_SYMBOL,
+      name: "Test POL",
+      symbol: "POL",
       decimals: 18,
     },
-    rpcUrls: [REACT_APP_POLYGON_AMOY_RPC],
-    blockExplorerUrls: [REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL],
+    rpcUrls: ["https://rpc-amoy.polygon.technology"],
+    blockExplorerUrls: ["https://amoy.polygonscan.com/"],
   };
    
 
