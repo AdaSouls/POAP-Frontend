@@ -1,6 +1,6 @@
 import { useDrawer } from "../contexts/drawer/drawer.provider";
-import PoapEvent from "./poapEvent";
 import eventNormal from "../../images/svg/event-normal.svg";
+import EventItem from "./eventItem";
 import circlePlus from "../../icons/svg/circle-plus.svg";
 import walletStatus from "../../images/collections/wallet-status.png";
 
@@ -14,10 +14,10 @@ const PoapEvents = ({ addressEvents }) => {
     <>
       {provider ? (
         <table className="table table-striped table-small responsive-table">
-          {poapEvents.length > 0 ? (
+          {poapEvents?.length > 0 ? (
             <tbody>
-              {addressEvents.map((event, index) => {
-                return <PoapEvent event={event} index={index} key={index} />;
+              {poapEvents.map((event, index) => {
+                return <EventItem event={event} index={index} key={index} />;
               })}
             </tbody>
           ) : (
