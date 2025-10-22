@@ -5,7 +5,11 @@ import {
 import { useState } from "react";
 import { Button } from "react-bootstrap";
 import { createIssuerService } from "../../../services/paima.service";
-import { succesfullMessage } from "../../toasts/sweetAlerts";
+import { 
+  succesfullMessage, 
+  errorFunction, 
+  loadingFunction 
+} from "../../toasts/sweetAlerts";
 
 export default function CreateIssuer() {
   const state = useDrawer();
@@ -14,6 +18,7 @@ export default function CreateIssuer() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [organization, setOrganization] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const closeDrawer = () => {
     dispatch({
@@ -30,26 +35,46 @@ export default function CreateIssuer() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    const createInfo = {
-      email: email,
-      name: name,
-      organization: organization,
-      address: state.ethereum.provider.address.toLowerCase(),
-    };
-    const createdIssuerOnDB = await createIssuerService(createInfo);
-    if (!createdIssuerOnDB) {
-      console.error("Error creating event on DB");
-      return;
-    } else {
+    try {
+      const createInfo = {
+        email: email,
+        name: name,
+        organization: organization,
+        address: state.ethereum.provider.address.toLowerCase(),
+      };
+
+      loadingFunction("Creating Issuer", "Please wait...", "");
+      
+      const createdIssuerOnDB = await createIssuerService(createInfo);
+      
+      if (!createdIssuerOnDB) {
+        errorFunction(
+          "Error",
+          "Failed to create issuer. Please try again.",
+          ""
+        );
+        return;
+      }
+
       updateIssuer(createdIssuerOnDB);
       succesfullMessage(
         "Issuer created successfully",
         "You can now create POAP events."
       );
       console.log("Created issuer on DB", createdIssuerOnDB);
+      closeDrawer();
+    } catch (error) {
+      console.error("Error creating issuer:", error);
+      errorFunction(
+        "Error",
+        "An error occurred while creating the issuer. Please try again.",
+        ""
+      );
+    } finally {
+      setLoading(false);
     }
-    closeDrawer();
   };
 
   return (
@@ -116,9 +141,9 @@ export default function CreateIssuer() {
           type="submit"
           className="btn btn-gradient btn-block"
           onClick={handleSubmit}
-          // disabled={date ? !isDateValid : false}
+          disabled={loading}
         >
-          Create
+          {loading ? "Creating..." : "Create"}
         </Button>
       </div>
     </div>
