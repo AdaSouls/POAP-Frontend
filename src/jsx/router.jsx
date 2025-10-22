@@ -12,6 +12,12 @@ import Collections from "./pages/collections";
 import { useDrawerDispatch } from "./contexts/drawer/drawer.provider";
 import ClaimMint from "./pages/claim-mint";
 import { getAllEventsService, getAllPoapsService } from "../services/paima.service";
+import EventsPage from "./pages/events";
+import PoapManagement from "./pages/poapManagement";
+import Overview from "./pages/overview";
+import Create from "./pages/create";
+
+
 import MVP from "./pages/mvp";
 import MVPEvents from "./pages/mvp-events";
 import MVPTokens from "./pages/mvp-tokens";
@@ -34,6 +40,7 @@ const Router = () => {
   useEffect(() => {
     async function fetchData() {
       const events = await getAllEventsService();
+      console.log("getting all events: >>>>>>>>>>>>>>", events);
       await getAllPoapsService();
       updateEvents(events);
     }
@@ -48,9 +55,12 @@ const Router = () => {
       <div id="main-wrapper">
         <Routes>
           <Route path="/" exact element={<Dashboard />} />
+          <Route path="/overview" element={<Overview />} />
           <Route path="/search" element={<Search />} />
           <Route path="/wallet" element={<Wallet />} />
-          {/* <Route path="/create-event" element={<Events />} /> */}
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/poap-management" element={<PoapManagement />} />
+          <Route path="/create" element={<Create />} />
           <Route path="/souls" element={<Souls />} />
           <Route path="/Settings-profile" element={<SettingsProfile />} />
           <Route path="/soulbounds-claim" element={<SoulboundClaim />} />

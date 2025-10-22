@@ -68,6 +68,10 @@
   );
   --bs-event:#7C6AAD;
   --bs-stream-event: #76C2C3;
+  --bs-event-normal:#5CA4DA;
+  --bs-event-expired:#6D6D6D;
+  --bs-poap-normal:#5EA1D8;
+  --bs-poap-expired:#6D6D6D;
   --bs-collection-normal:#5CA4DA;
   --bs-collection-multisig: #7C6AAD;
   --bs-collection-aiken-normal:#6D6D6D;
@@ -76,6 +80,11 @@
     0deg,
     #5EA1D8,
     #824F99
+  );
+  --bs-gradient-event: linear-gradient(
+    0deg,    
+    #5CA4DA,
+    #7C6AAD
   );
   --bs-gradient-soulbound: linear-gradient(
     0deg,    
@@ -13144,6 +13153,152 @@ button:active,
 .card-collection .card-body h4 span,
 .card-collection .card-body .h4 span{
   font-weight: 800;
+}
+
+/* Event Card Styles */
+.bg-event{
+  background: var(--bs-gradient-event) !important;
+}
+
+.bg-event-normal{
+  background: var(--bs-event-normal) !important;
+  /* background-image: url(../images/events/event-normal-bg.png) !important; */
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.bg-event-expired{
+  background: var(--bs-event-expired) !important;
+  /* background-image: url(../images/events/event-expired-bg.png) !important; */
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.card-event{
+  overflow: hidden;
+}
+
+.card-event p{
+  color: #fff;
+  margin-bottom: 0px;
+}
+
+.card-event .rounded-circle{
+  border: 2px solid #DADADA;
+  background-color: #fff;
+}
+
+.card-event .card-body h4,
+.card-event .card-body .h4 {
+  color: #fff;
+  margin-top: 10px;
+  font-size: 18px;
+}
+
+.card-event .card-body h4 span,
+.card-event .card-body .h4 span{
+  font-weight: 800;
+}
+
+.card-event .event-info {
+  flex: 1;
+}
+
+.card-event .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.card-event .text-warning {
+  color: #ffc107 !important;
+}
+
+.card-event .text-success {
+  color: #28a745 !important;
+}
+
+.card-event .text-danger {
+  color: #dc3545 !important;
+}
+
+.card-event .text-info {
+  color: #17a2b8 !important;
+}
+
+.card-event .text-secondary {
+  color: #6c757d !important;
+}
+
+/* POAP Card Styles */
+.bg-poap{
+  background: var(--bs-gradient-poap) !important;
+}
+
+.bg-poap-normal{
+  background: var(--bs-poap-normal) !important;
+  /* background-image: url(../images/poaps/poap-normal-bg.png) !important; */
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.bg-poap-expired{
+  background: var(--bs-poap-expired) !important;
+  /* background-image: url(../images/poaps/poap-expired-bg.png) !important; */
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+.card-poap{
+  overflow: hidden;
+}
+
+.card-poap p{
+  color: #fff;
+  margin-bottom: 0px;
+}
+
+.card-poap .rounded-circle{
+  border: 2px solid #DADADA;
+  background-color: #fff;
+}
+
+.card-poap .card-body h4,
+.card-poap .card-body .h4 {
+  color: #fff;
+  margin-top: 10px;
+  font-size: 18px;
+}
+
+.card-poap .card-body h4 span,
+.card-poap .card-body .h4 span{
+  font-weight: 800;
+}
+
+.card-poap .poap-info {
+  flex: 1;
+}
+
+.card-poap .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.card-poap .text-warning {
+  color: #ffc107 !important;
+}
+
+.card-poap .text-success {
+  color: #28a745 !important;
+}
+
+.card-poap .text-danger {
+  color: #dc3545 !important;
+}
+
+.card-poap .text-info {
+  color: #17a2b8 !important;
+}
+
+.card-poap .text-secondary {
+  color: #6c757d !important;
 }
 
 

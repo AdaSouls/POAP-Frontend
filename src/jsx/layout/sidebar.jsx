@@ -26,7 +26,10 @@ const Sidebar = ({ activeMenu }) => {
   const getMenus = () => {
     const baseMenus = [
       { id: 1, href: "/", title: "Home", iconActive: homeIcon, iconInactive: homeIcon },
-      { id: 9, href: "/mvp", title: "POAP", iconActive: poapIconActive, iconInactive: poapIconInactive },
+      // { id: 0, href: "/overview", title: "Overview", iconActive: homeIcon, iconInactive: homeIcon },
+      { id: 3, href: "/create", title: "Create", iconActive: poapIconActive, iconInactive: poapIconInactive },
+      // { id: 2, href: "/events", title: "Events (Integrated)", iconActive: poapIconActive, iconInactive: poapIconInactive },
+      // { id: 9, href: "/mvp", title: "POAP (Smart Contract)", iconActive: poapIconActive, iconInactive: poapIconInactive },
       { id: 5, href: "/wallet", title: "Wallet", iconActive: walletIconActive, iconInactive: walletIconInactive },
     ];
 
@@ -34,8 +37,8 @@ const Sidebar = ({ activeMenu }) => {
       // Show organizer menus if user has organizer role
       if (userRoles.includes('organizer')) {
         baseMenus.push(
-          { id: 10, href: "/mvp/organizer", title: "My Events", iconActive: collectionOwnerIconActive, iconInactive: collectionOwnerIconInactive },
-          { id: 11, href: "/mvp/manage-minters", title: "Manage Minters", iconActive: manageUsersIconActive, iconInactive: manageUsersIconActive },
+          // { id: 10, href: "/mvp/organizer", title: "My Events", iconActive: collectionOwnerIconActive, iconInactive: collectionOwnerIconInactive },
+          // { id: 11, href: "/mvp/manage-minters", title: "Manage Minters", iconActive: manageUsersIconActive, iconInactive: manageUsersIconActive },
           // { id: 12, href: "/mvp/bulk-distribute", title: "Bulk Distribute", iconActive: adaSoulsIconActive, iconInactive: poapIconInactive }
         );
       }
@@ -43,7 +46,7 @@ const Sidebar = ({ activeMenu }) => {
       // Show attendee menus if user has attendee role
       if (userRoles.includes('attendee')) {
         baseMenus.push(
-          { id: 13, href: "/mvp/attendee", title: "My Participation", iconActive: collectionInvitedIconActive, iconInactive: collectionInvitedIconInactive }
+          // { id: 13, href: "/mvp/attendee", title: "My Participation", iconActive: collectionInvitedIconActive, iconInactive: collectionInvitedIconInactive }
         );
       }
     }
