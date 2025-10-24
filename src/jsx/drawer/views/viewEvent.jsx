@@ -8,6 +8,7 @@ import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
 import { mintToken } from "../../../utils/poapContractInteractions";
 import { isPoapMintable } from "../../../utils/mitableChecks";
 import { Button } from "react-bootstrap";
+import { Link } from "react-router-dom";
 import {
   createOwnerService,
   getOwnerPoapsService,
@@ -154,15 +155,15 @@ export default function ViewEvent() {
 
       <div className="drawer-footer">
         <div className="d-flex justify-content-center">
-          <Button
+          {/* <Button
             className="btn btn-gradient btn-block"
             onClick={() => {
               if (!provider?.address) {
                 showEthereumWallet();
               } else {
                 mintPoap(
-                  event.event.issuerIdInContract,
-                  event.event.eventIdInContract
+                  event.event.issuerId,
+                  event.event.eventId
                 );
               }
             }}
@@ -175,7 +176,12 @@ export default function ViewEvent() {
               : isPoapMintable(event.event)
               ? "Mint Poap"
               : "Already Minted"}
-          </Button>
+          </Button> */}
+          <Link to={`/poap-management?eventId=${event.event.eventId}`}>
+            <button className="btn btn-gradient btn-block">
+              View POAPs
+            </button>
+          </Link>
         </div>
       </div>
     </div>

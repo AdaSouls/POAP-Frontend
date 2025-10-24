@@ -94,7 +94,7 @@ const EventBody = ({ event }) => {
       </div> */}
       <div className="col-12 ">
         <p className="m-0 small gray">Expiration</p>
-        <p className="m-0 mb-3">{formatDateToDDMMYYYY(new Date(event.expiration * 1000))}</p>
+        <p className="m-0 mb-3">{event.expiration == 0 ? 'No expiry' : formatDateToDDMMYYYY(new Date(event.expiration * 1000))}</p>
       </div>
 
       {/* {hasValue(event.city) && (
@@ -126,18 +126,18 @@ const EventBody = ({ event }) => {
           <p className="m-0 mb-3">{event.amountOfAttendees}</p>
         </div>
       )} */}
-      <div
+      {/* <div
         className={`${hasValue(event.amountOfAttendees) ? "col-4" : "col-6"} `}
       >
         <p className="m-0 small gray">POAPs to be Minted</p>
         <p className="m-0 mb-3">{event.poapsToBeMinted}</p>
-      </div>
-      <div
+      </div> */}
+      {/* <div
         className={`${hasValue(event.amountOfAttendees) ? "col-4" : "col-6"} `}
       >
         <p className="m-0 small gray">Requested Codes</p>
         <p className="m-0 mb-3">{event.requestedCodes}</p>
-      </div>
+      </div> */}
 
       {/* <div className="col-6">
         <p className="m-0 small gray">Private Event</p>
