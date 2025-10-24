@@ -171,6 +171,22 @@
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "issuerId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "issuerAddress",
+        "type": "address"
+      }
+    ],
+    "name": "IssuerAlreadyExists",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "NotInitializing",
     "type": "error"
@@ -584,6 +600,12 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
       }
     ],
     "name": "TokenMinted",
@@ -622,6 +644,12 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
       }
     ],
     "name": "TokenUpdated",

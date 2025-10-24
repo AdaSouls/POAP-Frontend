@@ -92,14 +92,14 @@ const useEthereum = () => {
         method: "eth_chainId",
       });
       console.log("Current chainId:", currentChainId);
-
+      const DESIRED_CHAIN_ID_CHECK = "0x13882";
       // 3. Check if the current chainId matches the desired one
-      if (currentChainId !== DESIRED_CHAIN_ID) {
+      if (currentChainId !== DESIRED_CHAIN_ID_CHECK) {
         // 4. Attempt to switch to the desired network
         console.log("Switching to the desired network...");
         await window.ethereum.request({
           method: "wallet_switchEthereumChain",
-          params: [{ chainId: DESIRED_CHAIN_ID }],
+          params: [{ chainId: DESIRED_CHAIN_ID_CHECK }],
         });
         console.log(
           "Current chainId after request switching network:",
