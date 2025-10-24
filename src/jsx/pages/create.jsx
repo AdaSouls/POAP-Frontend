@@ -141,7 +141,6 @@ const Create = () => {
   async function getEvents() {
     if (provider && provider.address) {
       const events = await getAllEventsService();
-      console.log("getting all events: >>>>>>>>>>>>>>", events);
       await getAllPoapsService();
       updateEvents(events);
       const poaps = await getOwnerPoapsService(provider.address);
@@ -182,8 +181,26 @@ const Create = () => {
   return (
     <Layout activeMenu={2}>
         <div className="row">
+          {/* HEADER */}
+          <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
+            <div className="card inner-header">
+              <div className="d-flex justify-content-center m-3">
+                <div className="inner-header-title">
+                  <h4>
+                    <span className="text-uppercase"></span>
+                    POAP EVENT CREATION
+                  </h4>
+                </div>
+                <div className="inner-header-buttons">
+                  {/* Future: Add filter buttons */}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="row">
         {/* Version Info */}
-        <div className="col-12 mb-3">
+        {/* <div className="col-12 mb-3">
             <div className="card">
             <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center">
@@ -199,7 +216,7 @@ const Create = () => {
                 </div>
             </div>
             </div>
-        </div>
+        </div> */}
 
         <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
             <div className="card card-create bg-poap card-classic">

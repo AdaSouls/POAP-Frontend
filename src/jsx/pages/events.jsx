@@ -6,6 +6,7 @@ import EventCard from "../components/eventCard";
 import eventNormal from "../../images/svg/event-normal.svg";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
+import dataSyncService from "../../services/dataSync.service";
 
 const EventsPage = () => { 
   const [loading, setLoading] = useState(true);
@@ -17,6 +18,13 @@ const EventsPage = () => {
   const createEvent = () => {
     dispatch({
       type: 'CREATE_EVENT'
+    });
+  };
+
+  const updateEvents = (events) => {
+    dispatch({
+      type: "UPDATE_EVENTS",
+      payload: events,
     });
   };
 
@@ -36,6 +44,19 @@ const EventsPage = () => {
     }
     setLoading(false);
   }, [poapEvents, provider, address]);
+
+  // Polling for real-time events data
+  useEffect(() => {
+    if (provider && provider.address) {
+      // Start polling when events page loads
+      dataSyncService.startEventsPolling(updateEvents, 5000);
+    }
+
+    // Cleanup when leaving events page
+    return () => {
+      dataSyncService.stopEventsPolling();
+    };
+  }, [provider]);
 
   return (
     <Layout activeMenu={3}>

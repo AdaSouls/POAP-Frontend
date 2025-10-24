@@ -40,7 +40,6 @@ const Router = () => {
   useEffect(() => {
     async function fetchData() {
       const events = await getAllEventsService();
-      console.log("getting all events: >>>>>>>>>>>>>>", events);
       await getAllPoapsService();
       updateEvents(events);
     }

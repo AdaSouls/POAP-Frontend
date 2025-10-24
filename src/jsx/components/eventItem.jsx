@@ -40,39 +40,26 @@ const EventItem = ({ event, index, mintable, owned }) => {
       <td className="col-2">Issuer ID: {event.issuerId}</td>
       <td className="col-3">
         {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
-        Expiration: {event.expiration ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : 'No expiry'}
-        {/* {event.isExpired && (
-          <span
-            alt="Expired"
-            style={{
-              border: "1px solid rgb(232, 75, 75)",
-              borderRadius: "10px",
-              margin: "2px",
-              marginLeft: "10px",
-              padding: "2px 5px",
-              color: "rgb(232, 75, 75)",
-              fontSize: "10px",
-            }}
-          >
-            Expired
-          </span>
-        )} */}
-        {isEventExpired(event.expiration) && event.expiration !== 0 && (
-          <span
-            alt="Expired"
-            style={{
-              border: "1px solid rgb(232, 75, 75)",
-              borderRadius: "10px",
-              margin: "2px",
-              marginLeft: "10px",
-              padding: "2px 5px",
-              color: "rgb(232, 75, 75)",
-              fontSize: "10px",
-            }}
-          >
-            Expired
-          </span>
-        )}
+        Expiration: 
+        {event.expiration == 0 ?
+          'No expiry' :
+          isEventExpired(event.expiration) ?
+            formatDateToDDMMYYYY(new Date(event.expiration * 1000)) :
+            <span
+              alt="Expired"
+              style={{
+                border: "1px solid rgb(232, 75, 75)",
+                borderRadius: "10px",
+                margin: "2px",
+                marginLeft: "10px",
+                padding: "2px 5px",
+                color: "rgb(232, 75, 75)",
+                fontSize: "10px",
+              }}
+            >
+              Expired
+            </span>}
+        
       </td>
       <td className="col-3">
         Minted: {event.mintedPoaps} of {event.maxSupply}
@@ -108,12 +95,12 @@ const EventItem = ({ event, index, mintable, owned }) => {
               !provider
                 ? circleArrow
                 : event.isExpired
-                ? circleArrow
-                : owned
-                ? circleArrow
-                : mintable
-                ? mintTokenButton
-                : circleArrow
+                  ? circleArrow
+                  : owned
+                    ? circleArrow
+                    : mintable
+                      ? mintTokenButton
+                      : circleArrow
             }
             alt="View Event"
           />
