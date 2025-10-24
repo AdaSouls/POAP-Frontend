@@ -7,6 +7,7 @@ import poapNormal from "../../images/svg/poap-normal.svg";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
 import { getUserPoaps } from "../../services/poap.service";
+import dataSyncService from "../../services/dataSync.service";
 
 const PoapManagement = () => { 
   const { eventId } = useParams();
@@ -22,11 +23,25 @@ const PoapManagement = () => {
     });
   };
 
+  const updatePoaps = (poaps) => {
+    dispatch({
+      type: "UPDATE_POAPS",
+      payload: poaps,
+    });
+  };
+
+  const updateEvents = (events) => {
+    dispatch({
+      type: "UPDATE_EVENTS",
+      payload: events,
+    });
+  }; 
+
   useEffect(() => {
     setLoading(true);
     
     async function fetchPoaps() {
-      if (!provider || !address) {
+      if (!provider) {
         setPoaps([]);
         setMyPoaps([]);
         setLoading(false);
@@ -35,9 +50,7 @@ const PoapManagement = () => {
 
       try {
         // Get user's POAPs
-        const userPoaps = await getUserPoaps(address);
-        setMyPoaps(userPoaps);
-        
+        const userPoaps = await getUserPoaps(provider.address);
         // Use POAPs from context if available
         if (poapCollection && poapCollection.length > 0) {
           setPoaps(poapCollection);
@@ -55,6 +68,20 @@ const PoapManagement = () => {
 
     fetchPoaps();
   }, [provider, address, poapCollection]);
+  // Polling for real-time events and POAPs data
+  useEffect(() => {
+    if (provider && provider.address) {
+      // Start polling for both events and POAPs when POAP management page loads
+      // dataSyncService.startEventsPolling(updateEvents, 5000);
+      dataSyncService.startPoapsPolling(updatePoaps, 5000);
+    }
+
+    // Cleanup when leaving POAP management page
+    return () => {
+      // dataSyncService.stopEventsPolling();
+      dataSyncService.stopPoapsPolling();
+    };
+  }, [provider]);
 
   return (
     <Layout activeMenu={3}>
