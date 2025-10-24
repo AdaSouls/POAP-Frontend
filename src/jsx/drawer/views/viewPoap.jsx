@@ -58,23 +58,27 @@ export default function ViewPoap() {
       <div className="drawer-body">
         <div className="row g-3">
           <div className="col-6">
-            <p className="m-0 font-weight-bolder">Instance</p>
-            <p className="m-0 mb-3">{poap.instance}</p>
+            <p className="m-0 font-weight-bolder">Event ID</p>
+            <p className="m-0 mb-3">{poap.eventId}</p>
           </div>
           <div className="col-6">
             <p className="m-0 font-weight-bolder">Issuer ID</p>
-            <p className="m-0 mb-3">{poap.events[0].issuerIdInContract}</p>
+            <p className="m-0 mb-3">{poap.issuerId}</p>
           </div>
           <div className="col-12">
             <p className="m-0 font-weight-bolder">Minted</p>
             <p className="m-0 mb-3">{formatDateToDDMMYYYY(poap.createdAt)}</p>
           </div>
 
+          <h3 className="pb-3">Token ID: {poap.tokenId}</h3>
+
+          <div className="col-12">
+            <p className="m-0 font-weight-bolder">Owner</p>
+            <p className="m-0 mb-3">{poap.ownerAddress}</p>
+          </div>
           <hr className="col-12 my-2" />
 
-          <h3 className="pb-3">Events: {poap.events.length}</h3>
-
-          {poap?.events.map((event, index) => (
+          {/* {poap?.events.map((event, index) => (
             <div
               className="mb-3"
               key={index}
@@ -110,7 +114,7 @@ export default function ViewPoap() {
                 </div>
               )}
             </div>
-          ))}
+          ))} */}
         </div>
       </div>
     </div>

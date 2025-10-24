@@ -196,7 +196,7 @@ export async function getOwnerPoapsService(ownerAddress: string) {
     if (!response.ok) {
       throw new Error("Network response was not ok" + response.statusText);
     }
-    const { poaps } = await response.json();
+    const poaps = await response.json();
     console.log("🚀 ~ getOwnerPoapsService ~ poaps:", poaps);
     return poaps;
   } catch (error) {
@@ -219,7 +219,7 @@ export async function getOwnerByAddressService(address: string) {
     if (!response.ok) {
       throw new Error("Network response was not ok" + response.statusText);
     }
-    const { owner } = await response.json();
+    const {owner} = await response.json();
     console.log("🚀 ~ getOwnerByAddressService ~ owner:", owner);
     return owner;
   } catch (error) {
@@ -240,7 +240,7 @@ export async function getAllPoapsService() {
     if (!response.ok) {
       throw new Error("Network response was not ok" + response.statusText);
     }
-    const { poaps } = await response.json();
+    const poaps = await response.json();
     console.log("🚀 ~ getAllPoapsService ~ poaps:", poaps);
     return poaps;
   } catch (error) {

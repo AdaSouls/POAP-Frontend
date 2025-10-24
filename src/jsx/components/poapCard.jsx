@@ -18,7 +18,7 @@ const PoapCard = ({ poap, index }) => {
 
   const getEventTitle = () => {
     if (poap.events && poap.events.length > 0) {
-      return poap.events[0].title || `Event ${poap.events[0].eventIdInContract}`;
+      return poap.events[0].title || `Event ${poap.events[0].eventId}`;
     }
     return `Event ${poap.eventId}`;
   };
@@ -32,7 +32,7 @@ const PoapCard = ({ poap, index }) => {
 
   const getIssuerId = () => {
     if (poap.events && poap.events.length > 0) {
-      return poap.events[0].issuerIdInContract;
+      return poap.events[0].issuerId;
     }
     return poap.issuerId;
   };
