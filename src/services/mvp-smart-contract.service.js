@@ -16,6 +16,55 @@ const provider = new ethers.JsonRpcProvider(providerRPC.rpc, {
   name: providerRPC.name,
 });
 
+// Utility function to check if error is a rate limit error
+const isRateLimitError = (error) => {
+  if (!error) return false;
+  
+  // Check for HTTP 429 status
+  if (error.code === -32005 || error.data?.httpStatus === 429) {
+    return true;
+  }
+  
+  // Check error message
+  const errorMessage = error.message?.toLowerCase() || "";
+  if (errorMessage.includes("rate limit") || errorMessage.includes("429")) {
+    return true;
+  }
+  
+  // Check nested error data
+  if (error.error?.data?.httpStatus === 429 || error.error?.code === -32005) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Retry utility with exponential backoff
+const retryWithBackoff = async (fn, maxRetries = 3, initialDelay = 1000) => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries - 1;
+      
+      if (isRateLimitError(error)) {
+        if (isLastAttempt) {
+          throw new Error("Rate limit exceeded. Please wait a moment and try again.");
+        }
+        
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = initialDelay * Math.pow(2, attempt);
+        console.warn(`Rate limit hit, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // For non-rate-limit errors, throw immediately
+      throw error;
+    }
+  }
+};
+
 // Smart Contract Service Class
 export class MVPSmartContractService {
   constructor() {
@@ -138,23 +187,36 @@ export class MVPSmartContractService {
   // Create event
   async createEvent(issuerId, eventId, maxSupply, mintExpiration, eventOrganizer) {
     try {
-      const tx = await this.contract.createEventId(
-        issuerId,
-        eventId,
-        maxSupply,
-        mintExpiration,
-        eventOrganizer,
-        { gasLimit: 1000000 }
-      );
+      // Use retry logic with exponential backoff for rate limit errors
+      const result = await retryWithBackoff(async () => {
+        const tx = await this.contract.createEventId(
+          issuerId,
+          eventId,
+          maxSupply,
+          mintExpiration,
+          eventOrganizer,
+          { gasLimit: 1000000 }
+        );
+        
+        const receipt = await tx.wait();
+        return {
+          success: true,
+          txHash: receipt.hash,
+          blockNumber: receipt.blockNumber,
+        };
+      }, 3, 1000); // 3 retries, starting with 1 second delay
       
-      const receipt = await tx.wait();
-      return {
-        success: true,
-        txHash: receipt.hash,
-        blockNumber: receipt.blockNumber,
-      };
+      return result;
     } catch (error) {
       console.error("Failed to create event:", error);
+      
+      // Provide user-friendly error message for rate limits
+      if (isRateLimitError(error)) {
+        const rateLimitError = new Error("The network is currently busy. Please wait a moment and try again.");
+        rateLimitError.name = "RateLimitError";
+        throw rateLimitError;
+      }
+      
       throw error;
     }
   }

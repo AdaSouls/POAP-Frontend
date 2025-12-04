@@ -141,11 +141,28 @@ export default function CreateEvent() {
       
     } catch (error) {
       console.error("Error creating event:", error);
-      errorFunction(
-        "Error",
-        "An error occurred while creating the event. Please try again.",
-        ""
-      );
+      
+      // Check for rate limit errors
+      const isRateLimit = 
+        error.name === "RateLimitError" ||
+        error.message?.includes("rate limit") ||
+        error.message?.includes("Rate limit") ||
+        error.code === -32005 ||
+        error.data?.httpStatus === 429;
+      
+      if (isRateLimit) {
+        errorFunction(
+          "Rate Limit Error",
+          "The network is currently busy. Please wait a few seconds and try again.",
+          ""
+        );
+      } else {
+        errorFunction(
+          "Error",
+          error.message || "An error occurred while creating the event. Please try again.",
+          ""
+        );
+      }
     } finally {
       setLoading(false);
     }
