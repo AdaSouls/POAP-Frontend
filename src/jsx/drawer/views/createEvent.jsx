@@ -7,6 +7,7 @@ import { Button } from "react-bootstrap";
 import { createEventId } from "../../../utils/poapContractInteractions";
 import useValidateEventDate from "../../helpers/useValidateEventDate";
 import { mvpSmartContractService } from "../../../services/mvp-smart-contract.service";
+import { createEvent } from "../../../services/event.service";
 import { 
   succesfullMessage, 
   errorFunction, 
@@ -27,6 +28,13 @@ export default function CreateEvent() {
   const [date, setDate] = useState(false);
   const [expiryDate, setExpiryDate] = useState("");
   const { isDateValid } = useValidateEventDate({ date: expiryDate });
+  
+  // Off-chain data fields (optional)
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [eventStartDate, setEventStartDate] = useState("");
+  const [eventEndDate, setEventEndDate] = useState("");
   
   // Check if form is valid
   const isFormValid = () => {
@@ -90,6 +98,38 @@ export default function CreateEvent() {
 
       if (result.success) {
         const explorerUrl = `${process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL}/tx/${result.txHash}`;
+        
+        // Store off-chain data in database
+        try {
+          // Convert datetime-local format to ISO string
+          // datetime-local returns "YYYY-MM-DDTHH:mm" which needs timezone info
+          const convertToISO = (dateTimeLocal) => {
+            if (!dateTimeLocal) return null;
+            // datetime-local is in local time, convert to ISO with timezone
+            const date = new Date(dateTimeLocal);
+            return isNaN(date.getTime()) ? null : date.toISOString();
+          };
+
+          const offChainData = {
+            issuerId: parseInt(poapIssuer.issuerId),
+            eventId: parseInt(eventId),
+            eventMaxSupply: parseInt(maxSupply),
+            eventMintExpiration: timestamp,
+            eventOrganizer: provider.address,
+            title: title.trim() || null,
+            description: description.trim() || null,
+            imageUrl: imageUrl.trim() || null,
+            eventStartDate: convertToISO(eventStartDate),
+            eventEndDate: convertToISO(eventEndDate),
+          };
+          
+          await createEvent(offChainData);
+          console.log("✅ Off-chain data stored successfully");
+        } catch (apiError) {
+          console.error("⚠️ Failed to store off-chain data:", apiError);
+          // Don't fail the entire operation if off-chain storage fails
+          // The blockchain event was created successfully
+        }
         
         closeDrawer();
         succesfullBlockchainCreation(
@@ -196,6 +236,87 @@ export default function CreateEvent() {
               </small>
             </div>
           )}
+
+          <hr className="col-12 my-3"></hr>
+          <div className="col-12">
+            <h6 className="py-2">Event Details (Optional)</h6>
+            <small className="form-text text-muted">
+              Add additional information about your event. These details are stored off-chain and help users understand what the event is about.
+            </small>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label">Event Title</label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="e.g., Web3 Conference 2024"
+              name="title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <small className="form-text text-muted">
+              A descriptive title for your event
+            </small>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label">Description</label>
+            <textarea
+              className="form-control"
+              rows="3"
+              placeholder="Describe your event, what attendees can expect, etc."
+              name="description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+            <small className="form-text text-muted">
+              Detailed description of the event
+            </small>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label">Image URL</label>
+            <input
+              type="url"
+              className="form-control"
+              placeholder="https://example.com/event-image.jpg"
+              name="imageUrl"
+              value={imageUrl}
+              onChange={(event) => setImageUrl(event.target.value)}
+            />
+            <small className="form-text text-muted">
+              URL to an image representing your event (banner, logo, etc.)
+            </small>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label">Event Start Date</label>
+            <input
+              type="datetime-local"
+              className="form-control"
+              name="eventStartDate"
+              value={eventStartDate}
+              onChange={(event) => setEventStartDate(event.target.value)}
+            />
+            <small className="form-text text-muted">
+              When the actual event starts (different from mint expiration)
+            </small>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label">Event End Date</label>
+            <input
+              type="datetime-local"
+              className="form-control"
+              name="eventEndDate"
+              value={eventEndDate}
+              onChange={(event) => setEventEndDate(event.target.value)}
+            />
+            <small className="form-text text-muted">
+              When the actual event ends (different from mint expiration)
+            </small>
+          </div>
         </form>
       </div>
       <div className="drawer-footer">
