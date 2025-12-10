@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import eventNormal from "../../images/svg/event-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 import mintTokenButton from "../../icons/svg/mint-token-button.svg";
@@ -9,10 +10,17 @@ import {
 } from "../contexts/drawer/drawer.provider";
 
 const EventItem = ({ event, index, mintable, owned }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const dispatch = useDrawerDispatch();
   const {
     ethereum: { provider },
   } = useDrawer();
+
+  // Helper function to check if imageUrl exists
+  const hasImageUrl = (url) => {
+    return url !== null && url !== undefined && url !== "";
+  };
 
   const viewEvent = () => {
     dispatch({
@@ -28,13 +36,58 @@ const EventItem = ({ event, index, mintable, owned }) => {
   return (
     <tr key={index}>
       <td className="table-image col-1">
-        <img
-          className="rounded-circle"
-          src={eventNormal}
-          width="47"
-          height="47"
-          alt="Poap Event"
-        />
+        <div
+          style={{
+            width: "47px",
+            height: "47px",
+            minWidth: "47px",
+            minHeight: "47px",
+            position: "relative",
+          }}
+        >
+          {hasImageUrl(event.imageUrl) && !imageError ? (
+            <>
+              {!imageLoaded && (
+                <img
+                  className="rounded-circle position-absolute"
+                  src={eventNormal}
+                  width="47"
+                  height="47"
+                  alt="Loading..."
+                  style={{
+                    top: 0,
+                    left: 0,
+                    opacity: 0.5,
+                  }}
+                />
+              )}
+              <img
+                className="rounded-circle"
+                src={event.imageUrl}
+                width="47"
+                height="47"
+                alt={event.title || "Poap Event"}
+                style={{
+                  display: imageLoaded ? "block" : "none",
+                  objectFit: "cover",
+                }}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoaded(false);
+                }}
+              />
+            </>
+          ) : (
+            <img
+              className="rounded-circle"
+              src={eventNormal}
+              width="47"
+              height="47"
+              alt="Poap Event"
+            />
+          )}
+        </div>
       </td>
       <td className="col-2">Event ID: {event.eventId}</td>
       <td className="col-2">Issuer ID: {event.issuerId}</td>
