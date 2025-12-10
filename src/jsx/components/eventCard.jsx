@@ -1,13 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
-import eventNormal from "../../icons/svg/event.svg";
-import eventOwnerIcon from "../../icons/svg/event.svg";
+import eventNormal from "../../images/svg/event-normal.svg";
+import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import eventStatusIcon from "../../icons/svg/event.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 
 const EventCard = ({ event, index }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const dispatch = useDrawerDispatch();
+
+  // Helper function to check if imageUrl exists
+  const hasImageUrl = (url) => {
+    return url !== null && url !== undefined && url !== "";
+  };
 
   const viewEvent = () => {
     dispatch({
@@ -75,13 +82,60 @@ const EventCard = ({ event, index }) => {
     <div key={event.eventId || event.eventUuid} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
       <div className={`card card-event card-classic ${isExpired() ? 'bg-event-expired' : 'bg-event-normal'}`}>
         <div className="card-body card-classic-max-height d-flex justify-content-start">
-          {/* <img
-            className="mr-3 rounded-circle mr-0 mr-sm-3"
-            src={event.image || eventNormal}
-            width="50"
-            height="50"
-            alt="Event"
-          /> */}
+          <div
+            className="mr-3 mr-0 mr-sm-3"
+            style={{
+              width: "50px",
+              height: "50px",
+              minWidth: "50px",
+              minHeight: "50px",
+              position: "relative",
+              flexShrink: 0,
+            }}
+          >
+            {hasImageUrl(event.imageUrl) && !imageError ? (
+              <>
+                {!imageLoaded && (
+                  <img
+                    className="rounded-circle position-absolute"
+                    src={eventNormal}
+                    width="50"
+                    height="50"
+                    alt="Loading..."
+                    style={{
+                      top: 0,
+                      left: 0,
+                      opacity: 0.5,
+                    }}
+                  />
+                )}
+                <img
+                  className="rounded-circle"
+                  src={event.imageUrl}
+                  width="50"
+                  height="50"
+                  alt={event.title || "Event"}
+                  style={{
+                    display: imageLoaded ? "block" : "none",
+                    objectFit: "cover",
+                  }}
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => {
+                    setImageError(true);
+                    setImageLoaded(false);
+                  }}
+                />
+              </>
+            ) : (
+              <img
+                className="rounded-circle"
+                src={eventNormal}
+                width="50"
+                height="50"
+                alt="Event"
+              />
+            )}
+          </div>
           <div className="event-info">
             <h4 className="text-capitalize mb-1">
               {event.title || `Event ${event.eventId}`}
