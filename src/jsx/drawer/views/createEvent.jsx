@@ -5,7 +5,6 @@ import {
 import { useState } from "react";
 import { Button } from "react-bootstrap";
 import { createEventId } from "../../../utils/poapContractInteractions";
-import useValidateEventDate from "../../helpers/useValidateEventDate";
 import { mvpSmartContractService } from "../../../services/mvp-smart-contract.service";
 import { createEvent } from "../../../services/event.service";
 import { 
@@ -25,9 +24,7 @@ export default function CreateEvent() {
   // Smart contract required fields only
   const [eventId, setEventId] = useState("");
   const [maxSupply, setMaxSupply] = useState(0);
-  const [date, setDate] = useState(false);
-  const [expiryDate, setExpiryDate] = useState("");
-  const { isDateValid } = useValidateEventDate({ date: expiryDate });
+  const [showEventDates, setShowEventDates] = useState(false);
   
   // Off-chain data fields (optional)
   const [title, setTitle] = useState("");
@@ -39,28 +36,16 @@ export default function CreateEvent() {
   // Check if form is valid
   const isFormValid = () => {
     // Always need Event ID and Maximum Supply
-    if (!eventId || !maxSupply) return false;
-    
-    // If toggle is on, we need a non-empty date and it must be valid and in the future
-    if (date) {
-      return expiryDate && expiryDate.trim() !== "" && !isNaN(new Date(expiryDate).getTime()) && isDateValid;
-    }
-    
-    // If toggle is off, form is valid (indefinite minting)
-    return true;
+    return eventId && maxSupply;
   };
   const [loading, setLoading] = useState(false);
 
-  const toggleDate = () => {
-    if (!date) {
-      setDate(true);
-      // Set a default future date when toggle is turned on
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 7); // 7 days from now
-      setExpiryDate(futureDate.toISOString().split('T')[0]); // Format as YYYY-MM-DD
-    } else {
-      setDate(false);
-      setExpiryDate(""); // Clear date when toggle is turned off
+  const toggleEventDates = () => {
+    setShowEventDates(!showEventDates);
+    // Optionally clear dates when toggle is turned off
+    if (showEventDates) {
+      setEventStartDate("");
+      setEventEndDate("");
     }
   };
 
@@ -77,15 +62,28 @@ export default function CreateEvent() {
     setLoading(true);
 
     try {
-      let timestamp=0;
-      if (!date) {
-        // Set to 0 for indefinite (no expiration)
-        timestamp = 0;
-      } else {
-        const miliseconds = new Date(expiryDate);
-        timestamp = Math.floor(miliseconds.getTime() / 1000);
+      // If eventStartDate is blank, set it to today
+      let finalEventStartDate = eventStartDate;
+      if (!eventStartDate || eventStartDate.trim() === "") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        finalEventStartDate = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
       }
 
+      // Calculate mintExpiration from eventEndDate
+      let timestamp = 0;
+      if (eventEndDate && eventEndDate.trim() !== "") {
+        // Convert date to timestamp (in seconds)
+        // eventEndDate is in YYYY-MM-DD format
+        const endDate = new Date(eventEndDate);
+        // Set to end of day to allow minting throughout the event end date
+        endDate.setHours(23, 59, 59, 999);
+        timestamp = Math.floor(endDate.getTime() / 1000);
+      }
+
+      console.log("✅ Timestamp:", timestamp);
+      console.log("✅ Event End Date:", eventEndDate);
+      console.log("✅ Event Start Date:", finalEventStartDate);
       // Create event directly on blockchain
       // loadingFunction("Creating Event", "Creating event on blockchain...", "");
       const result = await mvpSmartContractService.createEvent(
@@ -101,12 +99,12 @@ export default function CreateEvent() {
         
         // Store off-chain data in database
         try {
-          // Convert datetime-local format to ISO string
-          // datetime-local returns "YYYY-MM-DDTHH:mm" which needs timezone info
-          const convertToISO = (dateTimeLocal) => {
-            if (!dateTimeLocal) return null;
-            // datetime-local is in local time, convert to ISO with timezone
-            const date = new Date(dateTimeLocal);
+          // Convert date format to ISO string
+          // date input returns "YYYY-MM-DD" which needs to be converted to ISO
+          const convertToISO = (dateString) => {
+            if (!dateString || dateString.trim() === "") return null;
+            // dateString is in YYYY-MM-DD format, convert to ISO with timezone
+            const date = new Date(dateString);
             return isNaN(date.getTime()) ? null : date.toISOString();
           };
 
@@ -119,9 +117,10 @@ export default function CreateEvent() {
             title: title.trim() || null,
             description: description.trim() || null,
             imageUrl: imageUrl.trim() || null,
-            eventStartDate: convertToISO(eventStartDate),
+            eventStartDate: convertToISO(finalEventStartDate),
             eventEndDate: convertToISO(eventEndDate),
           };
+          console.log("✅ Off-chain data:", offChainData);
           
           await createEvent(offChainData);
           console.log("✅ Off-chain data stored successfully");
@@ -220,10 +219,10 @@ export default function CreateEvent() {
           <hr className="col-12 my-3"></hr>
           <div className="col-10">
             <h6 className="py-2">
-              Do you want an expiry date for the minting?
+              Do you want to add event dates?
             </h6>
             <small className="form-text text-muted">
-              If unchecked, minting will be indefinite (no expiration). If checked, you must select a valid future date to enable event creation.
+              If checked, you can specify the event start and end dates. The mint expiration will be automatically calculated from the event end date.
             </small>
           </div>
           <div className="col-2">
@@ -231,27 +230,42 @@ export default function CreateEvent() {
               <input
                 className="form-check-input"
                 type="checkbox"
-                id="flexSwitchCheckDefault"
-                onClick={toggleDate}
+                id="eventDatesToggle"
+                checked={showEventDates}
+                onChange={toggleEventDates}
               />
             </div>
           </div>
-          {date && (
-            <div className="col-12">
-              <label className="form-label">Mint Expiration Date</label>
-              <input
-                type="date"
-                className="form-control"
-                placeholder="Expiry Date"
-                name="expiryDate"
-                value={expiryDate}
-                onChange={(event) => setExpiryDate(event.target.value)}
-                required
-              />
-              <small className="form-text text-muted">
-                After this date, no more POAPs can be minted for this event. Leave unchecked for indefinite minting.
-              </small>
-            </div>
+          {showEventDates && (
+            <>
+              <div className="col-12">
+                <label className="form-label">Event Start Date</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  name="eventStartDate"
+                  value={eventStartDate}
+                  onChange={(event) => setEventStartDate(event.target.value)}
+                />
+                <small className="form-text text-muted">
+                  When the actual event starts. If left blank, it will default to today's date.
+                </small>
+              </div>
+
+              <div className="col-12">
+                <label className="form-label">Event End Date</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  name="eventEndDate"
+                  value={eventEndDate}
+                  onChange={(event) => setEventEndDate(event.target.value)}
+                />
+                <small className="form-text text-muted">
+                  When the actual event ends. Mint expiration will be automatically calculated from this date. Leave empty for indefinite minting.
+                </small>
+              </div>
+            </>
           )}
 
           <hr className="col-12 my-3"></hr>
@@ -307,33 +321,6 @@ export default function CreateEvent() {
             </small>
           </div>
 
-          <div className="col-12">
-            <label className="form-label">Event Start Date</label>
-            <input
-              type="datetime-local"
-              className="form-control"
-              name="eventStartDate"
-              value={eventStartDate}
-              onChange={(event) => setEventStartDate(event.target.value)}
-            />
-            <small className="form-text text-muted">
-              When the actual event starts (different from mint expiration)
-            </small>
-          </div>
-
-          <div className="col-12">
-            <label className="form-label">Event End Date</label>
-            <input
-              type="datetime-local"
-              className="form-control"
-              name="eventEndDate"
-              value={eventEndDate}
-              onChange={(event) => setEventEndDate(event.target.value)}
-            />
-            <small className="form-text text-muted">
-              When the actual event ends (different from mint expiration)
-            </small>
-          </div>
         </form>
       </div>
       <div className="drawer-footer">
@@ -342,9 +329,6 @@ export default function CreateEvent() {
             <small>
               {!eventId && "Please enter an Event ID. "}
               {!maxSupply && "Please enter Maximum Supply. "}
-              {date && (!expiryDate || expiryDate.trim() === "") && "Please select a date to enable event creation. "}
-              {date && expiryDate && expiryDate.trim() !== "" && isNaN(new Date(expiryDate).getTime()) && "Please select a valid date format. "}
-              {date && expiryDate && expiryDate.trim() !== "" && !isNaN(new Date(expiryDate).getTime()) && !isDateValid && "Please select a future date to enable event creation. "}
             </small>
           </div>
         )}
@@ -352,7 +336,7 @@ export default function CreateEvent() {
           type="submit"
           className="btn btn-gradient btn-block"
           onClick={handleSubmit}
-          disabled={loading || !eventId || !maxSupply || (date ? (!expiryDate || expiryDate.trim() === "" || !isDateValid) : false)}
+          disabled={loading || !eventId || !maxSupply}
         >
           {loading ? "Creating..." : "Create Event"}
         </Button>
