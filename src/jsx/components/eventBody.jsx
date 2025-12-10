@@ -1,9 +1,10 @@
-import React from "react";
-import collectionMultisigImage from "../../images/svg/collection-multisig.svg";
-import tokenSoulMultisig from "../../images/svg/soul-multisig.svg";
+import React, { useState } from "react";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 
 const EventBody = ({ event }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
   // Helper function to check if a value should be displayed
   const hasValue = (value) => {
     return value !== null && value !== undefined && value !== "";
@@ -11,161 +12,176 @@ const EventBody = ({ event }) => {
 
   return (
     <div className="row g-3">
-      {/* <div className="card card-button">
-        <div className="card-body top-area d-flex cursor-default">
-          <div className="d-flex align-items-center">
+      {/* Event Image */}
+      {hasValue(event.imageUrl) && (
+        <div className="col-12 mb-3">
+          <div
+            className="position-relative"
+            style={{
+              width: "100%",
+              aspectRatio: "16 / 9",
+            }}
+          >
+            {!imageLoaded && !imageError && (
+              <div
+                className="position-absolute w-100 h-100 d-flex align-items-center justify-content-center"
+              >
+                <div className="spinner-border text-secondary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            )}
+            {imageError && (
+              <div
+                className="position-absolute w-100 h-100 d-flex align-items-center justify-content-center rounded-pill"
+              >
+                <span>Image not available</span>
+              </div>
+            )}
             <img
-              className="mr-3 rounded-circle wallet-circle mr-0 mr-sm-3"
-              src={
-                // hasValue(event.image) && event.image.length > 12
-                //   ? event.image
-                //   : collectionMultisigImage
-                collectionMultisigImage
-              }
-              width="60"
-              height="60"
-              alt=""
+              src={event.imageUrl}
+              alt={event.title || "Event image"}
+              className="img-fluid rounded-pill"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: imageLoaded ? "block" : "none",
+              }}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => {
+                setImageError(true);
+                setImageLoaded(false);
+              }}
             />
-            <div className="media-body">
-              <p className="m-0 small gray">Event Title</p>
-              <h4 className="mb-0">{event.title}</h4>
-            </div>
           </div>
         </div>
-      </div>
-
-      <div className="card card-button">
-        <div className="card-body top-area d-flex cursor-default">
-          <div className="d-flex align-items-center">
-            <img
-              className="mr-3 mr-0 mr-sm-3"
-              src={tokenSoulMultisig || "/placeholder.svg"}
-              width="60"
-              height="60"
-              alt=""
-            />
-            <div className="media-body">
-              <p className="m-0 small gray">Poap Token</p>
-              <h4 className="mb-0">{event.poapType}</h4>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
-      {/* <div className="text-break p-4"> */}
-      <h4 className="pb-3 max-width">Details</h4>
-
-      <div className="col-6">
-        <p className="m-0 small gray">Event ID</p>
-        <p className="m-0 mb-3">{event.eventId}</p>
-      </div>
-      <div className="col-6">
-        <p className="m-0 small gray">Issuer ID</p>
-        <p className="m-0 mb-3">{event.issuerId}</p>
-      </div>
-      {/* {hasValue(event.email) && (
-        <>
-          <p className="m-0 small gray">Email</p>
-          <p className="m-0 mb-3">{event.email}</p>
-        </>
       )}
 
-      {hasValue(event.eventType) && (
-        <>
-          <p className="m-0 small gray">Event Type</p>
-          <p className="m-0 mb-3">{event.eventType}</p>
-        </>
-      )} */}
+      {/* Event Title */}
+      {hasValue(event.title) && (
+        <div className="col-12">
+          <p className="m-0 small gray">Event Title</p>
+          <h4 className="mb-3">{event.title}</h4>
+        </div>
+      )}
 
-      {/* {hasValue(event.description) && (
-        <>
+      {/* Description */}
+      {hasValue(event.description) && (
+        <div className="col-12">
           <p className="m-0 small gray">Description</p>
           <p className="m-0 mb-3">{event.description}</p>
-        </>
-      )} */}
-      {/* The items in the div have to be centered both vertically and horizontally with flex */}
-      {/* <div className="col-4 ">
-        <p className="m-0 small gray">Start Date</p>
-        <p className="m-0 mb-3">{formatDateToDDMMYYYY(event.startDate)}</p>
-      </div>
-      <div className="col-4 ">
-        <p className="m-0 small gray">End Date</p>
-        <p className="m-0 mb-3">{formatDateToDDMMYYYY(event.endDate)}</p>
-      </div> */}
-      <div className="col-12 ">
-        <p className="m-0 small gray">Expiration</p>
-        <p className="m-0 mb-3">{event.expiration == 0 ? 'No expiry' : formatDateToDDMMYYYY(new Date(event.expiration * 1000))}</p>
-      </div>
-
-      {/* {hasValue(event.city) && (
-        <>
-          <p className="m-0 small gray">City</p>
-          <p className="m-0 mb-3">{event.city}</p>
-        </>
+        </div>
       )}
 
-      {hasValue(event.country) && (
-        <>
-          <p className="m-0 small gray">Country</p>
-          <p className="m-0 mb-3">{event.country}</p>
-        </>
+      <h4 className="pb-3 max-width col-12">Details</h4>
+
+      {/* Event ID */}
+      {hasValue(event.eventId) && (
+        <div className="col-6">
+          <p className="m-0 small gray">Event ID</p>
+          <p className="m-0 mb-3">{event.eventId}</p>
+        </div>
       )}
 
-      {hasValue(event.eventUrl) && (
-        <>
-          <p className="m-0 small gray">Event URL</p>
-          <a href={event.eventUrl} target="_blank" rel="noopener noreferrer">
-            <p className="m-0 mb-3">{event.eventUrl}</p>
-          </a>
-        </>
-      )}
-
-      {hasValue(event.amountOfAttendees) && (
-        <div className="col-4 ">
-          <p className="m-0 small gray">Amount of Attendees</p>
-          <p className="m-0 mb-3">{event.amountOfAttendees}</p>
+      {/* Event UUID */}
+      {/* {hasValue(event.eventUuid) && (
+        <div className="col-6">
+          <p className="m-0 small gray">Event UUID</p>
+          <p className="m-0 mb-3 text-break small">{event.eventUuid}</p>
         </div>
       )} */}
-      {/* <div
-        className={`${hasValue(event.amountOfAttendees) ? "col-4" : "col-6"} `}
-      >
-        <p className="m-0 small gray">POAPs to be Minted</p>
-        <p className="m-0 mb-3">{event.poapsToBeMinted}</p>
-      </div> */}
-      {/* <div
-        className={`${hasValue(event.amountOfAttendees) ? "col-4" : "col-6"} `}
-      >
-        <p className="m-0 small gray">Requested Codes</p>
-        <p className="m-0 mb-3">{event.requestedCodes}</p>
+
+      {/* Issuer ID */}
+      {hasValue(event.issuerId) && (
+        <div className="col-6">
+          <p className="m-0 small gray">Issuer ID</p>
+          <p className="m-0 mb-3">{event.issuerId}</p>
+        </div>
+      )}
+
+      {/* Status */}
+      {/* {hasValue(event.status) && (
+        <div className="col-6">
+          <p className="m-0 small gray">Status</p>
+          <p className="m-0 mb-3">{event.status}</p>
+        </div>
+      )} */}
+
+      {/* Max Supply */}
+      {hasValue(event.maxSupply) && (
+        <div className="col-12">
+          <p className="m-0 small gray">Max Supply</p>
+          <p className="m-0 mb-3">{event.maxSupply}</p>
+        </div>
+      )}
+
+      {/* Expiration */}
+      {/* <div className="col-6">
+        <p className="m-0 small gray">Expiration</p>
+        <p className="m-0 mb-3">
+          {event.expiration == 0
+            ? "No expiry"
+            : formatDateToDDMMYYYY(new Date(event.expiration * 1000))}
+        </p>
       </div> */}
 
-      {/* <div className="col-6">
-        <p className="m-0 small gray">Private Event</p>
-        <p className="m-0 mb-3">{event.privateEvent ? "Yes" : "No"}</p>
-      </div>
+      {/* Event Start Date */}
+      {hasValue(event.eventStartDate) && (
+        <div className="col-6">
+          <p className="m-0 small gray">Event Start Date</p>
+          <p className="m-0 mb-3">
+            {formatDateToDDMMYYYY(new Date(event.eventStartDate))}
+          </p>
+        </div>
+      )}
+
+      {/* Event End Date */}
+      {/* {hasValue(event.eventEndDate) && (
+        <div className="col-6">
+          <p className="m-0 small gray">Event End Date</p>
+          <p className="m-0 mb-3">
+            {formatDateToDDMMYYYY(new Date(event.eventEndDate))}
+          </p>
+        </div>
+      )} */}
       <div className="col-6">
-        <p className="m-0 small gray">Virtual Event</p>
-        <p className="m-0 mb-3">{event.virtualEvent ? "Yes" : "No"}</p>
-      </div> */}
+        <p className="m-0 small gray">Event End Date</p>
+        <p className="m-0 mb-3">
+          {event.expiration == 0
+            ? "No expiry"
+            : formatDateToDDMMYYYY(new Date(event.expiration * 1000))}
+        </p>
+      </div>
+
+      {/* Organiser Address */}
+      {hasValue(event.organiserAddress) && (
+        <div className="col-12">
+          <p className="m-0 small gray">Organiser Address</p>
+          <p className="m-0 mb-3 text-break small">{event.organiserAddress}</p>
+        </div>
+      )}
+
+      {/* Additional fields that might exist */}
       {hasValue(event.platform) && (
-        <>
+        <div className="col-6">
           <p className="m-0 small gray">Platform</p>
           <p className="m-0 mb-3">{event.platform}</p>
-        </>
+        </div>
       )}
 
       {hasValue(event.purpose) && (
-        <>
+        <div className="col-6">
           <p className="m-0 small gray">Purpose</p>
           <p className="m-0 mb-3">{event.purpose}</p>
-        </>
+        </div>
       )}
 
       {hasValue(event.account) && (
-        <>
+        <div className="col-6">
           <p className="m-0 small gray">Account</p>
           <p className="m-0 mb-3">{event.account}</p>
-        </>
+        </div>
       )}
     </div>
   );
