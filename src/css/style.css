@@ -13933,3 +13933,18 @@ button.dropdown-toggle.btn.btn-primary {
   @apply top-0;
   @apply left-0; */
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gap-2{
+  gap: 0.5rem;
+}

@@ -2,7 +2,7 @@ import {
   useDrawer,
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "react-bootstrap";
 import { createEventId } from "../../../utils/poapContractInteractions";
 import { mvpSmartContractService } from "../../../services/mvp-smart-contract.service";
@@ -33,12 +33,41 @@ export default function CreateEvent() {
   const [eventStartDate, setEventStartDate] = useState("");
   const [eventEndDate, setEventEndDate] = useState("");
   
+  // Image preview state
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  
   // Check if form is valid
   const isFormValid = () => {
     // Always need Event ID, Maximum Supply, Title, Description, and Image URL
     return eventId && maxSupply && title.trim() && description.trim() && imageUrl.trim();
   };
   const [loading, setLoading] = useState(false);
+
+  // Handle image URL change and preview
+  useEffect(() => {
+    if (imageUrl.trim()) {
+      setImageLoading(true);
+      setImageError(false);
+      const img = new Image();
+      img.onload = () => {
+        setImagePreview(imageUrl);
+        setImageLoading(false);
+        setImageError(false);
+      };
+      img.onerror = () => {
+        setImagePreview(null);
+        setImageLoading(false);
+        setImageError(true);
+      };
+      img.src = imageUrl;
+    } else {
+      setImagePreview(null);
+      setImageError(false);
+      setImageLoading(false);
+    }
+  }, [imageUrl]);
 
   const toggleEventDates = () => {
     setShowEventDates(!showEventDates);
@@ -195,11 +224,18 @@ export default function CreateEvent() {
       </div>
       <div className="drawer-body">
         <form className="row g-3" onSubmit={handleSubmit}>
+          {/* Basic Information Section */}
+          <div className="col-12 mb-3">
+            <h6 className="mb-3 text-primary font-weight-semibold">Basic Information</h6>
+          </div>
+
           <div className="col-12">
-            <label className="form-label">Event ID *</label>
+            <label className="form-label">
+              Event ID <span className="text-danger">*</span>
+            </label>
             <input
               type="number"
-              className="form-control"
+              className={`form-control ${!eventId && !isFormValid() ? 'border-warning' : ''}`}
               placeholder="Enter unique event ID"
               name="eventId"
               value={eventId}
@@ -213,13 +249,16 @@ export default function CreateEvent() {
           </div>
 
           <div className="col-12">
-            <label className="form-label">Maximum Supply *</label>
+            <label className="form-label">
+              Maximum Supply <span className="text-danger">*</span>
+            </label>
             <input
               type="number"
-              className="form-control"
+              className={`form-control ${!maxSupply && !isFormValid() ? 'border-warning' : ''}`}
               placeholder="Maximum number of POAPs to mint"
               name="maxSupply"
-              onChange={(event) => setMaxSupply(Number.parseInt(event.target.value))}
+              value={maxSupply || ''}
+              onChange={(event) => setMaxSupply(Number.parseInt(event.target.value) || 0)}
               required
               min="1"
             />
@@ -228,103 +267,137 @@ export default function CreateEvent() {
             </small>
           </div>
 
-          <hr className="col-12 my-3"></hr>
-          <div className="col-10">
-            <h6 className="py-2">
-              Do you want to add event dates?
-            </h6>
-            <small className="form-text text-muted">
-              If checked, you can specify the event start and end dates. The mint expiration will be automatically calculated from the event end date.
-            </small>
+          {/* Event Dates Section */}
+          <div className="col-12">
+            <hr className="my-4" style={{ borderColor: '#f1f1f1' }} />
           </div>
-          <div className="col-2">
-            <div className="form-check form-switch">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="eventDatesToggle"
-                checked={showEventDates}
-                onChange={toggleEventDates}
-              />
+          
+          <div className="col-12 mb-2">
+            <div className="d-flex align-items-center justify-content-between">
+              <div className="flex-grow-1">
+                <h6 className="mb-1 text-primary font-weight-semibold">Event Dates</h6>
+                <small className="form-text text-muted d-block">
+                  Optional: Set start and end dates for your event
+                </small>
+              </div>
+              <div className="form-check form-switch ms-3">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="eventDatesToggle"
+                  checked={showEventDates}
+                  onChange={toggleEventDates}
+                  style={{ cursor: 'pointer' }}
+                />
+              </div>
             </div>
           </div>
-          {showEventDates && (
-            <>
-              <div className="col-12">
-                <label className="form-label">Event Start Date</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  name="eventStartDate"
-                  value={eventStartDate}
-                  onChange={(event) => setEventStartDate(event.target.value)}
-                />
-                <small className="form-text text-muted">
-                  When the actual event starts. If left blank, it will default to today's date.
-                </small>
-              </div>
 
-              <div className="col-12">
-                <label className="form-label">Event End Date</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  name="eventEndDate"
-                  value={eventEndDate}
-                  onChange={(event) => setEventEndDate(event.target.value)}
-                />
-                <small className="form-text text-muted">
-                  When the actual event ends. Mint expiration will be automatically calculated from this date. Leave empty for indefinite minting.
-                </small>
+          {showEventDates && (
+            <div className="col-12" style={{ animation: 'fadeIn 0.3s ease-in' }}>
+              <div className="row g-3">
+                <div className="col-12">
+                  <label className="form-label">Event Start Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    name="eventStartDate"
+                    value={eventStartDate}
+                    onChange={(event) => setEventStartDate(event.target.value)}
+                  />
+                  <small className="form-text text-muted">
+                    When the actual event starts. If left blank, it will default to today's date.
+                  </small>
+                </div>
+
+                <div className="col-12">
+                  <label className="form-label">Event End Date</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    name="eventEndDate"
+                    value={eventEndDate}
+                    onChange={(event) => setEventEndDate(event.target.value)}
+                    min={eventStartDate || undefined}
+                  />
+                  <small className="form-text text-muted">
+                    When the actual event ends. Mint expiration will be automatically calculated from this date. Leave empty for indefinite minting.
+                  </small>
+                </div>
               </div>
-            </>
+            </div>
           )}
 
-          <hr className="col-12 my-3"></hr>
+          {/* Event Details Section */}
           <div className="col-12">
-            <h6 className="py-2">Event Details *</h6>
+            <hr className="my-4" style={{ borderColor: '#f1f1f1' }} />
+          </div>
+
+          <div className="col-12 mb-3">
+            <h6 className="mb-1 text-primary font-weight-semibold">
+              Event Details <span className="text-danger">*</span>
+            </h6>
             <small className="form-text text-muted">
               Provide information about your event. These details are stored off-chain and help users understand what the event is about.
             </small>
           </div>
 
           <div className="col-12">
-            <label className="form-label">Event Title *</label>
+            <label className="form-label">
+              Event Title <span className="text-danger">*</span>
+            </label>
             <input
               type="text"
-              className="form-control"
+              className={`form-control ${!title.trim() && !isFormValid() ? 'border-warning' : ''}`}
               placeholder="e.g., Web3 Conference 2024"
               name="title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               required
+              maxLength={255}
             />
-            <small className="form-text text-muted">
-              A descriptive title for your event
-            </small>
+            <div className="d-flex justify-content-between">
+              <small className="form-text text-muted">
+                A descriptive title for your event
+              </small>
+              <small className="form-text text-muted">
+                {title.length}/255
+              </small>
+            </div>
           </div>
 
           <div className="col-12">
-            <label className="form-label">Description *</label>
+            <label className="form-label">
+              Description <span className="text-danger">*</span>
+            </label>
             <textarea
-              className="form-control"
-              rows="3"
+              className={`form-control ${!description.trim() && !isFormValid() ? 'border-warning' : ''}`}
+              rows="4"
               placeholder="Describe your event, what attendees can expect, etc."
               name="description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               required
+              maxLength={1000}
+              style={{ resize: 'vertical', minHeight: '100px', paddingTop: '10px'}}
             />
-            <small className="form-text text-muted">
-              Detailed description of the event
-            </small>
+            <div className="d-flex justify-content-between">
+              <small className="form-text text-muted">
+                Detailed description of the event
+              </small>
+              <small className="form-text text-muted">
+                {description.length}/1000
+              </small>
+            </div>
           </div>
 
           <div className="col-12">
-            <label className="form-label">Image URL *</label>
+            <label className="form-label">
+              Image URL <span className="text-danger">*</span>
+            </label>
             <input
               type="url"
-              className="form-control"
+              className={`form-control ${!imageUrl.trim() && !isFormValid() ? 'border-warning' : imageError ? 'border-danger' : ''}`}
               placeholder="https://example.com/event-image.jpg"
               name="imageUrl"
               value={imageUrl}
@@ -334,29 +407,78 @@ export default function CreateEvent() {
             <small className="form-text text-muted">
               URL to an image representing your event (banner, logo, etc.)
             </small>
+            
+            {/* Image Preview */}
+            {imageUrl.trim() && (
+              <div className="mt-3">
+                {imageLoading && (
+                  <div className="d-flex align-items-center justify-content-center p-4 border rounded" style={{ minHeight: '150px', backgroundColor: '#f8f9fa' }}>
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                )}
+                {imageError && (
+                  <div className="alert alert-danger py-2 mb-0" role="alert">
+                    <small>
+                      <i className="icofont-warning"></i> Unable to load image. Please check the URL.
+                    </small>
+                  </div>
+                )}
+                {imagePreview && !imageLoading && !imageError && (
+                  <div className="border rounded overflow-hidden" style={{ maxHeight: '200px' }}>
+                    <img
+                      src={imagePreview}
+                      alt="Event preview"
+                      className="img-fluid w-100"
+                      style={{ objectFit: 'cover', maxHeight: '200px' }}
+                      onError={() => setImageError(true)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </form>
-      </div>
-      <div className="drawer-footer">
         {!isFormValid() && (
-          <div className="alert alert-warning mb-2" role="alert">
-            <small>
-              {!eventId && "Please enter an Event ID. "}
-              {!maxSupply && "Please enter Maximum Supply. "}
-              {!title.trim() && "Please enter an Event Title. "}
-              {!description.trim() && "Please enter a Description. "}
-              {!imageUrl.trim() && "Please enter an Image URL. "}
-            </small>
+          <div className="alert alert-warning mb-2 py-2" role="alert" style={{ fontSize: '0.875rem', margin: '8px 0' }}>
+            <div className="d-flex align-items-start">
+              <i className="icofont-warning me-2 mt-1 flex-shrink-0"></i>
+              <div className="flex-grow-1">
+                <strong className="d-block mb-1">Please complete all required fields:</strong>
+                <div className="d-flex flex-wrap gap-2">
+                  {!eventId && <span className="badge bg-warning text-dark">Event ID</span>}
+                  {!maxSupply && <span className="badge bg-warning text-dark">Maximum Supply</span>}
+                  {!title.trim() && <span className="badge bg-warning text-dark">Event Title</span>}
+                  {!description.trim() && <span className="badge bg-warning text-dark">Description</span>}
+                  {!imageUrl.trim() && <span className="badge bg-warning text-dark">Image URL</span>}
+                </div>
+              </div>
+            </div>
           </div>
         )}
+      </div>
+      <div className="drawer-footer">
         <Button
           type="submit"
-          className="btn btn-gradient btn-block"
+          className="btn btn-gradient btn-block w-100"
           onClick={handleSubmit}
           disabled={loading || !isFormValid()}
+          style={{ 
+            minHeight: '45px',
+            fontWeight: '500',
+            transition: 'all 0.3s ease'
+          }}
         >
-          {loading ? "Creating..." : "Create Event"}
+          {loading ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Creating Event...
+            </>
+          ) : (
+            'Create Event'
+          )}
         </Button>
       </div>
     </div>
