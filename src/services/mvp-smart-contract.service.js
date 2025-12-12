@@ -187,8 +187,31 @@ export class MVPSmartContractService {
   // Create event
   async createEvent(issuerId, eventId, maxSupply, mintExpiration, eventOrganizer) {
     try {
+      // Check if user is admin before attempting transaction
+      const isUserAdmin = await this.isAdmin(this.signer.address);
+      if (!isUserAdmin) {
+        throw new Error("Only admins can create events. Your address is not authorized as an admin.");
+      }
+
       // Use retry logic with exponential backoff for rate limit errors
       const result = await retryWithBackoff(async () => {
+        // First, estimate gas to catch revert reasons early
+        try {
+          const gasEstimate = await this.contract.createEventId.estimateGas(
+            issuerId,
+            eventId,
+            maxSupply,
+            mintExpiration,
+            eventOrganizer
+          );
+          console.log("Gas estimate:", gasEstimate.toString());
+        } catch (estimateError) {
+          // Extract revert reason from gas estimation error
+          console.log("🚀 ~ MVPSmartContractService ~ createEvent ~ estimateError:", estimateError);
+          const revertReason = this.extractRevertReason(estimateError);
+          throw new Error(revertReason || "Transaction would fail. Please check your permissions and event parameters.");
+        }
+
         const tx = await this.contract.createEventId(
           issuerId,
           eventId,
@@ -208,7 +231,7 @@ export class MVPSmartContractService {
       
       return result;
     } catch (error) {
-      console.error("Failed to create event:", error);
+      // console.error("Failed to create event:", error);
       
       // Provide user-friendly error message for rate limits
       if (isRateLimitError(error)) {
@@ -217,8 +240,63 @@ export class MVPSmartContractService {
         throw rateLimitError;
       }
       
+      // Re-throw with the error message (which may now include revert reason)
       throw error;
     }
+  }
+
+  // Helper function to extract revert reason from errors
+  extractRevertReason(error) {
+    if (!error) return null;
+    
+    // Check for revert reason in error data
+    if (error.data) {
+      // Try to decode the revert reason
+      if (typeof error.data === 'string' && error.data.startsWith('0x')) {
+        try {
+          // Common revert reason signatures
+          const reason = this.contract.interface.parseError(error.data);
+          if (reason) {
+            return reason.name;
+          }
+        } catch (e) {
+          // If parsing fails, try to extract from error message
+        }
+      }
+    }
+    
+    // Check error message for revert reason
+    const errorMessage = error.message || error.toString();
+    console.log("🚀 ~ MVPSmartContractService ~ extractRevertReason ~ errorMessage:", errorMessage);
+    // Common revert reasons to look for
+    if (errorMessage.includes("onlyAdmin") || errorMessage.includes("AccessControl")) {
+      return "Only admins can create events. Your address is not authorized.";
+    }
+    if (errorMessage.includes("whenNotPaused") || errorMessage.includes("Pausable")) {
+      return "Contract is currently paused. Please try again later.";
+    }
+    if (errorMessage.includes("event already created") || errorMessage.includes("already exists")) {
+      return "This event ID already exists. Please use a different event ID.";
+    }
+    if (errorMessage.includes("revert")) {
+      // Try to extract the revert reason after "revert"
+      const revertMatch = errorMessage.match(/revert\s+(.+?)(?:\s+\(|$)/i);
+      if (revertMatch) {
+        return revertMatch[1].trim();
+      }
+    }
+    
+    // Check for error in nested error objects
+    if (error.error) {
+      return this.extractRevertReason(error.error);
+    }
+    
+    // Check for reason in error object
+    if (error.reason) {
+      return error.reason;
+    }
+    
+    return null;
   }
 
   // Mint token
