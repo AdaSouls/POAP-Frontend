@@ -19,6 +19,12 @@ export interface IEvent {
   mintedPoaps?: number;
   expiryDate?: string;
   isExpired?: boolean;
+  // Blockchain metadata fields
+  transaction_hash?: string | null;
+  block_number?: number | null;
+  imageUrl?: string | null;
+  eventStartDate?: string | null;
+  eventEndDate?: string | null;
 }
 
 export async function getAllEvents() {

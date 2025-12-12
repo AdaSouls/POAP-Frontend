@@ -62,6 +62,16 @@ export interface IGetAllEventsResult {
   virtualEvent: boolean;
   year: number | null;
   expiration?: number | null;
+  // Add missing fields from backend API response
+  transaction_hash?: string | null;
+  block_number?: number | null;
+  // Also add fields that match the actual backend response structure
+  eventId?: number;
+  issuerId?: number;
+  organiserAddress?: string;
+  imageUrl?: string | null;
+  eventStartDate?: string | null;
+  eventEndDate?: string | null;
 }
 
 export interface ICreateIssuerParams {

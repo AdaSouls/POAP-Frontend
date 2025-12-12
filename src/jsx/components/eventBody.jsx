@@ -10,6 +10,12 @@ const EventBody = ({ event }) => {
     return value !== null && value !== undefined && value !== "";
   };
 
+  // Get transaction hash from event (supports both snake_case and camelCase)
+  const txHash = event.transaction_hash || event.txHash;
+  const explorerUrl = txHash && process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL
+    ? `${process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL}/tx/${txHash}`
+    : null;
+
   return (
     <div className="row g-3">
       {/* Event Image */}
@@ -159,6 +165,27 @@ const EventBody = ({ event }) => {
         <div className="col-12">
           <p className="m-0 small gray">Organiser Address</p>
           <p className="m-0 mb-3 text-break small">{event.organiserAddress}</p>
+        </div>
+      )}
+
+      {/* Transaction Hash */}
+      {hasValue(txHash) && (
+        <div className="col-12">
+          <p className="m-0 small gray">Transaction Hash</p>
+          <p className="m-0 mb-3">
+            {explorerUrl ? (
+              <a 
+                href={explorerUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-break small text-decoration-none"
+              >
+                <code>{txHash}</code>
+              </a>
+            ) : (
+              <code className="text-break small">{txHash}</code>
+            )}
+          </p>
         </div>
       )}
 
