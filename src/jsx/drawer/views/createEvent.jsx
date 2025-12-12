@@ -26,7 +26,7 @@ export default function CreateEvent() {
   const [maxSupply, setMaxSupply] = useState(0);
   const [showEventDates, setShowEventDates] = useState(false);
   
-  // Off-chain data fields (optional)
+  // Off-chain data fields (required: title, description, imageUrl)
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -35,8 +35,8 @@ export default function CreateEvent() {
   
   // Check if form is valid
   const isFormValid = () => {
-    // Always need Event ID and Maximum Supply
-    return eventId && maxSupply;
+    // Always need Event ID, Maximum Supply, Title, Description, and Image URL
+    return eventId && maxSupply && title.trim() && description.trim() && imageUrl.trim();
   };
   const [loading, setLoading] = useState(false);
 
@@ -59,6 +59,17 @@ export default function CreateEvent() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!isFormValid()) {
+      errorFunction(
+        "Validation Error",
+        "Please fill in all required fields: Event ID, Maximum Supply, Title, Description, and Image URL.",
+        ""
+      );
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -108,17 +119,18 @@ export default function CreateEvent() {
             return isNaN(date.getTime()) ? null : date.toISOString();
           };
 
+          // Build offChainData object, only including optional fields if they have values
           const offChainData = {
             issuerId: parseInt(poapIssuer.issuerId),
             eventId: parseInt(eventId),
             eventMaxSupply: parseInt(maxSupply),
             eventMintExpiration: timestamp,
             eventOrganizer: provider.address,
-            title: title.trim() || null,
-            description: description.trim() || null,
-            imageUrl: imageUrl.trim() || null,
+            title: title.trim(),
+            description: description.trim(),
+            imageUrl: imageUrl.trim(),
             eventStartDate: convertToISO(finalEventStartDate),
-            eventEndDate: convertToISO(eventEndDate),
+            eventEndDate: convertToISO(eventEndDate) || '',
           };
           console.log("✅ Off-chain data:", offChainData);
           
@@ -270,14 +282,14 @@ export default function CreateEvent() {
 
           <hr className="col-12 my-3"></hr>
           <div className="col-12">
-            <h6 className="py-2">Event Details (Optional)</h6>
+            <h6 className="py-2">Event Details *</h6>
             <small className="form-text text-muted">
-              Add additional information about your event. These details are stored off-chain and help users understand what the event is about.
+              Provide information about your event. These details are stored off-chain and help users understand what the event is about.
             </small>
           </div>
 
           <div className="col-12">
-            <label className="form-label">Event Title</label>
+            <label className="form-label">Event Title *</label>
             <input
               type="text"
               className="form-control"
@@ -285,6 +297,7 @@ export default function CreateEvent() {
               name="title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
+              required
             />
             <small className="form-text text-muted">
               A descriptive title for your event
@@ -292,7 +305,7 @@ export default function CreateEvent() {
           </div>
 
           <div className="col-12">
-            <label className="form-label">Description</label>
+            <label className="form-label">Description *</label>
             <textarea
               className="form-control"
               rows="3"
@@ -300,6 +313,7 @@ export default function CreateEvent() {
               name="description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
+              required
             />
             <small className="form-text text-muted">
               Detailed description of the event
@@ -307,7 +321,7 @@ export default function CreateEvent() {
           </div>
 
           <div className="col-12">
-            <label className="form-label">Image URL</label>
+            <label className="form-label">Image URL *</label>
             <input
               type="url"
               className="form-control"
@@ -315,6 +329,7 @@ export default function CreateEvent() {
               name="imageUrl"
               value={imageUrl}
               onChange={(event) => setImageUrl(event.target.value)}
+              required
             />
             <small className="form-text text-muted">
               URL to an image representing your event (banner, logo, etc.)
@@ -329,6 +344,9 @@ export default function CreateEvent() {
             <small>
               {!eventId && "Please enter an Event ID. "}
               {!maxSupply && "Please enter Maximum Supply. "}
+              {!title.trim() && "Please enter an Event Title. "}
+              {!description.trim() && "Please enter a Description. "}
+              {!imageUrl.trim() && "Please enter an Image URL. "}
             </small>
           </div>
         )}
@@ -336,7 +354,7 @@ export default function CreateEvent() {
           type="submit"
           className="btn btn-gradient btn-block"
           onClick={handleSubmit}
-          disabled={loading || !eventId || !maxSupply}
+          disabled={loading || !isFormValid()}
         >
           {loading ? "Creating..." : "Create Event"}
         </Button>

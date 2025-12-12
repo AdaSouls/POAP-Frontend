@@ -87,11 +87,38 @@ export async function createEvent(eventData: any) {
       },
       body: JSON.stringify(eventData),
     });
+    
+    // Get response text first to check if it's empty
+    const responseText = await response.text();
+    
     if (!response.ok) {
-      throw new Error("Network response was not ok: " + response.statusText);
+      // Try to parse error response if it's JSON
+      let errorMessage = response.statusText;
+      if (responseText) {
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorData.details || errorData.message || response.statusText;
+        } catch {
+          errorMessage = responseText || response.statusText;
+        }
+      }
+      throw new Error(`Network response was not ok: ${response.status} ${errorMessage}`);
     }
-    const event = await response.json();
-    return event;
+    
+    // Check if response is empty
+    if (!responseText || responseText.trim() === "") {
+      throw new Error("Server returned an empty response");
+    }
+    
+    // Parse JSON response
+    try {
+      const event = JSON.parse(responseText);
+      return event;
+    } catch (parseError) {
+      console.error("Failed to parse response as JSON:", responseText);
+      const error = parseError as Error;
+      throw new Error(`Invalid JSON response from server: ${error.message}`);
+    }
   } catch (error) {
     console.error("Error creating event:", error);
     throw error;
