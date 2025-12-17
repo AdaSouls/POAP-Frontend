@@ -124,8 +124,48 @@ export default function CreateEvent() {
       console.log("✅ Timestamp:", timestamp);
       console.log("✅ Event End Date:", eventEndDate);
       console.log("✅ Event Start Date:", finalEventStartDate);
-      // Create event directly on blockchain
-      // loadingFunction("Creating Event", "Creating event on blockchain...", "");
+
+      // STEP 1: Store both offchain and onchain data in backend FIRST
+      // Convert date format to ISO string
+      // date input returns "YYYY-MM-DD" which needs to be converted to ISO
+      const convertToISO = (dateString) => {
+        if (!dateString || dateString.trim() === "") return null;
+        // dateString is in YYYY-MM-DD format, convert to ISO with timezone
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? null : date.toISOString();
+      };
+
+      // Build event data object with both onchain and offchain data
+      const eventData = {
+        issuerId: parseInt(poapIssuer.issuerId),
+        eventId: parseInt(eventId),
+        eventMaxSupply: parseInt(maxSupply),
+        eventMintExpiration: timestamp,
+        eventOrganizer: provider.address,
+        title: title.trim(),
+        description: description.trim(),
+        imageUrl: imageUrl.trim(),
+        eventStartDate: convertToISO(finalEventStartDate),
+        eventEndDate: convertToISO(eventEndDate) || '',
+      };
+
+      console.log("✅ Storing event data in backend (offchain + onchain):", eventData);
+      loadingFunction("Storing Event Data", "Saving event information...", "");
+      
+      // Store in backend first - this stores both offchain and onchain data
+      const storedEvent = await createEvent(eventData);
+      console.log("✅ Event stored in backend:", storedEvent);
+
+      // Check if backend returned an error
+      if (!storedEvent || storedEvent.error) {
+        throw new Error(storedEvent?.error || storedEvent?.details || "Failed to store event data in backend");
+      }
+
+      // STEP 2: Generate blockchain transaction (user will confirm in wallet)
+      console.log("✅ Generating blockchain transaction...");
+      loadingFunction("Preparing Transaction", "Please confirm the transaction in your wallet...", "");
+      
+      // Generate and send transaction to blockchain
       const result = await mvpSmartContractService.createEvent(
         parseInt(poapIssuer.issuerId),
         parseInt(eventId),
@@ -137,39 +177,12 @@ export default function CreateEvent() {
       if (result.success) {
         const explorerUrl = `${process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL}/tx/${result.txHash}`;
         
-        // Store off-chain data in database
-        try {
-          // Convert date format to ISO string
-          // date input returns "YYYY-MM-DD" which needs to be converted to ISO
-          const convertToISO = (dateString) => {
-            if (!dateString || dateString.trim() === "") return null;
-            // dateString is in YYYY-MM-DD format, convert to ISO with timezone
-            const date = new Date(dateString);
-            return isNaN(date.getTime()) ? null : date.toISOString();
-          };
-
-          // Build offChainData object, only including optional fields if they have values
-          const offChainData = {
-            issuerId: parseInt(poapIssuer.issuerId),
-            eventId: parseInt(eventId),
-            eventMaxSupply: parseInt(maxSupply),
-            eventMintExpiration: timestamp,
-            eventOrganizer: provider.address,
-            title: title.trim(),
-            description: description.trim(),
-            imageUrl: imageUrl.trim(),
-            eventStartDate: convertToISO(finalEventStartDate),
-            eventEndDate: convertToISO(eventEndDate) || '',
-          };
-          console.log("✅ Off-chain data:", offChainData);
-          
-          await createEvent(offChainData);
-          console.log("✅ Off-chain data stored successfully");
-        } catch (apiError) {
-          console.error("⚠️ Failed to store off-chain data:", apiError);
-          // Don't fail the entire operation if off-chain storage fails
-          // The blockchain event was created successfully
-        }
+        // STEP 3: Indexer will automatically update the event with tx hash and block number
+        // The indexer (blockchainSync.service.ts) detects the blockchain event
+        // and updates the existing database record with transaction_hash and block_number
+        // No manual update needed here - the indexer handles it automatically
+        
+        console.log("✅ Blockchain transaction successful. Indexer will update event metadata automatically.");
         
         closeDrawer();
         succesfullBlockchainCreation(
@@ -177,6 +190,8 @@ export default function CreateEvent() {
           `Transaction: ${result.txHash}`,
           explorerUrl
         );
+      } else {
+        throw new Error("Blockchain transaction failed");
       }
       
     } catch (error) {
