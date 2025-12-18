@@ -153,7 +153,7 @@ export default function CreatePoap() {
           `Transaction: ${result.txHash}`,
           explorerUrl
         );
-        navigate("/mvp");
+        // navigate("/mvp");
       } else {
         errorFunction(
           "Mint Failed",

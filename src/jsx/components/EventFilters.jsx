@@ -109,18 +109,18 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
               </select>
             </div>
 
-            {/* Filter by Issuer ID */}
+            {/* Filter by Event ID */}
             <div className="col-md-6 col-lg-4">
               <label className="form-label small text-muted">
                 <i className="icofont-id-card me-1"></i>
-                Issuer ID
+                Event ID
               </label>
               <input
                 type="number"
                 className="form-control form-control-sm"
-                placeholder="Filter by issuer ID..."
-                value={localFilters.issuerId || ''}
-                onChange={(e) => handleFilterChange('issuerId', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="Filter by event ID..."
+                value={localFilters.eventId || ''}
+                onChange={(e) => handleFilterChange('eventId', e.target.value ? parseInt(e.target.value) : undefined)}
                 min="0"
               />
             </div>
@@ -195,13 +195,13 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
                     ></button>
                   </span>
                 )}
-                {localFilters.issuerId !== undefined && (
+                {localFilters.eventId !== undefined && (
                   <span className="badge bg-secondary d-flex align-items-center gap-2">
-                    Issuer: {localFilters.issuerId}
+                    Event ID: {localFilters.eventId}
                     <button
                       className="btn-close btn-close-white ms-2"
                       style={{ fontSize: '0.6rem' }}
-                      onClick={() => handleFilterChange('issuerId', undefined)}
+                      onClick={() => handleFilterChange('eventId', undefined)}
                     ></button>
                   </span>
                 )}
