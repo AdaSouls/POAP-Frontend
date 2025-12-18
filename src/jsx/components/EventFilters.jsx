@@ -26,7 +26,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
   return (
     <div className="card mb-3">
       <div className="card-header bg-white">
-        <div className="d-flex justify-content-between align-items-center">
+        <div className="d-flex justify-content-between align-items-center gap-2">
           <h5 className="mb-0">
             <i className="icofont-filter me-2"></i>
             Filters & Sort
@@ -34,7 +34,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
           <div className="d-flex align-items-center gap-2">
             {hasActiveFilters() && (
               <button
-                className="btn btn-sm btn-outline-secondary"
+                className="btn btn-sm btn-outline-secondary px-2 py-1"
                 onClick={handleReset}
                 title="Clear all filters"
               >
@@ -42,7 +42,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
               </button>
             )}
             <button
-              className="btn btn-sm btn-outline-primary"
+              className="btn btn-sm btn-outline-primary px-2 py-1"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               <i className={`icofont-arrow-${isExpanded ? 'up' : 'down'}`}></i>
@@ -166,7 +166,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
               <div className="d-flex flex-wrap gap-2 align-items-center">
                 <span className="small text-muted">Active filters:</span>
                 {localFilters.titleSearch && (
-                  <span className="badge bg-primary">
+                  <span className="badge bg-primary d-flex align-items-center gap-2">
                     Title: "{localFilters.titleSearch}"
                     <button
                       className="btn-close btn-close-white ms-2"
@@ -176,7 +176,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
                   </span>
                 )}
                 {localFilters.status && (
-                  <span className="badge bg-info">
+                  <span className="badge bg-info d-flex align-items-center gap-2">
                     Status: {localFilters.status}
                     <button
                       className="btn-close btn-close-white ms-2"
@@ -196,7 +196,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
                   </span>
                 )}
                 {localFilters.issuerId !== undefined && (
-                  <span className="badge bg-secondary">
+                  <span className="badge bg-secondary d-flex align-items-center gap-2">
                     Issuer: {localFilters.issuerId}
                     <button
                       className="btn-close btn-close-white ms-2"
