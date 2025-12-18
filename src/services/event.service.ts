@@ -27,9 +27,32 @@ export interface IEvent {
   eventEndDate?: string | null;
 }
 
-export async function getAllEvents() {
+export interface IEventFilters {
+  organiserAddress?: string;
+  issuerId?: number;
+  status?: string;
+  expired?: string; // 'true' or 'false' as string for API
+  titleSearch?: string;
+  sortBy?: 'createdAt' | 'eventStartDate' | 'expiration' | 'title';
+  order?: 'asc' | 'desc';
+}
+
+export async function getAllEvents(filters?: IEventFilters) {
   try {
-    const response = await fetch(`${API_BASE_URL}/get_all_events`, {
+    // Build query string from filters
+    const queryParams = new URLSearchParams();
+    if (filters) {
+      if (filters.organiserAddress) queryParams.append('organiserAddress', filters.organiserAddress);
+      if (filters.issuerId !== undefined) queryParams.append('issuerId', filters.issuerId.toString());
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.expired !== undefined) queryParams.append('expired', filters.expired);
+      if (filters.titleSearch) queryParams.append('titleSearch', filters.titleSearch);
+      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+      if (filters.order) queryParams.append('order', filters.order);
+    }
+
+    const url = `${API_BASE_URL}/get_all_events${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

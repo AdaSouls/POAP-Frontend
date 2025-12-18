@@ -1,17 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import EventCard from "../components/eventCard";
+import EventFilters from "../components/EventFilters";
 import eventNormal from "../../images/svg/event-normal.svg";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
 import dataSyncService from "../../services/dataSync.service";
+import { getAllEvents } from "../../services/event.service";
 
 const EventsPage = () => { 
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState([]);
   const [myEvents, setMyEvents] = useState([]);
+  const [filters, setFilters] = useState({});
   const { poapEvents, ethereum: { provider, address } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
@@ -28,13 +31,66 @@ const EventsPage = () => {
     });
   };
 
-  useEffect(() => {
-    setLoading(true);
-    // Use events from context (already loaded in router)
-    if (poapEvents && poapEvents.length > 0) {
-      setEvents(poapEvents);
+  const loadEvents = useCallback(async (filterParams = {}) => {
+    try {
+      setLoading(true);
+      const finalFilters = { ...filterParams };
+
+      const fetchedEvents = await getAllEvents(finalFilters);
+      setEvents(fetchedEvents);
       
-      // Filter events by current user if wallet is connected
+      // Also update context for other components
+      dispatch({
+        type: "UPDATE_EVENTS",
+        payload: fetchedEvents,
+      });
+
+      // Separate my events for display
+      if (provider && address) {
+        const userEvents = fetchedEvents.filter(event => 
+          event.organiserAddress?.toLowerCase() === address.toLowerCase()
+        );
+        setMyEvents(userEvents);
+      } else {
+        setMyEvents([]);
+      }
+    } catch (error) {
+      console.error("Error loading events:", error);
+      // Fallback to context events if API fails
+      if (poapEvents && poapEvents.length > 0) {
+        setEvents(poapEvents);
+        if (provider && address) {
+          const userEvents = poapEvents.filter(event => 
+            event.organiserAddress?.toLowerCase() === address.toLowerCase()
+          );
+          setMyEvents(userEvents);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [provider, address, poapEvents, dispatch]);
+
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+    loadEvents(newFilters);
+  }, [loadEvents]);
+
+  const handleResetFilters = useCallback(() => {
+    setFilters({});
+    loadEvents({});
+  }, [loadEvents]);
+
+  useEffect(() => {
+    // Initial load
+    loadEvents({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount
+
+  // Keep context events as fallback
+  useEffect(() => {
+    if (!loading && events.length === 0 && poapEvents && poapEvents.length > 0) {
+      setEvents(poapEvents);
       if (provider && address) {
         const userEvents = poapEvents.filter(event => 
           event.organiserAddress?.toLowerCase() === address.toLowerCase()
@@ -42,8 +98,7 @@ const EventsPage = () => {
         setMyEvents(userEvents);
       }
     }
-    setLoading(false);
-  }, [poapEvents, provider, address]);
+  }, [poapEvents, provider, address, loading, events.length]);
 
   // Polling for real-time events data
   useEffect(() => {
@@ -78,10 +133,23 @@ const EventsPage = () => {
                   </h4>
                 </div>
                 <div className="inner-header-buttons">
-                  {/* Future: Add filter buttons */}
+                  <span className="badge bg-primary">
+                    {events.length} {events.length === 1 ? 'Event' : 'Events'}
+                  </span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* FILTERS */}
+        <div className="row">
+          <div className="col-12">
+            <EventFilters
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onReset={handleResetFilters}
+            />
           </div>
         </div>
 
