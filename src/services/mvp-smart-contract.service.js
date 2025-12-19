@@ -268,9 +268,28 @@ export class MVPSmartContractService {
     // Check error message for revert reason
     const errorMessage = error.message || error.toString();
     console.log("🚀 ~ MVPSmartContractService ~ extractRevertReason ~ errorMessage:", errorMessage);
+    
     // Common revert reasons to look for
     if (errorMessage.includes("onlyAdmin") || errorMessage.includes("AccessControl")) {
-      return "Only admins can create events. Your address is not authorized.";
+      return "Only admins can perform this action. Your address is not authorized.";
+    }
+    if (errorMessage.includes("onlyEventMinter") || errorMessage.includes("not authorized to mint")) {
+      return "You are not authorized to mint tokens for this event. Please ensure you are added as an event minter.";
+    }
+    if (errorMessage.includes("minter is event holder") || errorMessage.includes("event holder")) {
+      return "The recipient already has a token for this event. Each address can only receive one token per event.";
+    }
+    if (errorMessage.includes("event does not exist") || errorMessage.includes("Poap: event does not exist")) {
+      return "This event does not exist. Please verify the event ID.";
+    }
+    if (errorMessage.includes("issuer does not exist") || errorMessage.includes("Poap: issuer does not exist")) {
+      return "The issuer does not exist. Please verify the issuer ID.";
+    }
+    if (errorMessage.includes("event mint has expired") || errorMessage.includes("Poap: event mint has expired") || errorMessage.includes("expired")) {
+      return "This event's minting period has expired.";
+    }
+    if (errorMessage.includes("max supply reached") || errorMessage.includes("Poap: max supply reached") || errorMessage.includes("max supply")) {
+      return "This event has reached its maximum supply. No more tokens can be minted.";
     }
     if (errorMessage.includes("whenNotPaused") || errorMessage.includes("Pausable")) {
       return "Contract is currently paused. Please try again later.";
@@ -302,18 +321,72 @@ export class MVPSmartContractService {
   // Mint token
   async mintToken(issuerId, eventId, to) {
     try {
-      const tx = await this.contract.mintToken(issuerId, eventId, to, {
-        gasLimit: 800000,
-      });
+      // Pre-flight validation checks
+      try {
+        // Check if user can mint for this event
+        const canMint = await this.canMintForEvent(eventId, this.signer.address);
+        if (!canMint) {
+          throw new Error("You are not authorized to mint tokens for this event. Please ensure you are added as an event minter.");
+        }
+
+        // Check event details
+        const eventDetails = await this.getEventDetails(eventId);
+        if (eventDetails.available <= 0) {
+          throw new Error("This event has reached its maximum supply. No more tokens can be minted.");
+        }
+
+        if (eventDetails.mintExpiration > 0 && eventDetails.mintExpiration * 1000 <= Date.now()) {
+          throw new Error("This event's minting period has expired.");
+        }
+      } catch (validationError) {
+        // If it's already a user-friendly error, throw it
+        if (validationError.message && !validationError.message.includes("Failed to")) {
+          throw validationError;
+        }
+        // Otherwise, continue to try the transaction (might be a network error)
+      }
+
+      // Use retry logic with exponential backoff for rate limit errors
+      const result = await retryWithBackoff(async () => {
+        // First, estimate gas to catch revert reasons early
+        try {
+          const gasEstimate = await this.contract.mintToken.estimateGas(
+            issuerId,
+            eventId,
+            to
+          );
+          console.log("Gas estimate:", gasEstimate.toString());
+        } catch (estimateError) {
+          // Extract revert reason from gas estimation error
+          console.log("🚀 ~ MVPSmartContractService ~ mintToken ~ estimateError:", estimateError);
+          const revertReason = this.extractRevertReason(estimateError);
+          throw new Error(revertReason || "Transaction would fail. Please check your permissions and event parameters.");
+        }
+
+        const tx = await this.contract.mintToken(issuerId, eventId, to, {
+          gasLimit: 800000,
+        });
+        
+        const receipt = await tx.wait();
+        return {
+          success: true,
+          txHash: receipt.hash,
+          blockNumber: receipt.blockNumber,
+        };
+      }, 3, 1000); // 3 retries, starting with 1 second delay
       
-      const receipt = await tx.wait();
-      return {
-        success: true,
-        txHash: receipt.hash,
-        blockNumber: receipt.blockNumber,
-      };
+      return result;
     } catch (error) {
       console.error("Failed to mint token:", error);
+      
+      // Provide user-friendly error message for rate limits
+      if (isRateLimitError(error)) {
+        const rateLimitError = new Error("The network is currently busy. Please wait a moment and try again.");
+        rateLimitError.name = "RateLimitError";
+        throw rateLimitError;
+      }
+      
+      // Re-throw with the error message (which may now include revert reason)
       throw error;
     }
   }
