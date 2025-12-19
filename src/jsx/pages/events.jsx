@@ -209,8 +209,9 @@ const EventsPage = () => {
               )}
 
               {/* ALL EVENTS */}
-              {provider ? (
-                events.map(event => (
+              {provider && events.length > 0 ? (
+                events.filter(event => !myEvents.some(myEvent => myEvent.eventId === event.eventId))
+                .map(event => (
                   <EventCard key={event.eventId} event={event} index={0} />
                 ))
               ) : (

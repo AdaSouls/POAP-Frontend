@@ -186,7 +186,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
                   </span>
                 )}
                 {localFilters.expired !== undefined && (
-                  <span className="badge bg-warning">
+                  <span className="badge bg-warning  d-flex align-items-center gap-2">
                     {localFilters.expired === 'true' ? 'Expired' : 'Active'}
                     <button
                       className="btn-close btn-close-white ms-2"
