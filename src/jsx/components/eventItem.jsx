@@ -95,9 +95,8 @@ const EventItem = ({ event, index, mintable, owned }) => {
         {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
         Expiration: 
         {event.expiration == 0 ?
-          'No expiry' :
+          'No expiryq' :
           isEventExpired(event.expiration) ?
-            formatDateToDDMMYYYY(new Date(event.expiration * 1000)) :
             <span
               alt="Expired"
               style={{
@@ -111,7 +110,8 @@ const EventItem = ({ event, index, mintable, owned }) => {
               }}
             >
               Expired
-            </span>}
+            </span>:
+            formatDateToDDMMYYYY(new Date(event.expiration * 1000))}
         
       </td>
       <td className="col-3">
