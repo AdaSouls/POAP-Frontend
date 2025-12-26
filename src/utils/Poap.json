@@ -313,6 +313,12 @@
       {
         "indexed": false,
         "internalType": "uint256",
+        "name": "eventStartDate",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "eventMintExpiration",
         "type": "uint256"
       },
@@ -871,6 +877,11 @@
       },
       {
         "internalType": "uint256",
+        "name": "startDate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
         "name": "mintExpiration",
         "type": "uint256"
       },
@@ -975,6 +986,25 @@
       }
     ],
     "name": "eventMintExpiration",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "eventStartDate",
     "outputs": [
       {
         "internalType": "uint256",

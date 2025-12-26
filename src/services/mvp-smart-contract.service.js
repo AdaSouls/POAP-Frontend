@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import poapContractJson from "../utils/Poap.json";
 
-const POAP_CONTRACT_ADDRESS = "0x7b04cD65718eA503e0A641c1D23cb57688B808F9";
+const POAP_CONTRACT_ADDRESS = "0xE2113297a478889eFc11e0DC643D16a0178c2963";
 const POAP_CONTRACT_ABI = poapContractJson;
 
 // Provider configuration

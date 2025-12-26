@@ -32,7 +32,7 @@ const provider = new ethers.JsonRpcProvider(providerRPC.rpc, {
 });
 
 const poapContractAbi = poapContractJson;
-const poapContractAddress = "0x7b04cD65718eA503e0A641c1D23cb57688B808F9";
+const poapContractAddress = "0xE2113297a478889eFc11e0DC643D16a0178c2963";
 // const poapContractAddress = REACT_APP_POAP_CONTRACT_ADDRESS_POLYGON_AMOY;
 
 // let wallet = ethers.Wallet.fromPhrase(REACT_APP_MNEMONIC_DEVNET);
