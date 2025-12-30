@@ -23,7 +23,7 @@ export interface IEvent {
   transaction_hash?: string | null;
   block_number?: number | null;
   imageUrl?: string | null;
-  eventStartDate?: string | null;
+  eventStartDate?: number | null;
   eventEndDate?: string | null;
 }
 

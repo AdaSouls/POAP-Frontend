@@ -137,7 +137,7 @@ const EventBody = ({ event }) => {
         <div className="col-6">
           <p className="m-0 small gray">Event Start Date</p>
           <p className="m-0 mb-3">
-            {formatDateToDDMMYYYY(new Date(event.eventStartDate))}
+            {formatDateToDDMMYYYY(new Date(event.eventStartDate * 1000))}
           </p>
         </div>
       )}

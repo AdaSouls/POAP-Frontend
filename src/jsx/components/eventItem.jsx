@@ -95,7 +95,7 @@ const EventItem = ({ event, index, mintable, owned }) => {
         {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
         Expiration: 
         {event.expiration == 0 ?
-          'No expiryq' :
+          'No expiry' :
           isEventExpired(event.expiration) ?
             <span
               alt="Expired"

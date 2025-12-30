@@ -129,6 +129,15 @@ export default function CreateEvent() {
         return isNaN(date.getTime()) ? null : date.toISOString();
       };
 
+      let startTimeStamp = 0;
+      if (finalEventStartDate && finalEventStartDate.trim() !== "") {
+        const startDate = new Date(finalEventStartDate);
+        // Set to start of day (00:00:00.000) for consistency
+        startDate.setHours(0, 0, 0, 0);
+        startTimeStamp = Math.floor(startDate.getTime() / 1000);
+      }
+      console.log("✅ Start Time Stamp:", startTimeStamp);
+
       // Build event data object with both onchain and offchain data
       // Note: eventId is NOT included - backend will auto-generate it
       const eventData = {
@@ -140,7 +149,7 @@ export default function CreateEvent() {
         title: title.trim(),
         description: description.trim(),
         imageUrl: imageUrl.trim(),
-        eventStartDate: convertToISO(finalEventStartDate),
+        eventStartDate: startTimeStamp,
         eventEndDate: convertToISO(eventEndDate) || '',
       };
 
@@ -173,6 +182,7 @@ export default function CreateEvent() {
         parseInt(poapIssuer.issuerId),
         generatedEventId, // Use the auto-generated eventId from backend
         parseInt(maxSupply),
+        startTimeStamp,
         timestamp,
         provider.address
       );

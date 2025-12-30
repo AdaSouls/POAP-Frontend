@@ -185,7 +185,7 @@ export class MVPSmartContractService {
   }
 
   // Create event
-  async createEvent(issuerId, eventId, maxSupply, mintExpiration, eventOrganizer) {
+  async createEvent(issuerId, eventId, maxSupply, eventStartDate, mintExpiration, eventOrganizer) {
     try {
       // Check if user is admin before attempting transaction
       const isUserAdmin = await this.isAdmin(this.signer.address);
@@ -201,6 +201,7 @@ export class MVPSmartContractService {
             issuerId,
             eventId,
             maxSupply,
+            eventStartDate,
             mintExpiration,
             eventOrganizer
           );
@@ -216,6 +217,7 @@ export class MVPSmartContractService {
           issuerId,
           eventId,
           maxSupply,
+          eventStartDate,
           mintExpiration,
           eventOrganizer,
           { gasLimit: 1000000 }

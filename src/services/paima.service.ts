@@ -70,7 +70,7 @@ export interface IGetAllEventsResult {
   issuerId?: number;
   organiserAddress?: string;
   imageUrl?: string | null;
-  eventStartDate?: string | null;
+  eventStartDate?: number | null; // Unix timestamp in seconds (same type as expiration)
   eventEndDate?: string | null;
 }
 
