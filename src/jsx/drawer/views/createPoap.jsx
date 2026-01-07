@@ -268,7 +268,13 @@ export default function CreatePoap() {
                       </div>
                       <div className="col-6">
                         <small className="text-muted">Event End Date:</small>
-                        <p className="mb-0">{selectedEvent.eventEndDate ? formatDateToDDMMYYYY(new Date(selectedEvent.eventEndDate * 1000)) : 'No expiry'}</p>
+                        <p>{selectedEvent.expiration==0 ? 'No expiry' : formatDateToDDMMYYYY(new Date(selectedEvent.expiration * 1000))}</p>
+                      </div>
+                    </div>
+                    <div className="row">
+                      <div className="col-12">
+                        <small className="text-muted">Transaction Hash:</small>
+                        <p className="mb-0">{selectedEvent.transaction_hash ? <a href={`${process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL}/tx/${selectedEvent.transaction_hash}`} target="_blank" rel="noopener noreferrer">{selectedEvent.transaction_hash}</a> : 'No transaction hash'}</p>
                       </div>
                     </div>
                   </div>
