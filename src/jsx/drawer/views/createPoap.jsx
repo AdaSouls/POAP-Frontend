@@ -6,6 +6,7 @@ import { mintToken } from "../../../utils/poapContractInteractions";
 import { createOwnerService } from '../../../services/paima.service';
 import { mvpSmartContractService } from '../../../services/mvp-smart-contract.service';
 import { loadingFunction, errorFunction, succesfullBlockchainCreation } from '../../toasts/sweetAlerts';
+import formatDateToDDMMYYYY from '../../../utils/formatDateToDDMMYYYY';
 
 export default function CreatePoap() {
   const [events, setEvents] = useState([]);
@@ -258,6 +259,16 @@ export default function CreatePoap() {
                       <div className="col-6">
                         <small className="text-muted">Event ID:</small>
                         <p className="mb-0">{selectedEvent.eventId}</p>
+                      </div>
+                    </div>
+                    <div className="row">
+                      <div className="col-6">
+                        <small className="text-muted">Event Start Date:</small>
+                        <p className="mb-0">{formatDateToDDMMYYYY(new Date(selectedEvent.eventStartDate * 1000))}</p>
+                      </div>
+                      <div className="col-6">
+                        <small className="text-muted">Event End Date:</small>
+                        <p className="mb-0">{selectedEvent.eventEndDate ? formatDateToDDMMYYYY(new Date(selectedEvent.eventEndDate * 1000)) : 'No expiry'}</p>
                       </div>
                     </div>
                   </div>

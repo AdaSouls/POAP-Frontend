@@ -188,10 +188,10 @@ export class MVPSmartContractService {
   async createEvent(issuerId, eventId, maxSupply, eventStartDate, mintExpiration, eventOrganizer) {
     try {
       // Check if user is admin before attempting transaction
-      const isUserAdmin = await this.isAdmin(this.signer.address);
-      if (!isUserAdmin) {
-        throw new Error("Only admins can create events. Your address is not authorized as an admin.");
-      }
+      // const isUserAdmin = await this.isAdmin(this.signer.address);
+      // if (!isUserAdmin) {
+      //   throw new Error("Only admins can create events. Your address is not authorized as an admin.");
+      // }
 
       // Use retry logic with exponential backoff for rate limit errors
       const result = await retryWithBackoff(async () => {
@@ -326,17 +326,20 @@ export class MVPSmartContractService {
       // Pre-flight validation checks
       try {
         // Check if user can mint for this event
-        const canMint = await this.canMintForEvent(eventId, this.signer.address);
-        if (!canMint) {
-          throw new Error("You are not authorized to mint tokens for this event. Please ensure you are added as an event minter.");
-        }
+        // const canMint = await this.canMintForEvent(eventId, this.signer.address);
+        // if (!canMint) {
+        //   throw new Error("You are not authorized to mint tokens for this event. Please ensure you are added as an event minter.");
+        // }
 
         // Check event details
         const eventDetails = await this.getEventDetails(eventId);
+        
         if (eventDetails.available <= 0) {
           throw new Error("This event has reached its maximum supply. No more tokens can be minted.");
         }
-
+        if (eventDetails.eventStartDate > 0 && eventDetails.eventStartDate * 1000 <= Date.now()) {
+          throw new Error("This event has not started yet. Please try again later.");
+        }
         if (eventDetails.mintExpiration > 0 && eventDetails.mintExpiration * 1000 <= Date.now()) {
           throw new Error("This event's minting period has expired.");
         }
@@ -470,10 +473,11 @@ export class MVPSmartContractService {
   }
   // Get event details
   async getEventDetails(eventId) {
-    const [maxSupply, totalSupply, mintExpiration] = await Promise.all([
+    const [maxSupply, totalSupply, mintExpiration, eventStartDate] = await Promise.all([
       this.contract.eventMaxSupply(eventId),
       this.contract.eventTotalSupply(eventId),
       this.contract.eventMintExpiration(eventId),
+      this.contract.eventStartDate(eventId),
     ]);
     
     return {
@@ -482,6 +486,7 @@ export class MVPSmartContractService {
       totalSupply: Number(totalSupply),
       mintExpiration: Number(mintExpiration),
       available: Number(maxSupply) - Number(totalSupply),
+      eventStartDate: Number(eventStartDate),
     };
   }
 
