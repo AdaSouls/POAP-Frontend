@@ -337,7 +337,7 @@ export class MVPSmartContractService {
         if (eventDetails.available <= 0) {
           throw new Error("This event has reached its maximum supply. No more tokens can be minted.");
         }
-        if (eventDetails.eventStartDate > 0 && eventDetails.eventStartDate * 1000 <= Date.now()) {
+        if (eventDetails.eventStartDate > 0 && eventDetails.eventStartDate * 1000 > Date.now()) {
           throw new Error("This event has not started yet. Please try again later.");
         }
         if (eventDetails.mintExpiration > 0 && eventDetails.mintExpiration * 1000 <= Date.now()) {

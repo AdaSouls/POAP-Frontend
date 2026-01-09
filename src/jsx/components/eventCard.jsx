@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import eventNormal from "../../images/svg/event-normal.svg";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
-import eventStatusIcon from "../../icons/svg/event.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 
 const EventCard = ({ event, index }) => {
@@ -16,6 +15,13 @@ const EventCard = ({ event, index }) => {
     return url !== null && url !== undefined && url !== "";
   };
 
+  // Helper function to truncate address
+  const truncateAddress = (address) => {
+    if (!address) return "N/A";
+    if (address.length <= 10) return address;
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
   const viewEvent = () => {
     dispatch({
       type: "VIEW_EVENT",
@@ -23,28 +29,49 @@ const EventCard = ({ event, index }) => {
     });
   };
 
-  const viewPoaps = () => {
-    // Navigate to POAP management page for this event
-    window.location.href = `/poap-management?eventId=${event.eventId}`;
+  // Calculate status based on eventStartDate and expiration
+  const calculateStatus = () => {
+    const now = Date.now();
+    
+    // Check if expired first
+    if (event.expiration && event.expiration > 0) {
+      const expirationTime = event.expiration * 1000;
+      if (expirationTime <= now) {
+        return 'expired';
+      }
+    }
+    
+    // Check event start date
+    if (event.eventStartDate) {
+      const startTime = event.eventStartDate * 1000;
+      if (startTime > now) {
+        return 'pending';
+      } else {
+        return 'active';
+      }
+    }
+    
+    // Default to active if no dates available
+    return 'active';
   };
 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+  const getStatusBadgeClass = (status) => {
+    switch (status?.toLowerCase()) {
       case 'pending':
-        return 'text-warning';
+        return 'badge bg-warning';
       case 'active':
-        return 'text-success';
+        return 'badge bg-success';
       case 'completed':
-        return 'text-info';
+        return 'badge bg-info';
       case 'expired':
-        return 'text-danger';
+        return 'badge bg-danger';
       default:
-        return 'text-secondary';
+        return 'badge bg-secondary';
     }
   };
 
   const getStatusIcon = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'pending':
         return 'icofont-clock-time';
       case 'active':
@@ -59,147 +86,254 @@ const EventCard = ({ event, index }) => {
   };
 
   const isExpired = () => {
-    if (event.expiryDate) {
-      return new Date(event.expiryDate) <= new Date();
-    }
-    if (event.expiration) {
-      return event.expiration * 1000 <= Date.now();
-    }
-    return false;
+    const status = calculateStatus();
+    return status === 'expired';
   };
 
   const getMintProgress = () => {
     if (event.poapsToBeMinted && event.mintedPoaps !== undefined) {
-      return `${event.mintedPoaps}/${event.poapsToBeMinted}`;
+      return { current: event.mintedPoaps, total: event.poapsToBeMinted };
     }
     if (event.maxSupply) {
-      return `0/${event.maxSupply}`;
+      return { current: 0, total: event.maxSupply };
     }
-    return "0/0";
+    return { current: 0, total: 0 };
   };
 
+  const getProgressPercentage = () => {
+    const progress = getMintProgress();
+    if (progress.total === 0) return 0;
+    return Math.min((progress.current / progress.total) * 100, 100);
+  };
+
+  const formatEventDate = (timestamp) => {
+    if (!timestamp || timestamp === 0) return null;
+    return formatDateToDDMMYYYY(new Date(timestamp * 1000));
+  };
+
+  const progress = getMintProgress();
+  const progressPercentage = getProgressPercentage();
+  const eventStatus = calculateStatus();
+
   return (
-    <div key={event.eventId || event.eventUuid} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
-      <div className={`card card-event card-classic ${isExpired() ? 'bg-event-expired' : 'bg-event-normal'}`}>
-        <div className="card-body card-classic-max-height d-flex justify-content-start">
-          <div
-            className="mr-3 mr-0 mr-sm-3"
-            style={{
-              width: "50px",
-              height: "50px",
-              minWidth: "50px",
-              minHeight: "50px",
-              position: "relative",
-              flexShrink: 0,
-            }}
-          >
-            {hasImageUrl(event.imageUrl) && !imageError ? (
-              <>
-                {!imageLoaded && (
+    <div key={event.eventId || event.eventUuid} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6 mb-3">
+      <div 
+        className={`card card-event card-classic ${isExpired() ? 'bg-event-expired' : 'bg-event-normal'}`}
+        style={{
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-4px)';
+          e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '';
+        }}
+        onClick={viewEvent}
+      >
+        <div className="card-body card-classic-max-height">
+          {/* Header Section */}
+          <div className="d-flex justify-content-start mb-3">
+            <div
+              className="mr-3 mr-0 mr-sm-3"
+              style={{
+                width: "60px",
+                height: "60px",
+                minWidth: "60px",
+                minHeight: "60px",
+                position: "relative",
+                flexShrink: 0,
+              }}
+            >
+              {hasImageUrl(event.imageUrl) && !imageError ? (
+                <>
+                  {!imageLoaded && (
+                    <img
+                      className="rounded-circle position-absolute"
+                      src={eventNormal}
+                      width="60"
+                      height="60"
+                      alt="Loading..."
+                      style={{
+                        top: 0,
+                        left: 0,
+                        opacity: 0.5,
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
                   <img
-                    className="rounded-circle position-absolute"
-                    src={eventNormal}
-                    width="50"
-                    height="50"
-                    alt="Loading..."
+                    className="rounded-circle"
+                    src={event.imageUrl}
+                    width="60"
+                    height="60"
+                    alt={event.title || "Event"}
                     style={{
-                      top: 0,
-                      left: 0,
-                      opacity: 0.5,
+                      display: imageLoaded ? "block" : "none",
+                      objectFit: "cover",
+                      border: "2px solid rgba(255,255,255,0.3)",
+                    }}
+                    onLoad={() => setImageLoaded(true)}
+                    onError={() => {
+                      setImageError(true);
+                      setImageLoaded(false);
                     }}
                   />
-                )}
+                </>
+              ) : (
                 <img
                   className="rounded-circle"
-                  src={event.imageUrl}
-                  width="50"
-                  height="50"
-                  alt={event.title || "Event"}
+                  src={eventNormal}
+                  width="60"
+                  height="60"
+                  alt="Event"
                   style={{
-                    display: imageLoaded ? "block" : "none",
-                    objectFit: "cover",
-                  }}
-                  onLoad={() => setImageLoaded(true)}
-                  onError={() => {
-                    setImageError(true);
-                    setImageLoaded(false);
+                    border: "2px solid rgba(255,255,255,0.3)",
                   }}
                 />
-              </>
-            ) : (
-              <img
-                className="rounded-circle"
-                src={eventNormal}
-                width="50"
-                height="50"
-                alt="Event"
-              />
-            )}
+              )}
+            </div>
+            <div className="event-info flex-grow-1">
+              <h4 className="text-capitalize mb-2" style={{ fontSize: '18px', fontWeight: '600' }}>
+                {event.title || `Event ${event.eventId}`}
+              </h4>
+              
+              <div className="d-flex align-items-center">
+                <span className={`${getStatusBadgeClass(eventStatus)} mr-2`} style={{ fontSize: '10px', padding: '2px 8px', textTransform: 'capitalize' }}>
+                  {eventStatus}
+                </span>
+                <span className="text-muted small">ID: {event.eventId}</span>
+              </div>
+            </div>
           </div>
-          <div className="event-info">
-            <h4 className="text-capitalize mb-1">
-              {event.title || `Event ${event.eventId}`}
-            </h4>
-            <p className="text-muted small mb-0">
-              ID: {event.eventId}
+          {event.description && (
+            <p 
+              className="text-muted small mb-2" 
+              style={{ 
+                fontSize: '12px', 
+                lineHeight: '1.4',
+                display: '-webkit-box',
+                WebkitLineClamp: 4,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                height: '4em', // Approximately 3 lines (1.2em line-height * 3)
+              }}
+            >
+              {event.description}
             </p>
-          </div>
-        </div>
-        <div className="d-flex justify-content-between m-3">
-          <div className="align-content-center mt-4">
-            <ul>
-              <li className="d-flex justify-content-start">
-                <img
-                  className="mr-2"
-                  src={eventStatusIcon}
-                  width="25"
-                  height="25"
-                  alt=""
-                />
-                <p className={`pt-1 ${getStatusColor(event.status)}`}>
-                  {event.status}
-                </p>
-              </li>
-              <li className="d-flex justify-content-start">
-                <img
-                  className="mr-2"
-                  src={eventOwnerIcon}
-                  width="25"
-                  height="25"
-                  alt=""
-                />
-                <p className="pt-1">Organizer</p>
-              </li>
-              <li className="d-flex justify-content-start">
-                <i className={`icofont ${getStatusIcon(event.status)} mr-2 mt-1`}></i>
-                <p className="pt-1 small">
-                  {event.expiration == 0 ? 'No expiry' : formatDateToDDMMYYYY(new Date(event.expiration*1000))}
-                    {/* {event.expiryDate
-                    ? formatDateToDDMMYYYY(new Date(event.expiryDate))
-                    : event.expiration 
-                    ? formatDateToDDMMYYYY(event.expiration * 1000)
-                    : 'No expiry'
-                  } */}
-                </p>
-              </li>
+          )}
+          {/* Event Details Section */}
+          <div className="mb-3">
+            <ul className="list-unstyled mb-0" style={{ fontSize: '13px' }}>
+              {/* Event Start Date */}
+              {event.eventStartDate && (
+                <li className="d-flex align-items-center mb-2">
+                  <i className="icofont-calendar mr-2" style={{ fontSize: '16px', width: '20px' }}></i>
+                  <span className="text-muted">
+                    Starts: <strong className="text-white">{formatEventDate(event.eventStartDate) || 'N/A'}</strong>
+                  </span>
+                </li>
+              )}
+              
+              {/* Event End Date */}
+              {event.eventEndDate && (
+                <li className="d-flex align-items-center mb-2">
+                  <i className="icofont-calendar mr-2" style={{ fontSize: '16px', width: '20px' }}></i>
+                  <span className="text-muted">
+                    Ends: <strong className="text-white">{formatEventDate(event.eventEndDate)}</strong>
+                  </span>
+                </li>
+              )}
+
+              {/* Expiration */}
+              {event.expiration !== undefined && (
+                <li className="d-flex align-items-center mb-2">
+                  <i className={`icofont ${getStatusIcon(eventStatus)} mr-2`} style={{ fontSize: '16px', width: '20px' }}></i>
+                  <span className="text-muted">
+                    {event.expiration === 0 || event.expiration === null 
+                      ? 'No expiry' 
+                      : `Expires: ${formatDateToDDMMYYYY(new Date(event.expiration * 1000))}`
+                    }
+                  </span>
+                </li>
+              )}
+
+              {/* Organizer Address */}
+              {event.organiserAddress && (
+                <li className="d-flex align-items-center mb-2">
+                  <img
+                    className="mr-2"
+                    src={eventOwnerIcon}
+                    width="16"
+                    height="16"
+                    alt="Organizer"
+                    style={{ flexShrink: 0 }}
+                  />
+                  <span className="text-muted small">
+                    <span className="text-white">{truncateAddress(event.organiserAddress)}</span>
+                  </span>
+                </li>
+              )}
             </ul>
           </div>
-          <div className="align-content-center mt-5">
-            <div className="mb-2">
-              <small className="text-muted">
-                Minted: {getMintProgress()}
-              </small>
+
+          {/* Progress Section */}
+          {event.maxSupply && event.maxSupply > 0 && (
+            <div className="mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <small className="text-muted" style={{ fontSize: '11px' }}>
+                  Minted: <strong className="text-white">{progress.current}/{progress.total}</strong>
+                </small>
+                <small className="text-muted" style={{ fontSize: '11px' }}>
+                  {Math.round(progressPercentage)}%
+                </small>
+              </div>
+              <div className="progress" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '3px' }}>
+                <div
+                  className="progress-bar bg-white"
+                  role="progressbar"
+                  style={{
+                    width: `${progressPercentage}%`,
+                    transition: 'width 0.3s ease',
+                  }}
+                  aria-valuenow={progressPercentage}
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                ></div>
+              </div>
             </div>
-            {isExpired() ? (
-                <span className="btn btn-white btn-small disabled">Expired</span>
-                ) : (
+          )}
+        </div>
+
+        {/* Footer Section */}
+        <div className="card-footer border-0 bg-transparent p-3 pt-0">
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center">
+              {event.block_number && (
+                <small className="text-muted mr-3" style={{ fontSize: '10px' }}>
+                  Block: {event.block_number}
+                </small>
+              )}
+            </div>
+            <div>
+              {isExpired() ? (
+                <span className="btn btn-white btn-small disabled" style={{ fontSize: '12px', padding: '4px 12px' }}>
+                  Expired
+                </span>
+              ) : (
                 <Link
-                    to={`/poap-management?eventId=${event.eventId}`}
-                    className="btn btn-white btn-small"
+                  to={`/poap-management?eventId=${event.eventId}`}
+                  className="btn btn-white btn-small"
+                  style={{ fontSize: '12px', padding: '4px 12px' }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                    View POAPs
+                  View POAPs
                 </Link>
-                )}
+              )}
+            </div>
           </div>
         </div>
       </div>
