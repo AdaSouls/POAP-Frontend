@@ -17,6 +17,7 @@ export default function CreatePoap() {
     issuerId: '',
     to: ''
   });
+  const [addressError, setAddressError] = useState('');
 
   const { event, ethereum: { provider }, poapOwner } = useDrawer();
   const dispatch = useDrawerDispatch();
@@ -94,6 +95,85 @@ export default function CreatePoap() {
     });
   };
 
+  // Validate contract requirements for minting
+  const validateMintRequirements = async () => {
+    const errors = [];
+    
+    // Validate recipient address
+    const recipientAddress = formData.to || provider?.address;
+    if (!recipientAddress || recipientAddress === "0x0000000000000000000000000000000000000000") {
+      errors.push("Valid recipient address is required");
+      return errors;
+    }
+    
+    // Validate address format (basic Ethereum address validation)
+    if (!/^0x[a-fA-F0-9]{40}$/.test(recipientAddress)) {
+      errors.push("Invalid recipient address format");
+      return errors;
+    }
+    
+    // Validate event is selected
+    if (!selectedEvent || !formData.eventId || !formData.issuerId) {
+      errors.push("Please select an event first");
+      return errors;
+    }
+    
+    try {
+      // Get event details from blockchain to validate current state
+      const eventDetails = await mvpSmartContractService.getEventDetails(parseInt(formData.eventId));
+      
+      // Validate event has started (if start date is set)
+      if (eventDetails.eventStartDate > 0) {
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        if (currentTimestamp < eventDetails.eventStartDate) {
+          const startDate = new Date(eventDetails.eventStartDate * 1000);
+          errors.push(`Event has not started yet. Start date: ${formatDateToDDMMYYYY(startDate)}`);
+        }
+      }
+      
+      // Validate event hasn't expired (if expiration is set)
+      if (eventDetails.mintExpiration > 0) {
+        const currentTimestamp = Math.floor(Date.now() / 1000);
+        if (currentTimestamp >= eventDetails.mintExpiration) {
+          const expirationDate = new Date(eventDetails.mintExpiration * 1000);
+          errors.push(`Event minting has expired. Expiration date: ${formatDateToDDMMYYYY(expirationDate)}`);
+        }
+      }
+      
+      // Validate event hasn't reached max supply
+      if (eventDetails.available <= 0) {
+        errors.push(`Event has reached its maximum supply (${eventDetails.maxSupply} tokens minted)`);
+      }
+      
+      // Validate user hasn't already minted for this event
+      // Use the contract instance if available, otherwise skip this check
+      if (mvpSmartContractService.contract) {
+        try {
+          const isEventHolder = await mvpSmartContractService.contract.isMinterEventHolder(
+            recipientAddress,
+            parseInt(formData.eventId)
+          );
+          if (isEventHolder) {
+            errors.push("You have already minted a POAP token for this event");
+          }
+        } catch (checkError) {
+          console.warn("Could not check if user is event holder:", checkError);
+          // Continue without this check - contract will handle it
+        }
+      }
+      
+    } catch (error) {
+      console.error("Error validating mint requirements:", error);
+      // If we can't validate, show a warning but don't block
+      // The contract will handle the final validation
+      if (error.message && !error.message.includes("rate limit")) {
+        errors.push("Could not validate all requirements. The transaction may still fail if requirements are not met.");
+      }
+    }
+    
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -110,6 +190,19 @@ export default function CreatePoap() {
       errorFunction(
         "Event Selection Required",
         "Please select an event first.",
+        ""
+      );
+      return;
+    }
+
+    // Validate contract requirements
+    loadingFunction("Validating", "Checking mint requirements...", "");
+    const validationErrors = await validateMintRequirements();
+    
+    if (validationErrors.length > 0) {
+      errorFunction(
+        "Mint Validation Error",
+        validationErrors.join("\n"),
         ""
       );
       return;
@@ -285,12 +378,32 @@ export default function CreatePoap() {
                 <label className="form-label">Recipient Address</label>
                 <input
                   type="text"
-                  className="form-control"
+                  className={`form-control ${addressError ? 'border-danger' : ''}`}
                   placeholder="Enter recipient address"
                   value={formData.to}
-                  onChange={(e) => setFormData({...formData, to: e.target.value})}
-                  required
+                  onChange={(e) => {
+                    const address = e.target.value;
+                    setFormData({...formData, to: address});
+                    
+                    // Validate address format in real-time
+                    if (address && address.trim() !== '') {
+                      if (address === "0x0000000000000000000000000000000000000000") {
+                        setAddressError("Zero address is not allowed");
+                      } else if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+                        setAddressError("Invalid Ethereum address format");
+                      } else {
+                        setAddressError('');
+                      }
+                    } else {
+                      setAddressError('');
+                    }
+                  }}
                 />
+                {addressError && (
+                  <small className="text-danger d-block mt-1">
+                    <i className="icofont-warning"></i> {addressError}
+                  </small>
+                )}
                 <small className="text-muted">
                   Leave empty to mint to your own address: {provider?.address}
                 </small>
@@ -306,7 +419,7 @@ export default function CreatePoap() {
           type="submit"
           className="btn btn-gradient btn-block"
           onClick={handleSubmit}
-          disabled={loading || !formData.eventId}
+          disabled={loading || !formData.eventId || (formData.to && addressError)}
         >
           {loading ? 'Minting...' : 'Mint POAP'}
         </button>
