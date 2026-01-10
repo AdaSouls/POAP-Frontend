@@ -23,9 +23,10 @@ const EventCard = ({ event, index }) => {
   };
 
   const viewEvent = () => {
+    const mintable = canMintTokens();
     dispatch({
       type: "VIEW_EVENT",
-      payload: { event, mintable: true },
+      payload: { event, mintable },
     });
   };
 
@@ -91,13 +92,33 @@ const EventCard = ({ event, index }) => {
   };
 
   const getMintProgress = () => {
-    if (event.poapsToBeMinted && event.mintedPoaps !== undefined) {
-      return { current: event.mintedPoaps, total: event.poapsToBeMinted };
-    }
-    if (event.maxSupply) {
-      return { current: 0, total: event.maxSupply };
-    }
-    return { current: 0, total: 0 };
+    // Use totalSupply from database (preferred) or fallback to legacy fields
+    const currentSupply = event.totalSupply !== undefined ? event.totalSupply : 
+                         (event.mintedPoaps !== undefined ? event.mintedPoaps : 0);
+    const maxSupply = event.maxSupply || event.poapsToBeMinted || 0;
+    
+    return { 
+      current: currentSupply, 
+      total: maxSupply,
+      available: Math.max(0, maxSupply - currentSupply)
+    };
+  };
+
+  // Check if minting is possible
+  const canMintTokens = () => {
+    const progress = getMintProgress();
+    const eventStatus = calculateStatus();
+    
+    // Can't mint if expired
+    if (eventStatus === 'expired') return false;
+    
+    // Can't mint if no supply available
+    if (progress.available <= 0) return false;
+    
+    // Can't mint if event hasn't started yet
+    if (eventStatus === 'pending') return false;
+    
+    return true;
   };
 
   const getProgressPercentage = () => {
@@ -286,6 +307,11 @@ const EventCard = ({ event, index }) => {
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <small className="text-muted" style={{ fontSize: '11px' }}>
                   Minted: <strong className="text-white">{progress.current}/{progress.total}</strong>
+                  {progress.available !== undefined && (
+                    <span className="ml-2">
+                      (Available: <strong className="text-white">{progress.available}</strong>)
+                    </span>
+                  )}
                 </small>
                 <small className="text-muted" style={{ fontSize: '11px' }}>
                   {Math.round(progressPercentage)}%
@@ -304,6 +330,11 @@ const EventCard = ({ event, index }) => {
                   aria-valuemax="100"
                 ></div>
               </div>
+              {progress.available !== undefined && progress.available <= 0 && (
+                <small className="text-danger" style={{ fontSize: '10px', display: 'block', marginTop: '4px' }}>
+                  No tokens available for minting
+                </small>
+              )}
             </div>
           )}
         </div>
@@ -322,6 +353,10 @@ const EventCard = ({ event, index }) => {
               {isExpired() ? (
                 <span className="btn btn-white btn-small disabled" style={{ fontSize: '12px', padding: '4px 12px' }}>
                   Expired
+                </span>
+              ) : !canMintTokens() ? (
+                <span className="btn btn-white btn-small disabled" style={{ fontSize: '12px', padding: '4px 12px' }}>
+                  {progress.available <= 0 ? 'Sold Out' : 'Not Available'}
                 </span>
               ) : (
                 <Link

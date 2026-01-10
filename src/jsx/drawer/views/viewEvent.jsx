@@ -58,7 +58,47 @@ export default function ViewEvent() {
     });
   };
 
+  // Check if minting is possible based on available supply
+  const canMintEvent = () => {
+    const evt = event.event;
+    if (!evt) return false;
+    
+    // Check if expired
+    if (evt.expiration && evt.expiration > 0) {
+      const expirationTime = evt.expiration * 1000;
+      if (expirationTime <= Date.now()) {
+        return false;
+      }
+    }
+    
+    // Check if event has started
+    if (evt.eventStartDate && evt.eventStartDate > 0) {
+      const startTime = evt.eventStartDate * 1000;
+      if (startTime > Date.now()) {
+        return false;
+      }
+    }
+    
+    // Check available supply
+    const totalSupply = evt.totalSupply !== undefined ? evt.totalSupply : 
+                       (evt.mintedPoaps !== undefined ? evt.mintedPoaps : 0);
+    const maxSupply = evt.maxSupply || evt.poapsToBeMinted || 0;
+    const available = maxSupply - totalSupply;
+    
+    return available > 0;
+  };
+
   const mintPoap = async (issuerId, eventId) => {
+    // Check if minting is possible
+    if (!canMintEvent()) {
+      errorFunction(
+        "Cannot Mint",
+        "This event has no available tokens for minting. All tokens have been minted or the event is not available.",
+        ""
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {

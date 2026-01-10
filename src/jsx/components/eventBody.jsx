@@ -116,9 +116,17 @@ const EventBody = ({ event }) => {
 
       {/* Max Supply */}
       {hasValue(event.maxSupply) && (
-        <div className="col-12">
+        <div className="col-6">
           <p className="m-0 small gray">Max Supply</p>
           <p className="m-0 mb-3">{event.maxSupply}</p>
+        </div>
+      )}
+
+      {/* Total Supply */}
+      {hasValue(event.totalSupply) && (
+        <div className="col-6">
+          <p className="m-0 small gray">Available Supply</p>
+          <p className="m-0 mb-3">{event.maxSupply - event.totalSupply}</p>
         </div>
       )}
 

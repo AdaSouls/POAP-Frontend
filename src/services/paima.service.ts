@@ -72,6 +72,8 @@ export interface IGetAllEventsResult {
   imageUrl?: string | null;
   eventStartDate?: number | null; // Unix timestamp in seconds (same type as expiration)
   eventEndDate?: string | null;
+  totalSupply?: number;
+  maxSupply?: number;
 }
 
 export interface ICreateIssuerParams {

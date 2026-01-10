@@ -19,6 +19,7 @@ export interface IEvent {
   mintedPoaps?: number;
   expiryDate?: string;
   isExpired?: boolean;
+  totalSupply?: number;
   // Blockchain metadata fields
   transaction_hash?: string | null;
   block_number?: number | null;
