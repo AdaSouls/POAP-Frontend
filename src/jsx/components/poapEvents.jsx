@@ -39,57 +39,6 @@ const PoapEvents = ({ addressEvents }) => {
                   </div>
                 </td>
               </tr>
-              <tr>
-                <td className="table-image">
-                  <img
-                    className="rounded-circle"
-                    src={eventNormal}
-                    width="47"
-                    height="47"
-                    alt=""
-                  />
-                </td>
-                <td>Loading...</td>
-                <td className="table-press-icon">
-                  <div className="table-link">
-                    <img src={circlePlus} width="30" height="30" alt="" />
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td className="table-image">
-                  <img
-                    className="rounded-circle"
-                    src={eventNormal}
-                    width="47"
-                    height="47"
-                    alt=""
-                  />
-                </td>
-                <td>Loading...</td>
-                <td className="table-press-icon">
-                  <div className="table-link">
-                    <img src={circlePlus} width="30" height="30" alt="" />
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td className="table-image">
-                  <img
-                    className="rounded-circle"
-                    src={eventNormal}
-                    width="47"
-                    height="47"
-                    alt=""
-                  />
-                </td>
-                <td>Loading...</td>
-                <td className="table-press-icon">
-                  <div className="table-link">
-                    <img src={circlePlus} width="30" height="30" alt="" />
-                  </div>
-                </td>
-              </tr>
             </tbody>
           )}
         </table>
