@@ -30,11 +30,18 @@ export interface IEvent {
 
 export interface IEventFilters {
   organiserAddress?: string;
-  eventId?: number;
-  status?: string;
-  expired?: string; // 'true' or 'false' as string for API
+  eventIdSearch?: string; // Text search for event ID
   titleSearch?: string;
-  sortBy?: 'createdAt' | 'eventStartDate' | 'expiration' | 'title';
+  calculatedStatus?: 'pending' | 'active' | 'expired' | 'completed';
+  eventStartDateMin?: number; // Unix timestamp in seconds
+  eventStartDateMax?: number; // Unix timestamp in seconds
+  expirationMin?: number; // Unix timestamp in seconds
+  expirationMax?: number; // Unix timestamp in seconds
+  maxSupplyMin?: number;
+  maxSupplyMax?: number;
+  totalSupplyMin?: number;
+  totalSupplyMax?: number;
+  sortBy?: 'createdAt' | 'eventStartDate' | 'expiration' | 'title' | 'maxSupply' | 'totalSupply';
   order?: 'asc' | 'desc';
 }
 
@@ -44,10 +51,17 @@ export async function getAllEvents(filters?: IEventFilters) {
     const queryParams = new URLSearchParams();
     if (filters) {
       if (filters.organiserAddress) queryParams.append('organiserAddress', filters.organiserAddress);
-      if (filters.eventId !== undefined) queryParams.append('eventId', filters.eventId.toString());
-      if (filters.status) queryParams.append('status', filters.status);
-      if (filters.expired !== undefined) queryParams.append('expired', filters.expired);
+      if (filters.eventIdSearch) queryParams.append('eventIdSearch', filters.eventIdSearch);
       if (filters.titleSearch) queryParams.append('titleSearch', filters.titleSearch);
+      if (filters.calculatedStatus) queryParams.append('calculatedStatus', filters.calculatedStatus);
+      if (filters.eventStartDateMin !== undefined) queryParams.append('eventStartDateMin', filters.eventStartDateMin.toString());
+      if (filters.eventStartDateMax !== undefined) queryParams.append('eventStartDateMax', filters.eventStartDateMax.toString());
+      if (filters.expirationMin !== undefined) queryParams.append('expirationMin', filters.expirationMin.toString());
+      if (filters.expirationMax !== undefined) queryParams.append('expirationMax', filters.expirationMax.toString());
+      if (filters.maxSupplyMin !== undefined) queryParams.append('maxSupplyMin', filters.maxSupplyMin.toString());
+      if (filters.maxSupplyMax !== undefined) queryParams.append('maxSupplyMax', filters.maxSupplyMax.toString());
+      if (filters.totalSupplyMin !== undefined) queryParams.append('totalSupplyMin', filters.totalSupplyMin.toString());
+      if (filters.totalSupplyMax !== undefined) queryParams.append('totalSupplyMax', filters.totalSupplyMax.toString());
       if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
       if (filters.order) queryParams.append('order', filters.order);
     }
