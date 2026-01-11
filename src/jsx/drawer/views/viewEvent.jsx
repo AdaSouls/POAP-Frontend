@@ -8,7 +8,7 @@ import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
 import { mintToken } from "../../../utils/poapContractInteractions";
 import { isPoapMintable } from "../../../utils/mitableChecks";
 import { Button } from "react-bootstrap";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   createOwnerService,
   getOwnerPoapsService,
@@ -30,6 +30,7 @@ export default function ViewEvent() {
     poapOwner,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const closeDrawer = () => {
@@ -217,11 +218,15 @@ export default function ViewEvent() {
               ? "Mint Poap"
               : "Already Minted"}
           </Button> */}
-          <Link to={`/poap-management?eventId=${event.event.eventId}`}>
-            <button className="btn btn-gradient btn-block">
-              View POAPs
-            </button>
-          </Link>
+          <button 
+            className="btn btn-gradient btn-block"
+            onClick={() => {
+              navigate(`/poap-management?eventId=${event.event.eventId}`);
+              closeDrawer();
+            }}
+          >
+            View POAPs
+          </button>
         </div>
       </div>
     </div>
