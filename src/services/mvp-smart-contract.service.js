@@ -196,8 +196,9 @@ export class MVPSmartContractService {
       // Use retry logic with exponential backoff for rate limit errors
       const result = await retryWithBackoff(async () => {
         // First, estimate gas to catch revert reasons early
+        let gasEstimate;
         try {
-          const gasEstimate = await this.contract.createEventId.estimateGas(
+          gasEstimate = await this.contract.createEventId.estimateGas(
             issuerId,
             eventId,
             maxSupply,
@@ -220,7 +221,7 @@ export class MVPSmartContractService {
           eventStartDate,
           mintExpiration,
           eventOrganizer,
-          { gasLimit: 1000000 }
+          { gasLimit: gasEstimate + (gasEstimate / 5n) }
         );
         
         const receipt = await tx.wait();
@@ -354,8 +355,9 @@ export class MVPSmartContractService {
       // Use retry logic with exponential backoff for rate limit errors
       const result = await retryWithBackoff(async () => {
         // First, estimate gas to catch revert reasons early
+        let gasEstimate;
         try {
-          const gasEstimate = await this.contract.mintToken.estimateGas(
+          gasEstimate = await this.contract.mintToken.estimateGas(
             issuerId,
             eventId,
             to
@@ -368,8 +370,9 @@ export class MVPSmartContractService {
           throw new Error(revertReason || "Transaction would fail. Please check your permissions and event parameters.");
         }
 
+        // Use gas estimate with a small buffer (20% more) to avoid MetaMask rejection
         const tx = await this.contract.mintToken(issuerId, eventId, to, {
-          gasLimit: 800000,
+          gasLimit: gasEstimate + (gasEstimate / 5n), // Add 20% buffer
         });
         
         const receipt = await tx.wait();
