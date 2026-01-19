@@ -8,9 +8,24 @@ export interface IPoap {
   ownerAddress: string;
   createdAt: string;
   updatedAt: string;
+  // Blockchain metadata (added in schema updates)
+  block_number?: number | null;
+  transaction_hash?: string | null;
   // Additional fields from API response
   instance?: string;
   events?: any[];
+  // Fields from joined queries (with aliases to avoid conflicts)
+  poap_issuerId?: number;
+  poap_eventId?: number;
+  poap_createdAt?: string;
+  poap_updatedAt?: string;
+  poap_block_number?: number | null;
+  poap_transaction_hash?: string | null;
+  event_issuerId?: number;
+  event_block_number?: number | null;
+  event_transaction_hash?: string | null;
+  event_createdAt?: string;
+  event_updatedAt?: string;
 }
 
 export interface IPoapEvent {
@@ -64,7 +79,14 @@ export async function getAllPoaps() {
   }
 }
 
-export async function getPoapById(tokenId: number) {
+/**
+ * Get POAP(s) by tokenId
+ * NOTE: tokenId is NOT unique, so this returns an array of POAPs.
+ * Multiple POAPs can have the same tokenId from different transactions.
+ * @param tokenId - The token ID to search for
+ * @returns Array of POAPs with the given tokenId
+ */
+export async function getPoapById(tokenId: number): Promise<IPoap[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/get_poap/${tokenId}`, {
       method: "GET",
@@ -75,8 +97,9 @@ export async function getPoapById(tokenId: number) {
     if (!response.ok) {
       throw new Error("Network response was not ok: " + response.statusText);
     }
-    const poap = await response.json();
-    return poap;
+    const poaps = await response.json();
+    // Ensure we always return an array
+    return Array.isArray(poaps) ? poaps : [poaps];
   } catch (error) {
     console.error("Error fetching POAP:", error);
     throw error;

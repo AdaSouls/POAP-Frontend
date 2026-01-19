@@ -71,12 +71,13 @@ describe('POAP Service', () => {
   });
 
   describe('getPoapById', () => {
-    it('fetches POAP by ID successfully', async () => {
-      const mockPoap = { tokenId: 1, eventId: 1 };
+    it('fetches POAP(s) by ID successfully - returns array', async () => {
+      // NOTE: tokenId is NOT unique, so API returns an array
+      const mockPoaps = [{ tokenId: 1, eventId: 1, poapUuid: 'uuid-1' }];
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockPoap,
+        json: async () => mockPoaps,
       });
 
       const result = await getPoapById(1);
@@ -88,7 +89,22 @@ describe('POAP Service', () => {
           headers: { 'Content-Type': 'application/json' },
         })
       );
-      expect(result).toEqual(mockPoap);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toEqual(mockPoaps);
+    });
+
+    it('handles single POAP result and converts to array', async () => {
+      const mockPoap = { tokenId: 1, eventId: 1, poapUuid: 'uuid-1' };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockPoap,
+      });
+
+      const result = await getPoapById(1);
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toEqual([mockPoap]);
     });
   });
 
