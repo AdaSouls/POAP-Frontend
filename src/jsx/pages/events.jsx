@@ -31,6 +31,12 @@ const EventsPage = () => {
     });
   };
 
+  const showEthereumWallet = () => {
+    dispatch({
+      type: "SHOW_ETHEREUM_WALLET",
+    });
+  };
+
   const loadEvents = useCallback(async (filterParams = {}) => {
     try {
       setLoading(true);
@@ -171,7 +177,14 @@ const EventsPage = () => {
                   </span>     
                 </div>
                 <div className="align-content-center mt-4">
-                  {/* Wallet connection status */}
+                  {!provider && (
+                      <button
+                      className="btn btn-white btn-small"
+                      onClick={showEthereumWallet}
+                      >
+                      Connect
+                      </button>
+                  )}
                 </div> 
               </div>
             </div>

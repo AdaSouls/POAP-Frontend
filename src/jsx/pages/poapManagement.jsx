@@ -37,6 +37,12 @@ const PoapManagement = () => {
     });
   }; 
 
+  const showEthereumWallet = () => {
+    dispatch({
+      type: "SHOW_ETHEREUM_WALLET",
+    });
+  };
+
   useEffect(() => {
     setLoading(true);
     
@@ -130,7 +136,14 @@ const PoapManagement = () => {
                   </span>     
                 </div>
                 <div className="align-content-center mt-4">
-                  {/* Wallet connection status */}
+                  {!provider && (
+                      <button
+                      className="btn btn-white btn-small"
+                      onClick={showEthereumWallet}
+                      >
+                      Connect
+                      </button>
+                  )}
                 </div> 
               </div>
             </div>
