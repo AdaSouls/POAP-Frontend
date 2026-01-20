@@ -52,11 +52,13 @@ const PoapManagement = () => {
         // Get user's POAPs
         const userPoaps = await getUserPoaps(provider.address);
         // Use POAPs from context if available
-        if (poapCollection && poapCollection.length > 0) {
-          setPoaps(poapCollection);
-        } else {
-          setPoaps(userPoaps);
-        }
+        console.log("🚀 ~ fetchPoaps ~ userPoaps:", userPoaps);
+        setMyPoaps(userPoaps);
+        // if (poapCollection && poapCollection.length > 0) {
+        //   setPoaps(poapCollection);
+        // } else {
+        //   setPoaps(userPoaps);
+        // }
       } catch (error) {
         console.error("Error fetching POAPs:", error);
         setPoaps([]);
@@ -67,7 +69,7 @@ const PoapManagement = () => {
     }
 
     fetchPoaps();
-  }, [provider, address, poapCollection]);
+  }, [provider, address, poapCollection, eventId]);
   // Polling for real-time events and POAPs data
   useEffect(() => {
     if (provider && provider.address) {
@@ -81,7 +83,7 @@ const PoapManagement = () => {
       // dataSyncService.stopEventsPolling();
       dataSyncService.stopPoapsPolling();
     };
-  }, [provider]);
+  }, [provider, eventId]);
 
   return (
     <Layout activeMenu={3}>
@@ -160,15 +162,15 @@ const PoapManagement = () => {
               {provider && myPoaps.length > 0 && (
                 <>
                   {myPoaps.map(poap => (
-                    <PoapCard key={`my-${poap.tokenId}`} poap={poap} index={0} />
+                    <PoapCard key={`my-${poap.poapUuid}`} poap={poap} index={0} />
                   ))}
                 </>
               )}
 
               {/* ALL POAPS */}
-              {provider ? (
+              {/* {provider ? (
                 poaps.map(poap => (
-                  <PoapCard key={poap.tokenId} poap={poap} index={0} />
+                  <PoapCard key={poap.poapUuid} poap={poap} index={0} />
                 ))
               ) : (
                 <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
@@ -184,10 +186,10 @@ const PoapManagement = () => {
                     </div>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* EMPTY STATE */}
-              {provider && poaps.length === 0 && !loading && (
+              {provider && myPoaps.length === 0 && !loading && (
                 <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
                   <div className="card card-poap card-classic">
                     <div className="card-body text-center py-5">
