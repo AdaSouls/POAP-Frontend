@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import PoapEvents from '../../jsx/components/poapEvents';
-import { mockDrawerContext, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 
 // Mock EventItem component
 jest.mock('../../jsx/components/eventItem', () => {

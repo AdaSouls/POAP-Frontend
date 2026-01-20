@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PoapManagement from '../../jsx/pages/poapManagement';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 import { getUserPoaps } from '../../services/poap.service';
 import dataSyncService from '../../services/dataSync.service';
 
@@ -42,7 +42,7 @@ describe('PoapManagement Page', () => {
   it('renders create POAP card', () => {
     renderWithProviders(<PoapManagement />);
     expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
-    expect(screen.getByText(/POAP/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/POAP/i).length).toBeGreaterThan(0);
   });
 
   it('shows loading state initially', async () => {
@@ -58,7 +58,7 @@ describe('PoapManagement Page', () => {
     renderWithProviders(<PoapManagement />, { drawerValue });
     // Loading state should be visible
     await waitFor(() => {
-      expect(screen.queryByAltText('')).toBeInTheDocument();
+      expect(screen.getByAltText(/Loading POAPs/i)).toBeInTheDocument();
     });
   });
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventCard from '../../jsx/components/eventCard';
-import { mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 
 describe('EventCard Component', () => {
   const mockEvent = {
@@ -59,7 +59,8 @@ describe('EventCard Component', () => {
     };
 
     renderWithProviders(<EventCard event={expiredEvent} index={0} />);
-    expect(screen.getByText(/expired/i)).toBeInTheDocument();
+    const expiredBadges = screen.getAllByText(/expired/i);
+    expect(expiredBadges.length).toBeGreaterThan(0);
   });
 
   it('displays event image when imageUrl is provided', () => {

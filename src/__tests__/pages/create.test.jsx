@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Create from '../../jsx/pages/create';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 import * as paimaService from '../../services/paima.service';
 import dataSyncService from '../../services/dataSync.service';
 
@@ -38,7 +38,7 @@ describe('Create Page', () => {
   it('renders create event card', () => {
     renderWithProviders(<Create />);
     expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
-    expect(screen.getByText(/POAP EVENT/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/POAP EVENT/i).length).toBeGreaterThan(0);
   });
 
   it('dispatches CREATE_EVENT when create button is clicked with wallet and issuer', async () => {

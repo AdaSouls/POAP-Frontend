@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Wallet from '../../jsx/pages/wallet';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 
 describe('Wallet Page', () => {
   it('renders wallet page', () => {

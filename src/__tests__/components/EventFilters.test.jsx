@@ -48,7 +48,7 @@ describe('EventFilters Component', () => {
     const expandButton = screen.getByText(/Expand/i);
     await userEvent.click(expandButton);
 
-    const statusSelect = screen.getByLabelText(/Status/i);
+    const [statusSelect] = screen.getAllByRole('combobox');
     await userEvent.selectOptions(statusSelect, 'Active');
 
     expect(mockOnFilterChange).toHaveBeenCalled();
@@ -57,7 +57,7 @@ describe('EventFilters Component', () => {
   it('calls onReset when clear button is clicked', async () => {
     render(
       <EventFilters 
-        filters={{ titleSearch: 'test', status: 'Active' }} 
+        filters={{ titleSearch: 'test', calculatedStatus: 'active' }} 
         onFilterChange={mockOnFilterChange} 
         onReset={mockOnReset} 
       />
@@ -73,7 +73,7 @@ describe('EventFilters Component', () => {
   it('shows active filters badges', async () => {
     render(
       <EventFilters 
-        filters={{ titleSearch: 'test', status: 'Active' }} 
+        filters={{ titleSearch: 'test', calculatedStatus: 'active' }} 
         onFilterChange={mockOnFilterChange} 
         onReset={mockOnReset} 
       />
@@ -89,7 +89,7 @@ describe('EventFilters Component', () => {
   it('allows removing individual filter badges', async () => {
     render(
       <EventFilters 
-        filters={{ titleSearch: 'test', status: 'Active' }} 
+        filters={{ titleSearch: 'test', calculatedStatus: 'active' }} 
         onFilterChange={mockOnFilterChange} 
         onReset={mockOnReset} 
       />

@@ -1,8 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 import Collections from '../../jsx/pages/collections';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 import { getAll, getAllInvited, sign } from '../../services/collection.service';
 
 // Mock services
@@ -31,20 +30,12 @@ describe('Collections Page', () => {
   });
 
   it('renders collections header', () => {
-    renderWithProviders(
-      <MemoryRouter initialEntries={['/collections/souls']}>
-        <Collections />
-      </MemoryRouter>
-    );
+    renderWithProviders(<Collections />);
     expect(screen.getByText(/Collections/i)).toBeInTheDocument();
   });
 
   it('renders create collection card', () => {
-    renderWithProviders(
-      <MemoryRouter initialEntries={['/collections/souls']}>
-        <Collections />
-      </MemoryRouter>
-    );
+    renderWithProviders(<Collections />);
     expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
     expect(screen.getByText(/SOUL COLLECTION/i)).toBeInTheDocument();
   });
@@ -57,12 +48,7 @@ describe('Collections Page', () => {
       },
     };
 
-    renderWithProviders(
-      <MemoryRouter initialEntries={['/collections/souls']}>
-        <Collections />
-      </MemoryRouter>,
-      { drawerValue }
-    );
+    renderWithProviders(<Collections />, { drawerValue });
 
     await waitFor(() => {
       expect(getAll).toHaveBeenCalledWith('stake-123');
@@ -71,11 +57,7 @@ describe('Collections Page', () => {
   });
 
   it('shows wallet connection required when no wallet', () => {
-    renderWithProviders(
-      <MemoryRouter initialEntries={['/collections/souls']}>
-        <Collections />
-      </MemoryRouter>
-    );
+    renderWithProviders(<Collections />);
     // Should show wallet connection required state
     expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
   });
@@ -89,12 +71,7 @@ describe('Collections Page', () => {
       },
     };
 
-    renderWithProviders(
-      <MemoryRouter initialEntries={['/collections/souls']}>
-        <Collections />
-      </MemoryRouter>,
-      { drawerValue, drawerDispatch: dispatch }
-    );
+    renderWithProviders(<Collections />, { drawerValue, drawerDispatch: dispatch });
 
     const createButton = screen.getByText(/CREATE/i).closest('.card-body');
     await createButton.click();

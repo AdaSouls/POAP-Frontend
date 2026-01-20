@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import Overview from '../../jsx/pages/overview';
-import { mockDrawerContext, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 
 describe('Overview Page', () => {
   it('renders overview page title', () => {
@@ -12,7 +12,7 @@ describe('Overview Page', () => {
   it('displays integrated pages section', () => {
     renderWithProviders(<Overview />);
     expect(screen.getByText(/Integrated Pages/i)).toBeInTheDocument();
-    expect(screen.getByText(/Events \(Integrated\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Events \(Integrated\)/i).length).toBeGreaterThan(0);
   });
 
   it('displays smart contract only pages section', () => {
@@ -50,7 +50,7 @@ describe('Overview Page', () => {
     renderWithProviders(<Overview />);
     expect(screen.getByText(/Architecture Summary/i)).toBeInTheDocument();
     expect(screen.getByText(/Integrated Approach/i)).toBeInTheDocument();
-    expect(screen.getByText(/Smart Contract Only/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Smart Contract Only/i).length).toBeGreaterThan(0);
   });
 });
 

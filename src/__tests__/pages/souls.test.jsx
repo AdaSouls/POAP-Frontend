@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import Souls from '../../jsx/pages/souls';
-import { renderWithProviders } from '../utils/testUtils';
+import { renderWithProviders } from '../../testUtils';
 
 // Mock Events component
 jest.mock('../../jsx/components/events', () => {

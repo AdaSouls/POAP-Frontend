@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { DrawerContext, DrawerDispatchContext } from './jsx/contexts/drawer/drawer.provider';
 
 // Mock drawer context
 export const mockDrawerContext = {
@@ -23,10 +24,6 @@ export const mockDrawerContext = {
 };
 
 export const mockDrawerDispatch = jest.fn();
-
-// Create mock contexts
-const DrawerContext = React.createContext(null);
-const DrawerDispatchContext = React.createContext(null);
 
 // Mock drawer provider component
 export const MockDrawerProvider = ({ children, value = mockDrawerContext, dispatch = mockDrawerDispatch }) => {
@@ -69,7 +66,8 @@ export const mockUserRoles = {
   isLoading: false,
 };
 
-// Export everything
+// Re-export testing library helpers for convenience
 export * from '@testing-library/react';
 export { renderWithProviders as render };
+
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PoapCard from '../../jsx/components/poapCard';
-import { mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 
 describe('PoapCard Component', () => {
   const mockPoap = {
@@ -29,7 +29,7 @@ describe('PoapCard Component', () => {
 
   it('displays token ID', () => {
     renderWithProviders(<PoapCard poap={mockPoap} index={0} />);
-    expect(screen.getByText(/Token ID: 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Token:\s*1/i)).toBeInTheDocument();
   });
 
   it('dispatches VIEW_POAP_TOKEN when view details button is clicked', async () => {

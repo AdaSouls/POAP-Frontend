@@ -1,9 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
 import EventsPage from '../../jsx/pages/events';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 import { getAllEvents } from '../../services/event.service';
 import dataSyncService from '../../services/dataSync.service';
 
@@ -49,12 +48,7 @@ describe('Events Flow Integration', () => {
       },
     };
 
-    renderWithProviders(
-      <MemoryRouter>
-        <EventsPage />
-      </MemoryRouter>,
-      { drawerValue, drawerDispatch: dispatch }
-    );
+    renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
 
     // Wait for events to load
     await waitFor(() => {
@@ -88,12 +82,7 @@ describe('Events Flow Integration', () => {
       },
     };
 
-    renderWithProviders(
-      <MemoryRouter>
-        <EventsPage />
-      </MemoryRouter>,
-      { drawerValue }
-    );
+    renderWithProviders(<EventsPage />, { drawerValue });
 
     await waitFor(() => {
       expect(getAllEvents).toHaveBeenCalled();

@@ -159,7 +159,7 @@ const PoapManagement = () => {
                       src={loadingGif}
                       width="35"
                       height="35"
-                      alt=""
+                      alt="Loading POAPs"
                     />
                   </div> 
                 </div>

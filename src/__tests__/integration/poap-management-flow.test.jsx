@@ -1,9 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
 import PoapManagement from '../../jsx/pages/poapManagement';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../utils/testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 import { getUserPoaps } from '../../services/poap.service';
 import dataSyncService from '../../services/dataSync.service';
 
@@ -45,12 +44,7 @@ describe('POAP Management Flow Integration', () => {
       },
     };
 
-    renderWithProviders(
-      <MemoryRouter>
-        <PoapManagement />
-      </MemoryRouter>,
-      { drawerValue, drawerDispatch: dispatch }
-    );
+    renderWithProviders(<PoapManagement />, { drawerValue, drawerDispatch: dispatch });
 
     // Wait for POAPs to load
     await waitFor(() => {
@@ -81,12 +75,7 @@ describe('POAP Management Flow Integration', () => {
       poapCollection: [],
     };
 
-    renderWithProviders(
-      <MemoryRouter>
-        <PoapManagement />
-      </MemoryRouter>,
-      { drawerValue }
-    );
+    renderWithProviders(<PoapManagement />, { drawerValue });
 
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();
