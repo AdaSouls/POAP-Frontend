@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { getAllEventsService } from '../../../services/paima.service';
-import { mintToken } from "../../../utils/poapContractInteractions";
-import { createOwnerService } from '../../../services/paima.service';
 import { mvpSmartContractService } from '../../../services/mvp-smart-contract.service';
 import { loadingFunction, errorFunction, succesfullBlockchainCreation } from '../../toasts/sweetAlerts';
 import formatDateToDDMMYYYY from '../../../utils/formatDateToDDMMYYYY';
@@ -23,7 +21,7 @@ export default function CreatePoap() {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  const { event, ethereum: { provider }, poapOwner } = useDrawer();
+  const { event, ethereum: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [searchParams] = useSearchParams();
 
@@ -49,6 +47,16 @@ export default function CreatePoap() {
     // Load all events for selection
     loadEvents();
   }, [event, provider]);
+
+  const handleEventSelect = useCallback((selectedEvent) => {
+    console.log("🚀 ~ handleEventSelect ~ selectedEvent:", selectedEvent);
+    setSelectedEvent(selectedEvent);
+    setFormData({
+      eventId: selectedEvent.eventId,
+      issuerId: selectedEvent.issuerId,
+      to: provider?.address || ''
+    });
+  }, [provider]);
 
   // New useEffect to handle URL parameters after events are loaded
   useEffect(() => {
@@ -82,16 +90,6 @@ export default function CreatePoap() {
       console.error("Error loading events:", error);
     }
   };
-
-  const handleEventSelect = useCallback((selectedEvent) => {
-    console.log("🚀 ~ handleEventSelect ~ selectedEvent:", selectedEvent);
-    setSelectedEvent(selectedEvent);
-    setFormData({
-      eventId: selectedEvent.eventId,
-      issuerId: selectedEvent.issuerId,
-      to: provider?.address || ''
-    });
-  }, [provider]);
 
   // Helper function to check if imageUrl exists
   const hasImageUrl = (url) => {
@@ -206,20 +204,6 @@ export default function CreatePoap() {
   const formatEventDate = (timestamp) => {
     if (!timestamp || timestamp === 0) return null;
     return formatDateToDDMMYYYY(new Date(timestamp * 1000));
-  };
-
-  const updatePoaps = (poaps) => {
-    dispatch({
-      type: "UPDATE_POAPS",
-      payload: poaps,
-    });
-  };
-
-  const updateOwner = (owner) => {
-    dispatch({
-      type: "UPDATE_OWNER",
-      payload: owner,
-    });
   };
 
   // Validate contract requirements for minting

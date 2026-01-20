@@ -1,71 +1,69 @@
 import { useState, useMemo, useCallback } from "react";
 import { ethers } from "ethers";
 
+// BNB TESTNET
+//
+// const DESIRED_CHAIN_ID = "0x61";
+// const DESIRED_CHAIN_PARAMS = {
+//   chainId: DESIRED_CHAIN_ID,
+//   chainName: "BNB Chain Testnet",
+//   nativeCurrency: {
+//     name: "tBNB",
+//     symbol: "tBNB",
+//     decimals: 18,
+//   },
+//   rpcUrls: ["https://data-seed-prebsc-1-s1.bnbchain.org:8545/"],
+//   blockExplorerUrls: ["https://testnet.bscscan.com/"],
+// };
+
+// MILKOMEDA C1 TESTNET
+//
+// const DESIRED_CHAIN_ID = "0x30da5";
+// const DESIRED_CHAIN_PARAMS = {
+//   chainId: DESIRED_CHAIN_ID,
+//   chainName: "Milkomeda C1 Testnet",
+//   nativeCurrency: {
+//     name: "mTAda",
+//     symbol: "mTAda",
+//     decimals: 18,
+//   },
+//   rpcUrls: ["https://rpc-devnet-cardano-evm.c1.milkomeda.com"],
+//   blockExplorerUrls: ["https://explorer-devnet-cardano-evm.c1.milkomeda.com"],
+// };
+
+// POLYGON AMOY TESTNET
+const DESIRED_CHAIN_ID = "80002";
+const DESIRED_CHAIN_PARAMS = {
+  chainId: DESIRED_CHAIN_ID,
+  chainName: "Amoy",
+  nativeCurrency: {
+    name: "Test POL",
+    symbol: "POL",
+    decimals: 18,
+  },
+  rpcUrls: ["https://rpc-amoy.polygon.technology"],
+  blockExplorerUrls: ["https://amoy.polygonscan.com/"],
+};
+
+/**
+// HARDHAT LOCALHOST
+ */
+// chain id: 31337
+// const DESIRED_CHAIN_ID = "0x7a69";
+// const DESIRED_CHAIN_PARAMS = {
+//   chainId: DESIRED_CHAIN_ID,
+//   chainName: "Localhost 8545",
+//   nativeCurrency: {
+//     name: "ETH",
+//     symbol: "ETH",
+//     decimals: 18,
+//   },
+//   rpcUrls: ["http://localhost:8545"],
+//   // blockExplorerUrls: ["https://amoy.polygonscan.com/"],
+// };
+
 const useEthereum = () => {
   const [provider, setCurrentProvider] = useState(null);
-
-  // BNB TESTNET
-  //
-  // const DESIRED_CHAIN_ID = "0x61";
-  // const DESIRED_CHAIN_PARAMS = {
-  //   chainId: DESIRED_CHAIN_ID,
-  //   chainName: "BNB Chain Testnet",
-  //   nativeCurrency: {
-  //     name: "tBNB",
-  //     symbol: "tBNB",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["https://data-seed-prebsc-1-s1.bnbchain.org:8545/"],
-  //   blockExplorerUrls: ["https://testnet.bscscan.com/"],
-  // };
-
-  // MILKOMEDA C1 TESTNET
-  //
-  // const DESIRED_CHAIN_ID = "0x30da5";
-  // const DESIRED_CHAIN_PARAMS = {
-  //   chainId: DESIRED_CHAIN_ID,
-  //   chainName: "Milkomeda C1 Testnet",
-  //   nativeCurrency: {
-  //     name: "mTAda",
-  //     symbol: "mTAda",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["https://rpc-devnet-cardano-evm.c1.milkomeda.com"],
-  //   blockExplorerUrls: ["https://explorer-devnet-cardano-evm.c1.milkomeda.com"],
-  // };
-
-  
-  // POLYGON AMOY TESTNET
-  const DESIRED_CHAIN_ID = "80002";
-  const DESIRED_CHAIN_PARAMS = {
-    chainId: DESIRED_CHAIN_ID,
-    chainName: "Amoy",
-    nativeCurrency: {
-      name: "Test POL",
-      symbol: "POL",
-      decimals: 18,
-    },
-    rpcUrls: ["https://rpc-amoy.polygon.technology"],
-    blockExplorerUrls: ["https://amoy.polygonscan.com/"],
-  };
-   
-
-  /**
-  // HARDHAT LOCALHOST
-   */
-  // chain id: 31337
-  // const DESIRED_CHAIN_ID = "0x7a69";
-  // const DESIRED_CHAIN_PARAMS = {
-  //   chainId: DESIRED_CHAIN_ID,
-  //   chainName: "Localhost 8545",
-  //   nativeCurrency: {
-  //     name: "ETH",
-  //     symbol: "ETH",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["http://localhost:8545"],
-  //   // blockExplorerUrls: ["https://amoy.polygonscan.com/"],
-  // };
 
   const setProvider = useCallback(async (provider, wallet) => {
     if (!provider) {

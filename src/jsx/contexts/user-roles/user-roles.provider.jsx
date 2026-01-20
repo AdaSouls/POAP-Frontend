@@ -80,7 +80,7 @@ export const UserRolesProvider = ({ children }) => {
     } else if (!ethereum || !ethereum.provider) {
       resetRoles();
     }
-  }, [ethereum, isInitialized, isLoading]);
+  }, [ethereum, isInitialized, isLoading, initializeUserRole]);
 
   return (
     <UserRolesContext.Provider value={{

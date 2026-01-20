@@ -1,18 +1,14 @@
 import React from 'react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, InputGroup } from 'react-bootstrap';
-import { buildCollectionContracts, buildPolicy, generateNonce, getAddressPaymentKeyHash, getStakeAddress, readValidators } from '../../../utils/util';
-import { insert } from '../../../services/collection.service';
+import { getStakeAddress, readValidators } from '../../../utils/util';
 
 export default function CreateSoul() {
   const { cardano: { wallet } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
-  const [event, setEvent] = useState(false);
-  const [streamer, setStreamer] = useState(false);
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
@@ -84,12 +80,8 @@ export default function CreateSoul() {
       }
       keys.push(...keyHashes);
     }
-    const policy = buildPolicy('all', { signers: keys});
-
-    const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited, aikenCourse });
+    
     closeDrawer();
-    // navigate(`/collection/${collectionId}`);
     navigate(`/collections/souls`);
   };
   

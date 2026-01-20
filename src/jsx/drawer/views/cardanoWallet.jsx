@@ -1,8 +1,6 @@
 import React, {useState} from 'react';
-import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { wallets } from '../../../utils/wallets';
-import { Button } from 'react-bootstrap';
 
 export default function CardanoWallet() {
 

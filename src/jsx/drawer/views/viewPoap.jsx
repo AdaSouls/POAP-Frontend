@@ -7,46 +7,21 @@ import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
 import EventBody from "../../components/eventBody";
 import circlePlus from "../../../icons/svg/circle-plus.svg";
 import poapNormal from "../../../images/svg/poap-normal.svg";
-import eventOwnerIcon from "../../../icons/svg/collection-owner.svg";
 
 export default function ViewPoap() {
   const {
     poap,
-    ethereum: { provider },
-    poapEvents,
-    poapOwner,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [expandedEvents, setExpandedEvents] = useState([]);
 
-  console.log("🚀 ~ ViewPoap ~ poap:", poap);
-  
   const closeDrawer = () => {
     dispatch({
       type: "CLOSE_DRAWER",
     });
   };
 
-  const hasValue = (value) => {
-    return value !== null && value !== undefined && value !== "";
-  };
-
-  // Helper function to truncate address
-  const truncateAddress = (address) => {
-    if (!address) return "N/A";
-    if (address.length <= 10) return address;
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-  };
-
-  // Get event data (first event in array if available)
-  const getEvent = () => {
-    if (poap?.events && poap.events.length > 0) {
-      return poap.events[0];
-    }
-    return null;
-  };
-
-  const event = getEvent();
+  const event = poap?.events?.[0] || null;
 
   // Calculate status based on eventStartDate and expiration (like EventCard)
   const calculateStatus = () => {
@@ -90,12 +65,7 @@ export default function ViewPoap() {
         return 'badge bg-secondary';
     }
   };
-
-  const formatEventDate = (timestamp) => {
-    if (!timestamp || timestamp === 0) return null;
-    return formatDateToDDMMYYYY(new Date(timestamp * 1000));
-  };
-
+  
   // Toggle event expansion
   const toggleEvent = (index) => {
     setExpandedEvents((prev) =>
