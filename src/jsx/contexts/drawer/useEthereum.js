@@ -1,12 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { ethers, formatEther } from "ethers";
-
-const { REACT_APP_POLYGON_AMOY_RPC, 
-  REACT_APP_POLYGON_AMOY_CHAIN_ID, 
-  REACT_APP_POLYGON_AMOY_CHAIN_NAME,
-  REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_NAME,
-  REACT_APP_POLYGON_AMOY_NATIVE_CURRENCY_SYMBOL,
-  REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL } = process.env;
+import { useState, useMemo, useCallback } from "react";
+import { ethers } from "ethers";
 
 const useEthereum = () => {
   const [provider, setCurrentProvider] = useState(null);
@@ -146,7 +139,7 @@ const useEthereum = () => {
     console.log("🚀 ~ setProvider ~ newWalletState:", newWalletState);
     setCurrentProvider(newWalletState);
     return newWalletState;
-  }, []);
+  }, [DESIRED_CHAIN_PARAMS]);
 
   const value = useMemo(
     () => ({

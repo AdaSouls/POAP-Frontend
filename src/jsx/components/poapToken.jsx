@@ -21,7 +21,7 @@ const PoapToken = ({ poap, index }) => {
           src={poapNormal}
           width="47"
           height="47"
-          alt="Poap Image"
+          alt="Poap"
         />
       </td>
       <td>Issuer ID: {poap.events[0].issuerIdInContract}</td>

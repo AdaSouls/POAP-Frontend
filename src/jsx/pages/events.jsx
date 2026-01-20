@@ -117,7 +117,7 @@ const EventsPage = () => {
     return () => {
       dataSyncService.stopEventsPolling();
     };
-  }, [provider]);
+  }, [provider, updateEvents]);
 
   return (
     <Layout activeMenu={3}>

@@ -134,7 +134,7 @@ const EventBody = ({ event }) => {
       {/* <div className="col-6">
         <p className="m-0 small gray">Expiration</p>
         <p className="m-0 mb-3">
-          {event.expiration == 0
+          {event.expiration === 0
             ? "No expiry"
             : formatDateToDDMMYYYY(new Date(event.expiration * 1000))}
         </p>
@@ -162,7 +162,7 @@ const EventBody = ({ event }) => {
       <div className="col-6">
         <p className="m-0 small gray">Event End Date</p>
         <p className="m-0 mb-3">
-          {event.expiration == 0
+          {event.expiration === 0
             ? "No expiry"
             : formatDateToDDMMYYYY(new Date(event.expiration * 1000))}
         </p>

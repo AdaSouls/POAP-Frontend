@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useDrawer } from '../drawer/drawer.provider';
 import { mvpSmartContractService } from '../../../services/mvp-smart-contract.service';
 
@@ -14,7 +14,7 @@ export const UserRolesProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const initializeUserRole = async () => {
+  const initializeUserRole = useCallback(async () => {
     if (isInitialized || isLoading || !ethereum?.provider) return; // Prevent multiple initializations
     
     try {
@@ -62,7 +62,7 @@ export const UserRolesProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isInitialized, isLoading, ethereum]);
 
   const resetRoles = () => {
     setUserRoles([]);

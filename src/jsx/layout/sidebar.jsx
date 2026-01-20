@@ -68,7 +68,7 @@ const Sidebar = ({ activeMenu }) => {
                 className={activeMenu === item.id ? "active" : ""}
               >
                 <span>
-                <img src={cardano.wallet || ethereum.provider ? item.iconActive : item.iconInactive} ></img>
+                <img src={cardano.wallet || ethereum.provider ? item.iconActive : item.iconInactive} alt="" ></img>
                   {/* <i className={item.icon}></i> */}
                 </span>
               </Link>

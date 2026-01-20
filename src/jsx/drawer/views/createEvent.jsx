@@ -4,11 +4,9 @@ import {
 } from "../../contexts/drawer/drawer.provider";
 import { useState, useEffect } from "react";
 import { Button } from "react-bootstrap";
-import { createEventId } from "../../../utils/poapContractInteractions";
 import { mvpSmartContractService } from "../../../services/mvp-smart-contract.service";
 import { createEvent } from "../../../services/event.service";
 import { 
-  succesfullMessage, 
   errorFunction, 
   loadingFunction ,
   succesfullBlockchainCreation

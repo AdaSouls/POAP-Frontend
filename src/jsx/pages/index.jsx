@@ -83,7 +83,7 @@ const Dashboard = () => {
                 <div className="each-slide-effect">
                   <div style={{ backgroundImage: `url(${images[0]})` }}>
                     <span>
-                      <img src={adaSolusLogoBanner}></img>
+                      <img src={adaSolusLogoBanner} alt="" ></img>
                       <p>
                         <strong>AdaSouls</strong> is the first open platform to
                         create <strong>Soulbound Tokens</strong> and{" "}
@@ -95,7 +95,7 @@ const Dashboard = () => {
                 <div className="each-slide-effect">
                   <div style={{ backgroundImage: `url(${images[1]})` }}>
                     <span>
-                      <img src={adaSolusLogoBanner}></img>
+                      <img src={adaSolusLogoBanner} alt="" ></img>
                       <p>
                         <strong>AdaSouls</strong> is the first open platform to
                         create <strong>Soulbound Tokens</strong> and{" "}

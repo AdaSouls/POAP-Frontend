@@ -31,7 +31,7 @@ function useCardano({ network, provider }) {
         } catch (e) {
             console.log('setWallet error:', e);
         }
-    }, []);
+    }, [network, provider]);
     
     
     const value = useMemo(() => ({

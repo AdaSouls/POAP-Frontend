@@ -351,10 +351,6 @@ export const getPoaps = async (signer) => {
   );
 
   try {
-    // Create a filter for the EventCreated event
-    const poapFilter = poapContract.filters;
-    const poapMinted = poapContract.filters.TokenMinted();
-
     // Get all past EventCreated events
     const poaps = await poapContract.queryFilter(
       "TokenMinted",

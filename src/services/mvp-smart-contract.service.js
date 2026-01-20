@@ -11,11 +11,6 @@ const providerRPC = {
   chainId: 80002,
 };
 
-const provider = new ethers.JsonRpcProvider(providerRPC.rpc, {
-  chainId: providerRPC.chainId,
-  name: providerRPC.name,
-});
-
 // Utility function to check if error is a rate limit error
 const isRateLimitError = (error) => {
   if (!error) return false;

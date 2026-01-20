@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -17,25 +17,23 @@ import {
 const PoapCollection = () => {
   const {
     ethereum: { provider },
-    poapEvents,
-    poapOwner,
     poapCollection,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [loading, setLoading] = useState(false);
 
-  const updatePoaps = (poaps) => {
+  const updatePoaps = useCallback((poaps) => {
     dispatch({
       type: "UPDATE_POAPS",
       payload: poaps,
     });
-  };
-  const updateOwner = (owner) => {
+  }, [dispatch]);
+  const updateOwner = useCallback((owner) => {
     dispatch({
       type: "UPDATE_OWNER",
       payload: owner,
     });
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     async function fetchData() {
@@ -54,7 +52,7 @@ const PoapCollection = () => {
       }
     }
     fetchData();
-  }, [provider]);
+  }, [provider, updatePoaps, updateOwner]);
 
   return (
     <div>

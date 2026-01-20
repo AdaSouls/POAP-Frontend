@@ -149,4 +149,5 @@ class DataSyncService {
 }
 
 // Export singleton instance
-export default new DataSyncService();
+const dataSyncService = new DataSyncService();
+export default dataSyncService;

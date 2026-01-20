@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { getAllEventsService } from '../../../services/paima.service';
@@ -56,14 +56,14 @@ export default function CreatePoap() {
       const eventIdFromUrl = searchParams.get('eventId');
       
       if (eventIdFromUrl && !selectedEvent) {
-        const eventFromUrl = events.find(evt => evt.eventId == eventIdFromUrl);
+        const eventFromUrl = events.find(evt => evt.eventId === eventIdFromUrl);
         if (eventFromUrl) {
           console.log("🚀 ~ URL Event Selection ~ eventFromUrl:", eventFromUrl);
           handleEventSelect(eventFromUrl);
         }
       }
     }
-  }, [events, selectedEvent, searchParams]);
+  }, [events, selectedEvent, searchParams, handleEventSelect]);
 
   // Reset image loading state when event changes
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function CreatePoap() {
     }
   };
 
-  const handleEventSelect = (selectedEvent) => {
+  const handleEventSelect = useCallback((selectedEvent) => {
     console.log("🚀 ~ handleEventSelect ~ selectedEvent:", selectedEvent);
     setSelectedEvent(selectedEvent);
     setFormData({
@@ -91,7 +91,7 @@ export default function CreatePoap() {
       issuerId: selectedEvent.issuerId,
       to: provider?.address || ''
     });
-  };
+  }, [provider]);
 
   // Helper function to check if imageUrl exists
   const hasImageUrl = (url) => {
@@ -437,7 +437,7 @@ export default function CreatePoap() {
               value={formData.eventId}
               onChange={(e) => {
                 const eventId = e.target.value;
-                const selectedEvent = events.find(evt => evt.eventId == eventId);
+                const selectedEvent = events.find(evt => evt.eventId === eventId);
                 handleEventSelect(selectedEvent);
               }}
               required

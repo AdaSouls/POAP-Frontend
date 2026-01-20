@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -14,14 +14,14 @@ const PoapIssuerDetails = () => {
     poapIssuer,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
-  const updateIssuer = (issuer) => {
+  const updateIssuer = useCallback((issuer) => {
     dispatch({
       type: "UPDATE_ISSUER",
       payload: issuer,
     });
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     console.log("🚀 ~ PoapIssuerDetails ~ provider changed");
@@ -40,7 +40,7 @@ const PoapIssuerDetails = () => {
       }
     }
     fetchData();
-  }, [provider, poapIssuer]);
+  }, [provider, poapIssuer, updateIssuer]);
 
   return (
     <div className="row">

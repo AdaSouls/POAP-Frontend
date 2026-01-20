@@ -5,7 +5,7 @@ import { AppliedValidators, Policy, Mint, Credential, MintRedeemer, DatumMetadat
 
 export function strToBuffer(hexString: string) {
     // ensure even number of characters
-    if (hexString.length % 2 != 0) {
+    if (hexString.length % 2 !== 0) {
 
     }
 

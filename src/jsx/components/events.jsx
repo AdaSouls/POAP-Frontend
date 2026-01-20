@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import collectionMenu from "../../icons/svg/collection-menu.svg";
-import walletStatus from "../../images/collections/wallet-status.png";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 const Create = () => { 
   const { provider } = useDrawer();

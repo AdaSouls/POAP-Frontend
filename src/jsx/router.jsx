@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/index";
 import Souls from "./pages/souls";
@@ -30,12 +30,12 @@ import MVPBulkDistribute from "./pages/mvp-bulk-distribute";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
-  const updateEvents = (events) => {
+  const updateEvents = useCallback((events) => {
     dispatch({
       type: "UPDATE_EVENTS",
       payload: events,
     });
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     async function fetchData() {
@@ -44,7 +44,7 @@ const Router = () => {
       updateEvents(events);
     }
     fetchData();
-  }, []);
+  }, [updateEvents]);
 
   return (
     <BrowserRouter>

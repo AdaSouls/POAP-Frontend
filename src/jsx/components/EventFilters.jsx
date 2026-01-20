@@ -41,20 +41,6 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
     return date.toISOString().split('T')[0];
   };
 
-  const formatFilterValue = (key, value) => {
-    if (value === undefined || value === null || value === '') return null;
-    
-    switch (key) {
-      case 'eventStartDateMin':
-      case 'eventStartDateMax':
-      case 'expirationMin':
-      case 'expirationMax':
-        return timestampToDate(value);
-      default:
-        return value;
-    }
-  };
-
   return (
     <div className="card mb-3">
       <div className="card-header bg-white">

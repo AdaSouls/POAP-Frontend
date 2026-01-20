@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Layout from "../layout/layout";
 import { Link } from "react-router-dom";
 import collectionMenu from "../../icons/svg/collection-menu.svg";
@@ -62,36 +62,36 @@ const Create = () => {
     });
   };
 
-  const updateIssuer = (issuer) => {
+  const updateIssuer = useCallback((issuer) => {
     dispatch({
       type: "UPDATE_ISSUER",
       payload: issuer,
     });
-  };
+  }, [dispatch]);
 
-  const updateEvents = (events) => {
+  const updateEvents = useCallback((events) => {
     console.log("updating events in context:", events)
     dispatch({
       type: "UPDATE_EVENTS",
       payload: events,
     });
-  };
+  }, [dispatch]);
 
-  const updatePoaps = (poaps) => {
+  const updatePoaps = useCallback((poaps) => {
     dispatch({
       type: "UPDATE_POAPS",
       payload: poaps,
     });
-  };
+  }, [dispatch]);
 
-  const updateOwner = (owner) => {
+  const updateOwner = useCallback((owner) => {
     dispatch({
       type: "UPDATE_OWNER",
       payload: owner,
     });
-  };
+  }, [dispatch]);
 
-  function updateIssuersEvents() {
+  const updateIssuersEvents = useCallback(() => {
     if (provider && poapEvents?.length > 0) {
       console.log(
         "🚀 ~ updateIssuersEvents ~ poapEvents.length:",
@@ -107,27 +107,27 @@ const Create = () => {
       console.log("🚀 ~ ownersEvents ~ ownersEvents:", ownersEvents);
       setAddressEvents(ownersEvents);
     }
-  }
+  }, [provider, poapEvents, poapIssuer]);
 
-  async function fetchIssuer() {
+  const fetchIssuer = useCallback(async () => {
     if (provider && provider.address) {
       const issuer = await getIssuerByAddressService(
         provider.address.toLowerCase()
       );
       updateIssuer(issuer);
     }
-  }
+  }, [provider, updateIssuer]);
 
-  async function fetchOwner() {
+  const fetchOwner = useCallback(async () => {
     if (provider && provider.address) {
       const owner = await getOwnerByAddressService(
         provider.address.toLowerCase()
       );
       updateOwner(owner);
     }
-  }
+  }, [provider, updateOwner]);
 
-  async function getOwnerPoaps() {
+  const getOwnerPoaps = useCallback(async () => {
     if (provider && provider.address) {
       const poaps = await getOwnerPoapsService(provider.address);
       if (!poaps) {
@@ -136,7 +136,7 @@ const Create = () => {
       }
       updatePoaps(poaps);
     }
-  }
+  }, [provider, updatePoaps]);
 
   async function getEvents() {
     if (provider && provider.address) {
@@ -171,12 +171,12 @@ const Create = () => {
     return () => {
       dataSyncService.stopAllPolling();
     };
-  }, [provider]);
+  }, [provider, fetchIssuer, fetchOwner, getOwnerPoaps, updateEvents, updatePoaps]);
 
   useEffect(() => {
     console.log("Inside useEffect for fetching address events");
     updateIssuersEvents();
-  }, [provider, poapEvents, poapIssuer]);
+  }, [updateIssuersEvents]);
 
   return (
     <Layout activeMenu={2}>

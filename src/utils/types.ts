@@ -20,6 +20,7 @@ const ScriptType = Data.Enum([
   Data.Literal("After"),
   Data.Literal("Before"),
 ]);
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 type ScriptType = Data.Static<typeof ScriptType>;
 
 const NativeScript = Data.Object({
@@ -28,6 +29,7 @@ const NativeScript = Data.Object({
   slot: Data.Nullable(Data.Integer()),
   require: Data.Nullable(Data.Integer()),
 });
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 type NativeScript = Data.Static<typeof NativeScript>;
 
 const PolicySchema = Data.Object({
@@ -38,6 +40,7 @@ const PolicySchema = Data.Object({
   scripts: Data.Nullable(Data.Array(NativeScript)),
 });
 export type Policy = Data.Static<typeof PolicySchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const Policy = PolicySchema as unknown as Policy;
 
 const CredentialSchema = Data.Enum([
@@ -53,6 +56,7 @@ const CredentialSchema = Data.Enum([
   }),
 ]);
 export type Credential = Data.Static<typeof CredentialSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const Credential = CredentialSchema as unknown as Credential;
 
 const MintSchema = Data.Object({
@@ -61,6 +65,7 @@ const MintSchema = Data.Object({
   nonce: Data.Bytes(),
 });
 export type Mint = Data.Static<typeof MintSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const Mint = MintSchema as unknown as Mint;
 
 const SigStructureSchema = Data.Object({
@@ -71,6 +76,7 @@ const SigStructureSchema = Data.Object({
   payload: Data.Bytes(),
 });
 export type SigStructure = Data.Static<typeof SigStructureSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SigStructure = SigStructureSchema as unknown as SigStructure;
 
 const CoseSignatureSchema = Data.Object({
@@ -80,10 +86,12 @@ const CoseSignatureSchema = Data.Object({
   signature: Data.Bytes(),
 });
 export type CoseSignature = Data.Static<typeof CoseSignatureSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CoseSignature = CoseSignatureSchema as unknown as CoseSignature;
 
 const SignaturesSchema = Data.Map(Data.Bytes(), CoseSignatureSchema);
 export type Signatures = Data.Static<typeof SignaturesSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const Signatures = SignaturesSchema as unknown as Signatures;
 
 const MintRedeemerSchema = Data.Enum([
@@ -93,6 +101,7 @@ const MintRedeemerSchema = Data.Enum([
   Data.Literal("Burn"),
 ]);
 export type MintRedeemer = Data.Static<typeof MintRedeemerSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const MintRedeemer = MintRedeemerSchema as unknown as MintRedeemer;
 
 const ClaimRedeemerSchema = Data.Enum([
@@ -105,6 +114,7 @@ const ClaimRedeemerSchema = Data.Enum([
   }),
 ]);
 export type ClaimRedeemer = Data.Static<typeof ClaimRedeemerSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const ClaimRedeemer = ClaimRedeemerSchema as unknown as ClaimRedeemer;
 
 const DatumMetadataSchema = Data.Object({
@@ -118,4 +128,5 @@ const DatumMetadataSchema = Data.Object({
   }),
 });
 export type DatumMetadata = Data.Static<typeof DatumMetadataSchema>;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const DatumMetadata = DatumMetadataSchema as unknown as DatumMetadata;

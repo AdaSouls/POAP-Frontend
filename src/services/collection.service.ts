@@ -1,5 +1,3 @@
-const key = "COLLECTIONS";
-
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const CODE_MASTER = process.env.REACT_APP_API_CODE_MASTER;
 

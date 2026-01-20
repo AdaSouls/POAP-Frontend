@@ -94,7 +94,7 @@ const EventItem = ({ event, index, mintable, owned }) => {
       <td className="col-3">
         {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
         Expiration: 
-        {event.expiration == 0 ?
+        {event.expiration === 0 ?
           'No expiry' :
           isEventExpired(event.expiration) ?
             <span

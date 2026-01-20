@@ -38,7 +38,7 @@ const SoulboundClaim = () => {
         const { txSigned, claimUtxo } = await claimToken(token.name, token.metadata, policyId, policyHash, beneficiary, smartContract, redeem, token.mintUtxo, utxo, provider);
         console.log('Tx Cbor:', txSigned.toString());
         const updatedToken = await updateToken(collectionId, token.soulboundId, { claimUtxo });
-        setTokens(tokens.map((t) => t.soulboundId != token.soulboundId ? t : {...token, ...updatedToken}))
+        setTokens(tokens.map((t) => t.soulboundId !== token.soulboundId ? t : {...token, ...updatedToken}))
         const txId = await txSigned.submit();
         console.log('Tx Id:', txId);
         const success = await provider.awaitTx(txId);

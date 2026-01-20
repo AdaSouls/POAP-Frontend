@@ -67,7 +67,7 @@ const Collections = () => {
   }
 
   const allSigned = (collection) => {
-    return collection.invited.every(i => i.signature != '');
+    return collection.invited.every(i => i.signature !== '');
   }
 
   const signCollection = async (collection, invited = false) => {
