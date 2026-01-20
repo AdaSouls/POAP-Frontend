@@ -13,7 +13,7 @@ export interface IPoap {
   transaction_hash?: string | null;
   // Additional fields from API response
   instance?: string;
-  events?: any[];
+  events?: IPoapEvent[];
   // Fields from joined queries (with aliases to avoid conflicts)
   poap_issuerId?: number;
   poap_eventId?: number;
@@ -26,19 +26,38 @@ export interface IPoap {
   event_transaction_hash?: string | null;
   event_createdAt?: string;
   event_updatedAt?: string;
+  // Additional fields that may come from the API
+  maxSupply?: number;
+  organiserAddress?: string;
+  status?: string;
 }
 
 export interface IPoapEvent {
-  eventIdInContract: number;
-  issuerIdInContract: number;
-  title: string;
-  description: string;
-  image: string;
-  createdAt: string;
-  expiryDate: string;
-  poapsToBeMinted: number;
-  mintedPoaps: number;
-  isExpired: boolean;
+  eventUuid: string;
+  issuerId: number;
+  eventId: number;
+  title?: string | null;
+  description?: string | null;
+  image?: string | null;
+  imageUrl?: string | null;
+  maxSupply?: number;
+  organiserAddress?: string;
+  status?: string;
+  totalSupply?: number | null;
+  eventStartDate?: number | null;
+  eventEndDate?: string | null;
+  expiration?: number;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+  block_number?: number | null;
+  transaction_hash?: string | null;
+  isExpired?: boolean;
+  // Legacy fields for backward compatibility
+  eventIdInContract?: number;
+  issuerIdInContract?: number;
+  expiryDate?: string;
+  poapsToBeMinted?: number;
+  mintedPoaps?: number;
 }
 
 export async function getUserPoaps(ownerAddress: string) {
