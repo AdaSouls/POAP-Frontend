@@ -6,6 +6,8 @@ import {
 import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
 import EventBody from "../../components/eventBody";
 import circlePlus from "../../../icons/svg/circle-plus.svg";
+import poapNormal from "../../../images/svg/poap-normal.svg";
+import eventOwnerIcon from "../../../icons/svg/collection-owner.svg";
 
 export default function ViewPoap() {
   const {
@@ -18,6 +20,7 @@ export default function ViewPoap() {
   const [expandedEvents, setExpandedEvents] = useState([]);
 
   console.log("🚀 ~ ViewPoap ~ poap:", poap);
+  
   const closeDrawer = () => {
     dispatch({
       type: "CLOSE_DRAWER",
@@ -26,6 +29,71 @@ export default function ViewPoap() {
 
   const hasValue = (value) => {
     return value !== null && value !== undefined && value !== "";
+  };
+
+  // Helper function to truncate address
+  const truncateAddress = (address) => {
+    if (!address) return "N/A";
+    if (address.length <= 10) return address;
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
+  // Get event data (first event in array if available)
+  const getEvent = () => {
+    if (poap?.events && poap.events.length > 0) {
+      return poap.events[0];
+    }
+    return null;
+  };
+
+  const event = getEvent();
+
+  // Calculate status based on eventStartDate and expiration (like EventCard)
+  const calculateStatus = () => {
+    if (!event) return 'active';
+    
+    const now = Date.now();
+    
+    // Check if expired first
+    if (event.expiration && event.expiration > 0) {
+      const expirationTime = event.expiration * 1000;
+      if (expirationTime <= now) {
+        return 'expired';
+      }
+    }
+    
+    // Check event start date
+    if (event.eventStartDate) {
+      const startTime = event.eventStartDate * 1000;
+      if (startTime > now) {
+        return 'pending';
+      } else {
+        return 'active';
+      }
+    }
+    
+    // Default to active if no dates available
+    return 'active';
+  };
+
+  const getStatusBadgeClass = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return 'badge bg-warning';
+      case 'active':
+        return 'badge bg-success';
+      case 'completed':
+        return 'badge bg-info';
+      case 'expired':
+        return 'badge bg-danger';
+      default:
+        return 'badge bg-secondary';
+    }
+  };
+
+  const formatEventDate = (timestamp) => {
+    if (!timestamp || timestamp === 0) return null;
+    return formatDateToDDMMYYYY(new Date(timestamp * 1000));
   };
 
   // Toggle event expansion
@@ -40,6 +108,10 @@ export default function ViewPoap() {
     return expandedEvents.includes(index);
   };
 
+  const eventStatus = calculateStatus();
+  const eventTitle = event?.title || `Event ${poap?.eventId || 'N/A'}`;
+  const eventImageUrl = event?.imageUrl || event?.image || poapNormal;
+
   return (
     <div className="container absolute top-0 start-0 w-100 h-100 p-3 overflow-auto">
       <div className="drawer-header">
@@ -50,56 +122,135 @@ export default function ViewPoap() {
             aria-label="close"
           ></button>
           <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold capitalize">
-            Poap Token
+            POAP Token Details
           </h4>
         </div>
       </div>
 
       <div className="drawer-body">
-        <div className="row g-3">
-          <div className="col-6">
-            <p className="m-0 font-weight-bolder">Event ID</p>
-            <p className="m-0 mb-3">{poap.eventId}</p>
-          </div>
-          <div className="col-6">
-            <p className="m-0 font-weight-bolder">Issuer ID</p>
-            <p className="m-0 mb-3">{poap.issuerId}</p>
-          </div>
-          <div className="col-12">
-            <p className="m-0 font-weight-bolder">Minted</p>
-            <p className="m-0 mb-3">{formatDateToDDMMYYYY(poap.createdAt)}</p>
-          </div>
+        {/* POAP Token Section */}
+        <div className="mb-4">
+          <h3 className="mb-3" style={{ fontSize: '20px', fontWeight: '600' }}>
+            Token Information
+          </h3>
+          
+          <div className="row g-3">
+            {/* Token ID - Prominent Display */}
+            <div className="col-12">
+              <div className="card bg-light p-3 mb-3">
+                <p className="m-0 small text-muted mb-1">Token ID</p>
+                <h3 className="m-0" style={{ fontSize: '24px', fontWeight: '700' }}>
+                  {poap?.tokenId || 'N/A'}
+                </h3>
+              </div>
+            </div>
 
-          <h3 className="pb-3">Token ID: {poap.tokenId}</h3>
+            {/* Event ID and Issuer ID */}
+            <div className="col-6">
+              <p className="m-0 small text-muted mb-1">Event ID</p>
+              <p className="m-0 mb-3 font-weight-semibold">{poap?.eventId || 'N/A'}</p>
+            </div>
+            
+            <div className="col-6">
+              <p className="m-0 small text-muted mb-1">Issuer ID</p>
+              <p className="m-0 mb-3 font-weight-semibold">{poap?.issuerId || 'N/A'}</p>
+            </div>
 
-          <div className="col-12">
-            <p className="m-0 font-weight-bolder">Owner</p>
-            <p className="m-0 mb-3">{poap.ownerAddress}</p>
+            {/* Minted Date */}
+            <div className="col-12">
+              <p className="m-0 small text-muted mb-1">Minted Date</p>
+              <p className="m-0 mb-3">
+                {poap?.createdAt ? formatDateToDDMMYYYY(new Date(poap.createdAt)) : 'N/A'}
+              </p>
+            </div>
+
+            {/* Owner Address */}
+            <div className="col-12">
+              <p className="m-0 small text-muted mb-1">Owner Address</p>
+              <p className="m-0 mb-3 text-break small font-weight-semibold">
+                {poap?.ownerAddress || 'N/A'}
+              </p>
+            </div>
+
+            {/* Blockchain Metadata */}
+            {(poap?.block_number || poap?.transaction_hash) && (
+              <>
+                
+                {poap?.block_number && (
+                  <div className="col-6">
+                    <p className="m-0 small text-muted mb-1">Block Number</p>
+                    <p className="m-0 mb-3">{poap.block_number}</p>
+                  </div>
+                )}
+
+                {poap?.transaction_hash && (
+                  <div className="col-12">
+                    <p className="m-0 small text-muted mb-1">Transaction Hash</p>
+                    <p className="m-0 mb-3 text-break small">
+                      {poap.transaction_hash}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          <hr className="col-12 my-2" />
+        </div>
 
-          {/* {poap?.events.map((event, index) => (
+        {/* Event Information Section */}
+        {event && (
+          <div className="mb-4">
+            <hr className="my-4" />
             <div
               className="mb-3"
-              key={index}
               style={{
-                border: "1px solid #ccc",
-                padding: "10px 30px",
-                borderRadius: "5px",
+                border: "1px solid rgba(255,255,255,0.2)",
+                padding: "15px 20px",
+                borderRadius: "8px",
                 boxSizing: "border-box",
+                backgroundColor: "rgba(255,255,255,0.05)",
               }}
             >
               <div
                 className="d-flex align-items-center justify-content-between cursor-pointer"
-                onClick={() => toggleEvent(index)}
+                onClick={() => toggleEvent(0)}
                 style={{ cursor: "pointer" }}
               >
-                <h4 className="m-0" style={{ opacity: `${isEventExpanded(index) ? "0%" : "100%"}` }}>
-                  {event.title} - {formatDateToDDMMYYYY(event.createdAt)}
-                </h4>
+                <div className="d-flex align-items-center">
+                  {eventImageUrl && (
+                    <img
+                      src={eventImageUrl}
+                      alt={eventTitle}
+                      className="rounded-circle mr-3"
+                      width="40"
+                      height="40"
+                      style={{
+                        objectFit: "cover",
+                        border: "2px solid rgba(255,255,255,0.3)",
+                      }}
+                      onError={(e) => {
+                        e.target.src = poapNormal;
+                      }}
+                    />
+                  )}
+                  <div>
+                    <h4 className="m-0 mb-1" style={{ opacity: `${isEventExpanded(0) ? "0%" : "100%"}` }}>
+                      {eventTitle}
+                    </h4>
+                    <div className="d-flex align-items-center">
+                      <span className={`${getStatusBadgeClass(eventStatus)} mr-2`} style={{ fontSize: '10px', padding: '2px 8px', textTransform: 'capitalize' }}>
+                        {eventStatus}
+                      </span>
+                      {event.createdAt && (
+                        <span className="text-muted small">
+                          Created: {formatDateToDDMMYYYY(new Date(event.createdAt))}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <div
                   style={{
-                    transform: isEventExpanded(index) ? "rotate(45deg)" : "",
+                    transform: isEventExpanded(0) ? "rotate(45deg)" : "",
                     transition: "transform 0.3s",
                   }}
                 >
@@ -107,15 +258,26 @@ export default function ViewPoap() {
                 </div>
               </div>
 
-              {isEventExpanded(index) && (
-                <div>
-                  <div className="mb-4"></div>
+              {isEventExpanded(0) && (
+                <div className="mt-4">
                   <EventBody event={event} />
                 </div>
               )}
             </div>
-          ))} */}
-        </div>
+          </div>
+        )}
+
+        {/* No Event Information */}
+        {!event && poap?.eventId && (
+          <div className="mb-4">
+            <hr className="my-4" />
+            <div className="alert alert-info" role="alert">
+              <p className="m-0">
+                Event information is not available for Event ID: {poap.eventId}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
