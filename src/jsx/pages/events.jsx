@@ -4,7 +4,6 @@ import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import EventCard from "../components/eventCard";
 import EventFilters from "../components/EventFilters";
-import eventNormal from "../../images/svg/event-normal.svg";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
 import dataSyncService from "../../services/dataSync.service";
@@ -24,12 +23,12 @@ const EventsPage = () => {
     });
   };
 
-  const updateEvents = (events) => {
+  const updateEvents = useCallback((events) => {
     dispatch({
       type: "UPDATE_EVENTS",
       payload: events,
     });
-  };
+  }, [dispatch]);
 
   const showEthereumWallet = () => {
     dispatch({

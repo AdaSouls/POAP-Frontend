@@ -5,14 +5,13 @@ import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider
 import PoapCard from "../components/poapCard";
 import poapNormal from "../../images/svg/poap-normal.svg";
 import loadingGif from "../../images/loading.gif";
-import walletStatus from "../../images/collections/wallet-status.png";
 import { getUserPoaps } from "../../services/poap.service";
 import dataSyncService from "../../services/dataSync.service";
 
 const PoapManagement = () => { 
   const { eventId } = useParams();
   const [loading, setLoading] = useState(true);
-  const [poaps, setPoaps] = useState([]);
+  // const [poaps, setPoaps] = useState([]);
   const [myPoaps, setMyPoaps] = useState([]);
   const { poapCollection, ethereum: { provider, address } } = useDrawer();
   const dispatch = useDrawerDispatch();
@@ -30,13 +29,6 @@ const PoapManagement = () => {
     });
   };
 
-  const updateEvents = (events) => {
-    dispatch({
-      type: "UPDATE_EVENTS",
-      payload: events,
-    });
-  }; 
-
   const showEthereumWallet = () => {
     dispatch({
       type: "SHOW_ETHEREUM_WALLET",
@@ -48,7 +40,7 @@ const PoapManagement = () => {
     
     async function fetchPoaps() {
       if (!provider) {
-        setPoaps([]);
+        // setPoaps([]);
         setMyPoaps([]);
         setLoading(false);
         return;
@@ -67,7 +59,7 @@ const PoapManagement = () => {
         // }
       } catch (error) {
         console.error("Error fetching POAPs:", error);
-        setPoaps([]);
+        // setPoaps([]);
         setMyPoaps([]);
       }
       
@@ -89,6 +81,7 @@ const PoapManagement = () => {
       // dataSyncService.stopEventsPolling();
       dataSyncService.stopPoapsPolling();
     };
+  // eslint-disable-next-line
   }, [provider, eventId]);
 
   return (

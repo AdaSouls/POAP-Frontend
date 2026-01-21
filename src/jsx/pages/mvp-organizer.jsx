@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
@@ -7,17 +7,20 @@ import { mvpSmartContractService } from "../../services/mvp-smart-contract.servi
 
 const MVPOrganizer = () => {
   const { ethereum: { provider } } = useDrawer();
-  const { isIssuer, issuerId, isInitialized, isLoading } = useUserRoles();
+  const { isIssuer, issuerId, isLoading } = useUserRoles();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (provider && provider.address) {
-      initializeService();
+  const loadEvents = useCallback(async () => {
+    try {
+      const eventsData = await mvpSmartContractService.getOrganizerEvents(provider.address);
+      setEvents(eventsData);
+    } catch (error) {
+      console.error("Failed to load events:", error);
     }
-  }, [provider]);
+  }, [provider?.address]);
 
-  const initializeService = async () => {
+  const initializeService = useCallback(async () => {
     try {
       setLoading(true);
       if (isIssuer) {
@@ -28,16 +31,13 @@ const MVPOrganizer = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isIssuer, loadEvents]);
 
-  const loadEvents = async () => {
-    try {
-      const eventsData = await mvpSmartContractService.getOrganizerEvents(provider.address);
-      setEvents(eventsData);
-    } catch (error) {
-      console.error("Failed to load events:", error);
+  useEffect(() => {
+    if (provider && provider.address) {
+      initializeService();
     }
-  };
+  }, [provider, initializeService]);
 
   if (!provider) {
     return (

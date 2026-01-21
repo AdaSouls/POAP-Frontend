@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
-import { getAll, getAllInvited, sign, update } from "../../services/collection.service";
+import { getAll, getAllInvited, sign } from "../../services/collection.service";
 import { buildSignature, getSigningMessage } from "../../utils/util";
 import collectionNormalImage from "../../images/svg/collection-normal.svg";
 import collectionMultisigImage from "../../images/svg/collection-multisig.svg";
@@ -17,11 +17,11 @@ import walletStatus from "../../images/collections/wallet-status.png";
 
 
 const Collections = () => { 
-  const getFilter = useParams();
-  const [filter, setFilter] = useState(null);
+  // const getFilter = useParams();
+  // const [filter, setFilter] = useState(null);
   const [collections, setCollections] = useState([]);
   const [invitedCollections, setInvitedCollections] = useState([]);
-  const { cardano: { wallet }, ethereum: { provider } } = useDrawer();
+  const { cardano: { wallet } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
   const createSoul = () => {
@@ -42,7 +42,7 @@ const Collections = () => {
   };  
 
   useEffect(() => {
-    setFilter(getFilter);
+    // setFilter(getFilter);
     async function fetchData() {
       if (!wallet) {
         setCollections([]);

@@ -5,7 +5,7 @@ import {
 import PoapEvent from "../components/poapEvent";
 
 const Search = () => {
-  const { poapEvents, poapCollection } = useDrawer();
+  const { poapEvents } = useDrawer();
 
   const approvedEvents = poapEvents.filter(event => event.approved === "Approved");
 

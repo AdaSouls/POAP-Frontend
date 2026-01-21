@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
@@ -7,29 +7,12 @@ import { mvpSmartContractService } from "../../services/mvp-smart-contract.servi
 
 const MVPAttendee = () => {
   const { ethereum: { provider } } = useDrawer();
-  const { isInitialized, isLoading } = useUserRoles();
+  const { isLoading } = useUserRoles();
   const [events, setEvents] = useState([]);
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (provider && provider.address) {
-      initializeService();
-    }
-  }, [provider]);
-
-  const initializeService = async () => {
-    try {
-      setLoading(true);
-      await loadData();
-    } catch (error) {
-      console.error("Failed to initialize service:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [eventsData, tokensData] = await Promise.all([
         mvpSmartContractService.getAttendeeEvents(provider.address),
@@ -41,7 +24,24 @@ const MVPAttendee = () => {
     } catch (error) {
       console.error("Failed to load data:", error);
     }
-  };
+  }, [provider?.address]);
+
+  const initializeService = useCallback(async () => {
+    try {
+      setLoading(true);
+      await loadData();
+    } catch (error) {
+      console.error("Failed to initialize service:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadData]);
+
+  useEffect(() => {
+    if (provider && provider.address) {
+      initializeService();
+    }
+  }, [provider, initializeService]);
 
   if (!provider) {
     return (

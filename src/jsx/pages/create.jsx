@@ -8,8 +8,8 @@ import {
 } from "../contexts/drawer/drawer.provider";
 import PoapEvents from "../components/poapEvents";
 import {
-  getAllEventsService,
-  getAllPoapsService,
+  // getAllEventsService,
+  // getAllPoapsService,
   getIssuerByAddressService,
   getOwnerPoapsService,
   getOwnerByAddressService
@@ -138,19 +138,19 @@ const Create = () => {
     }
   }, [provider, updatePoaps]);
 
-  async function getEvents() {
-    if (provider && provider.address) {
-      const events = await getAllEventsService();
-      await getAllPoapsService();
-      updateEvents(events);
-      const poaps = await getOwnerPoapsService(provider.address);
-      if (!poaps) {
-        console.error("Error getting POAPs for address", provider.address);
-        return;
-      }
-      updatePoaps(poaps);
-    }
-  }
+  // async function getEvents() {
+  //   if (provider && provider.address) {
+  //     const events = await getAllEventsService();
+  //     await getAllPoapsService();
+  //     updateEvents(events);
+  //     const poaps = await getOwnerPoapsService(provider.address);
+  //     if (!poaps) {
+  //       console.error("Error getting POAPs for address", provider.address);
+  //       return;
+  //     }
+  //     updatePoaps(poaps);
+  //   }
+  // }
 
   // Set up data synchronization
   useEffect(() => {

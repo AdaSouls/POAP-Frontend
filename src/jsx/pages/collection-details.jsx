@@ -39,18 +39,10 @@ const Collection = () => {
       dispatch({ type: 'VIEW_TOKEN', payload: getToken });
     }; 
 
-    const showCardanoWallet = () => {
-        dispatch({
-          type: 'SHOW_CARDANO_WALLET'
-        });
-    };
-
     const burnSoulToken = async (token) => {
         const provider = wallet.provider;
-        const addr = wallet.address;
 
         const { collectionId, policy, policyId, redeem, mint, invited } = collection;
-        const signerKey = wallet.utils.getAddressDetails(addr).paymentCredential.hash;
         const utxo = (await provider.wallet.getUtxos())[0];
         const tokenUtxo = token.claimUtxo || token.mintUtxo;
         const signatures = invited.reduce((dict, sig) => ({...dict, [sig.keyHash]: sig.signature}), {});

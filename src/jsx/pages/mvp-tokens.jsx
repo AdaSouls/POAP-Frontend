@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
@@ -11,13 +11,7 @@ const MVPTokens = () => {
   const [selectedToken, setSelectedToken] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (provider && provider.address) {
-      loadTokens();
-    }
-  }, [provider]);
-
-  const loadTokens = async () => {
+  const loadTokens = useCallback(async () => {
     try {
       setLoading(true);
       const tokensData = await mvpSmartContractService.getUserTokens(provider.address);
@@ -27,7 +21,13 @@ const MVPTokens = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [provider?.address]);
+
+  useEffect(() => {
+    if (provider && provider.address) {
+      loadTokens();
+    }
+  }, [provider, loadTokens]);
 
   const handleViewDetails = (token) => {
     setSelectedToken(token);

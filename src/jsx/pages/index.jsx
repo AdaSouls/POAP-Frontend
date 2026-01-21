@@ -12,7 +12,6 @@ const indicators = (index) => <div className="indicator">{index + 1}</div>;
 
 const Dashboard = () => {
   const {
-    cardano: { wallet },
     ethereum: { provider },
   } = useDrawer();
   const images = [bannerWelcome, bannerWelcome];

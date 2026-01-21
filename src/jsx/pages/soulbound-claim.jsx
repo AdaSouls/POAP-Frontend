@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { getAll, getClaimableTokens, updateToken } from "../../services/collection.service";
+import { Link } from "react-router-dom";
+import { getClaimableTokens, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import walletStatus from "../../images/collections/wallet-status.png";
 import { useEffect, useState } from "react";
@@ -9,13 +9,10 @@ import tokenAikenNormal from "../../images/svg/aiken-normal.svg";
 import tokenAikenMultisig from "../../images/svg/aiken-multisig.svg";
 import tokenSoulNormal from "../../images/svg/soul-normal.svg";
 import tokenSoulMultisig from "../../images/svg/soul-multisig.svg";
-import collectionOwnerIcon from "../../icons/svg/collection-owner.svg";
 
 const SoulboundClaim = () => {
     const { cardano: { wallet } } = useDrawer();
     const dispatch = useDrawerDispatch();
-    const navigate = useNavigate();
-    const location = useLocation();
 
     const [tokens, setTokens] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,7 +25,6 @@ const SoulboundClaim = () => {
 
     const claimSoulToken = async (token) => {
       const provider = wallet.provider;
-      const addr = wallet.address;
   
       const { collectionId, policyId, policyHash, smartContract, redeem } = token.collection;
       const beneficiary = wallet.utils.getAddressDetails(token.beneficiary).paymentCredential.hash;

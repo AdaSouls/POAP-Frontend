@@ -6,7 +6,6 @@ import { checkEventsMintedByAddress } from "../../utils/poapContractInteractions
 
 const ClaimMint = () => {
   const {
-    ethereum: { provider },
     poapEvents,
     poapCollection
   } = useDrawer();

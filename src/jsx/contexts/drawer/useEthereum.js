@@ -137,7 +137,7 @@ const useEthereum = () => {
     console.log("🚀 ~ setProvider ~ newWalletState:", newWalletState);
     setCurrentProvider(newWalletState);
     return newWalletState;
-  }, [DESIRED_CHAIN_PARAMS]);
+  }, []);
 
   const value = useMemo(
     () => ({

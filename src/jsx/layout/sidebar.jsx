@@ -1,23 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import homeIcon from "../../icons/menu/home.png";
-import searchIcon from "../../icons/menu/search.png";
-import soulsIconActive from "../../icons/menu/souls-active.png";
 import walletIconActive from "../../icons/menu/wallet-active.png";
-import soulsIconInactive from "../../icons/menu/souls-inactive.png";
 import walletIconInactive from "../../icons/menu/wallet-inactive.png";
-// import settingsIcon from "../../icons/menu/settings.png";
-import adaSoulsIconActive from "../../icons/menu/ada-souls-active.png";
-import adaSoulsIconInactive from "../../icons/menu/ada-souls-inactive.png";
 import poapIconActive from "../../icons/svg/poap-active.svg";
 import poapIconInactive from "../../icons/svg/poap-inactive.svg";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
-import collectionOwnerIconActive from "../../icons/svg/collection-owner.svg";
-import collectionOwnerIconInactive from "../../icons/svg/collection-owner.svg";
-import collectionInvitedIconActive from "../../icons/svg/collection-invited.svg";
-import collectionInvitedIconInactive from "../../icons/svg/collection-invited.svg";
-import manageUsersIconActive from "../../icons/svg/collection-multisig.svg";
 
 const Sidebar = ({ activeMenu }) => {
   const { cardano, ethereum } = useDrawer(); 

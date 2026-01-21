@@ -12,7 +12,7 @@ import {
 
 const MVPCreateEvent = () => {
   const { ethereum: { provider } } = useDrawer();
-  const { issuerId, isIssuer, isLoading } = useUserRoles();
+  const { issuerId } = useUserRoles();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -31,7 +31,7 @@ const MVPCreateEvent = () => {
         issuerId: issuerId.toString()
       }));
     }
-  }, [issuerId]);
+  }, [issuerId, formData.issuerId]);
 
   // Auto-populate eventOrganizer with wallet address
   useEffect(() => {
@@ -41,7 +41,7 @@ const MVPCreateEvent = () => {
         eventOrganizer: provider.address
       }));
     }
-  }, [provider?.address]);
+  }, [provider?.address, formData.eventOrganizer]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

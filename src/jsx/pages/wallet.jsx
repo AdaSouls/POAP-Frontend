@@ -1,23 +1,13 @@
-import React, { useEffect } from "react";
+import React from "react";
 import Layout from "../layout/layout";
-import eternlWallet from "../../images/wallets/eternl.jpg";
-import { Link } from "react-router-dom";
 import {
   useDrawer,
   useDrawerDispatch,
 } from "../contexts/drawer/drawer.provider";
-import PoapCollection from "../components/poapCollection";
-import PoapIssuerDetails from "../components/poapIssuerDetails";
 
 const Wallet = () => {
-  const { cardano, ethereum, poapEvents, poapCollection } = useDrawer();
+  const { ethereum } = useDrawer();
   const dispatch = useDrawerDispatch();
-
-  const showCardanoWallet = () => {
-    dispatch({
-      type: "SHOW_CARDANO_WALLET",
-    });
-  };
 
   const showEthereumWallet = () => {
     dispatch({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
@@ -12,7 +12,7 @@ import {
 
 const MVPMangeMinters = () => {
   const { ethereum: { provider } } = useDrawer();
-  const { isIssuer, issuerId, isInitialized, isLoading } = useUserRoles();
+  const { isIssuer, issuerId, isLoading } = useUserRoles();
   const [searchParams] = useSearchParams();
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -24,22 +24,37 @@ const MVPMangeMinters = () => {
 
   const eventIdFromUrl = searchParams.get('eventId');
 
-  useEffect(() => {
-    if (provider && provider.address) {
-      initializeService();
+  const loadMinters = useCallback(async (eventId) => {
+    try {
+      // Note: This would need to be implemented in the smart contract service
+      // For now, we'll show a placeholder
+      setMinters([]);
+    } catch (error) {
+      console.error("Failed to load minters:", error);
     }
-  }, [provider]);
+  }, []);
 
-  const initializeService = async () => {
+  const loadEvents = useCallback(async () => {
+    try {
+      const eventsData = await mvpSmartContractService.getOrganizerEvents(provider.address);
+      setEvents(eventsData);
+      return eventsData;
+    } catch (error) {
+      console.error("Failed to load events:", error);
+      return [];
+    }
+  }, [provider?.address]);
+
+  const initializeService = useCallback(async () => {
     try {
       setLoading(true);
       if (isIssuer) {
-        await loadEvents();
+        const eventsData = await loadEvents();
         
         // If eventId is provided in URL, select that event
         if (eventIdFromUrl) {
           const eventId = parseInt(eventIdFromUrl);
-          const event = events.find(e => e.eventId === eventId);
+          const event = eventsData.find(e => e.eventId === eventId);
           if (event) {
             setSelectedEvent(event);
             await loadMinters(eventId);
@@ -51,26 +66,13 @@ const MVPMangeMinters = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isIssuer, loadEvents, eventIdFromUrl, loadMinters]);
 
-  const loadEvents = async () => {
-    try {
-      const eventsData = await mvpSmartContractService.getOrganizerEvents(provider.address);
-      setEvents(eventsData);
-    } catch (error) {
-      console.error("Failed to load events:", error);
+  useEffect(() => {
+    if (provider && provider.address) {
+      initializeService();
     }
-  };
-
-  const loadMinters = async (eventId) => {
-    try {
-      // Note: This would need to be implemented in the smart contract service
-      // For now, we'll show a placeholder
-      setMinters([]);
-    } catch (error) {
-      console.error("Failed to load minters:", error);
-    }
-  };
+  }, [provider, initializeService]);
 
   const handleEventChange = (e) => {
     const eventId = parseInt(e.target.value);

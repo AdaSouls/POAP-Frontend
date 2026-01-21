@@ -2,36 +2,15 @@ import {
   useDrawer,
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
-import collectionMultisigImage from "../../../images/svg/collection-multisig.svg";
-import tokenSoulMultisig from "../../../images/svg/soul-multisig.svg";
-import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
-import { mintToken } from "../../../utils/poapContractInteractions";
-import { isPoapMintable } from "../../../utils/mitableChecks";
-import { Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import {
-  createOwnerService,
-  getOwnerPoapsService,
-} from "../../../services/paima.service";
 import EventBody from "../../components/eventBody";
-import { 
-  succesfullMessage, 
-  errorFunction, 
-  loadingFunction 
-} from "../../toasts/sweetAlerts";
-import { useState } from "react";
-import dataSyncService from "../../../services/dataSync.service";
 
 export default function ViewEvent() {
   const {
     event,
-    ethereum: { provider },
-    poapEvents,
-    poapOwner,
   } = useDrawer();
   const dispatch = useDrawerDispatch();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
 
   const closeDrawer = () => {
     dispatch({
@@ -39,141 +18,6 @@ export default function ViewEvent() {
     });
   };
 
-  const showEthereumWallet = () => {
-    dispatch({
-      type: "SHOW_ETHEREUM_WALLET",
-    });
-  };
-
-  const updatePoaps = (poaps) => {
-    dispatch({
-      type: "UPDATE_POAPS",
-      payload: poaps,
-    });
-  };
-
-  const updateOwner = (owner) => {
-    dispatch({
-      type: "UPDATE_OWNER",
-      payload: owner,
-    });
-  };
-
-  // Check if minting is possible based on available supply
-  const canMintEvent = () => {
-    const evt = event.event;
-    if (!evt) return false;
-    
-    // Check if expired
-    if (evt.expiration && evt.expiration > 0) {
-      const expirationTime = evt.expiration * 1000;
-      if (expirationTime <= Date.now()) {
-        return false;
-      }
-    }
-    
-    // Check if event has started
-    if (evt.eventStartDate && evt.eventStartDate > 0) {
-      const startTime = evt.eventStartDate * 1000;
-      if (startTime > Date.now()) {
-        return false;
-      }
-    }
-    
-    // Check available supply
-    const totalSupply = evt.totalSupply !== undefined ? evt.totalSupply : 
-                       (evt.mintedPoaps !== undefined ? evt.mintedPoaps : 0);
-    const maxSupply = evt.maxSupply || evt.poapsToBeMinted || 0;
-    const available = maxSupply - totalSupply;
-    
-    return available > 0;
-  };
-
-  const mintPoap = async (issuerId, eventId) => {
-    // Check if minting is possible
-    if (!canMintEvent()) {
-      errorFunction(
-        "Cannot Mint",
-        "This event has no available tokens for minting. All tokens have been minted or the event is not available.",
-        ""
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Step 1: Create owner if doesn't exist
-      if (!poapOwner) {
-        console.log("🚀 ~ mintPoap ~ poapOwner:", poapOwner);
-        loadingFunction("Creating Owner", "Setting up your account...", "");
-        
-        const newOwner = await createOwnerService({
-          address: provider.address.toLowerCase(),
-        });
-        console.log("🚀 ~ mintPoap ~ newOwner:", newOwner);
-        
-        if (!newOwner) {
-          errorFunction(
-            "Error",
-            "Failed to create owner account. Please try again.",
-            ""
-          );
-          return;
-        }
-        
-        console.log("🚀 ~ mintPoap ~ updating owner context");
-        updateOwner(newOwner);
-      }
-
-      // Step 2: Mint POAP token on blockchain
-      loadingFunction("Minting POAP", "Minting your POAP token...", "");
-      const minting = await mintToken(
-        issuerId,
-        eventId,
-        provider.address,
-        provider
-      );
-      console.log("🚀 ~ mintPoap ~ minting:", minting);
-      
-      if (!minting) {
-        errorFunction(
-          "Error",
-          "Failed to mint POAP token. Please try again.",
-          ""
-        );
-        return;
-      }
-
-      // Step 3: Refresh POAPs list using data sync service
-      try {
-        await dataSyncService.refreshPoaps(updatePoaps);
-      } catch (error) {
-        console.error("Error refreshing POAPs:", error);
-      }
-
-      succesfullMessage(
-        "POAP Minted Successfully",
-        "Your POAP has been minted and added to your collection."
-      );
-      
-      closeDrawer();
-    } catch (error) {
-      console.error("Error minting POAP:", error);
-      errorFunction(
-        "Error",
-        "An error occurred while minting the POAP. Please try again.",
-        ""
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper function to check if a value should be displayed
-  const hasValue = (value) => {
-    return value !== null && value !== undefined && value !== "";
-  };
 
   return (
     <div className="container absolute top-0 start-0 w-100 h-100 p-3 overflow-auto">
@@ -196,28 +40,6 @@ export default function ViewEvent() {
 
       <div className="drawer-footer">
         <div className="d-flex justify-content-center">
-          {/* <Button
-            className="btn btn-gradient btn-block"
-            onClick={() => {
-              if (!provider?.address) {
-                showEthereumWallet();
-              } else {
-                mintPoap(
-                  event.event.issuerId,
-                  event.event.eventId
-                );
-              }
-            }}
-            disabled={loading || (!provider?.address ? false : !isPoapMintable(event.event))}
-          >
-            {loading
-              ? "Minting..."
-              : !provider?.address
-              ? "Connect to wallet"
-              : isPoapMintable(event.event)
-              ? "Mint Poap"
-              : "Already Minted"}
-          </Button> */}
           <button 
             className="btn btn-gradient btn-block"
             onClick={() => {

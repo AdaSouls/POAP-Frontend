@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { mvpSmartContractService } from "../../services/mvp-smart-contract.service";
@@ -24,21 +24,11 @@ const MVPMintToken = () => {
     to: "",
   });
 
-  useEffect(() => {
-    if (provider && provider.address) {
-      mvpSmartContractService.testContract().then(console.log);
-      loadEvents();
-      setFormData(prev => ({
-        ...prev,
-        to: provider.address
-      }));
-    }
-  }, [provider]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoadingEvents(true);
       setDebugInfo("Loading events...");
+      console.log("debugInfo", debugInfo);
       
       // Check if service is initialized
       if (!mvpSmartContractService.contract) {
@@ -63,7 +53,18 @@ const MVPMintToken = () => {
     } finally {
       setLoadingEvents(false);
     }
-  };
+  }, [debugInfo]);
+
+  useEffect(() => {
+    if (provider && provider.address) {
+      mvpSmartContractService.testContract().then(console.log);
+      loadEvents();
+      setFormData(prev => ({
+        ...prev,
+        to: provider.address
+      }));
+    }
+  }, [provider, loadEvents]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

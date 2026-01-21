@@ -401,12 +401,6 @@ export class MVPSmartContractService {
         name: providerRPC.name,
       });
       
-      const staticContract = new ethers.Contract(
-        POAP_CONTRACT_ADDRESS,
-        POAP_CONTRACT_ABI,
-        staticProvider
-      );
-      
       // Check if contract exists
       const code = await staticProvider.getCode(POAP_CONTRACT_ADDRESS);
       
@@ -416,11 +410,11 @@ export class MVPSmartContractService {
       }
       
       // Try to get total supply
-      try {
-        const totalSupply = await staticContract.totalSupply();
-      } catch (error) {
-        console.error("Failed to get total supply:", error);
-      }
+      // try {
+      //   const totalSupply = await staticContract.totalSupply();
+      // } catch (error) {
+      //   console.error("Failed to get total supply:", error);
+      // }
       
       return true;
     } catch (error) {

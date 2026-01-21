@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
@@ -7,20 +7,14 @@ import EventDetailsModal from "../components/EventDetailsModal";
 
 const MVPEvents = () => {
   const { ethereum: { provider } } = useDrawer();
-  const { userRoles, isIssuer } = useUserRoles();
+  const { userRoles } = useUserRoles();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('all'); // 'all', 'organizer', 'attendee'
 
-  useEffect(() => {
-    if (provider && provider.address) {
-      loadEvents();
-    }
-  }, [viewMode, provider]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true);
       let eventsData = [];
@@ -42,7 +36,13 @@ const MVPEvents = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewMode, provider?.address]);
+
+  useEffect(() => {
+    if (provider && provider.address) {
+      loadEvents();
+    }
+  }, [viewMode, provider, loadEvents]);
 
   const handleViewDetails = (event) => {
     setSelectedEvent(event);
