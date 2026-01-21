@@ -62,16 +62,20 @@ export default function CreatePoap() {
   useEffect(() => {
     if (events.length > 0) {
       const eventIdFromUrl = searchParams.get('eventId');
-      
       if (eventIdFromUrl && !selectedEvent) {
-        const eventFromUrl = events.find(evt => evt.eventId === eventIdFromUrl);
-        if (eventFromUrl) {
-          console.log("🚀 ~ URL Event Selection ~ eventFromUrl:", eventFromUrl);
-          handleEventSelect(eventFromUrl);
+        const eventIdNumber = Number(eventIdFromUrl);
+        if (!isNaN(eventIdNumber)) {
+          const eventFromUrl = events.find(evt => evt.eventId === eventIdNumber);
+          if (eventFromUrl) {
+            console.log("🚀 ~ URL Event Selection ~ eventFromUrl:", eventFromUrl);
+            handleEventSelect(eventFromUrl);
+          }
+        } else {
+          console.log("🚀 ~ Invalid eventId in URL:", eventIdFromUrl);
         }
       }
     }
-  }, [events, selectedEvent, searchParams, handleEventSelect]);
+  }, [events, searchParams, selectedEvent, handleEventSelect]);
 
   // Reset image loading state when event changes
   useEffect(() => {
@@ -421,7 +425,7 @@ export default function CreatePoap() {
               value={formData.eventId}
               onChange={(e) => {
                 const eventId = e.target.value;
-                const selectedEvent = events.find(evt => evt.eventId === eventId);
+                const selectedEvent = events.find(evt => evt.eventId.toString() === eventId);
                 handleEventSelect(selectedEvent);
               }}
               required
