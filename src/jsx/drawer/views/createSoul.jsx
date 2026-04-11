@@ -1,18 +1,14 @@
 import React from 'react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, InputGroup } from 'react-bootstrap';
-import { buildCollectionContracts, buildPolicy, generateNonce, getAddressPaymentKeyHash, getStakeAddress, readValidators } from '../../../utils/util';
-import { insert } from '../../../services/collection.service';
+import { getStakeAddress, readValidators } from '../../../utils/util';
 
 export default function CreateSoul() {
   const { cardano: { wallet } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
-  const [event, setEvent] = useState(false);
-  const [streamer, setStreamer] = useState(false);
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [description, setDescription] = useState('');
@@ -42,7 +38,7 @@ export default function CreateSoul() {
 
   const handleRemoveSigner = (index) => {
     const newSigners = signers.filter((_, i) => i !== index);
-    if (newSigners.length == 0) {
+    if (newSigners.length === 0) {
       setSigners(['']);
       setMultisig(false);
     } else {
@@ -63,7 +59,6 @@ export default function CreateSoul() {
 
     // Create collection SC
     const validators = readValidators();
-    console.log('Validators', validators);
 
     const addr = wallet.address;
     const ownerDetails = wallet.utils.getAddressDetails(addr);
@@ -84,12 +79,8 @@ export default function CreateSoul() {
       }
       keys.push(...keyHashes);
     }
-    const policy = buildPolicy('all', { signers: keys});
-
-    const collection = buildCollectionContracts(validators.mint.script, validators.redeem.script, wallet.utils, policy);
-    const { collectionId } = await insert(owner, { ...collection, name, symbol, description, owner, policy, invited, aikenCourse });
+    
     closeDrawer();
-    // navigate(`/collection/${collectionId}`);
     navigate(`/collections/souls`);
   };
   
@@ -119,7 +110,6 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Name</label> */}
               <input
-                required
                 type="text"
                 className="form-control"
                 placeholder="Name"
@@ -131,7 +121,6 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Symbol</label> */}
               <input
-                required
                 type="text"
                 className="form-control"
                 placeholder="Symbol"
@@ -143,7 +132,6 @@ export default function CreateSoul() {
             <div className="col-12">
               {/* <label className="form-label">Description</label> */}
               <input
-                required
                 type="text"
                 className="form-control"
                 placeholder="Description"
@@ -154,7 +142,7 @@ export default function CreateSoul() {
             </div>
             <div className="col-12">
               {/* <label className="form-label">Type</label> */}
-              <select required className="form-select" onChange={(event) => setMultisig(event.target.value == 'multisig')}>
+              <select className="form-select" onChange={(event) => setMultisig(event.target.value === 'multisig')}>
                 <option value="">Choose a Type...</option>
                 <option value="normal">Normal</option>
                 <option value="multisig">Multisig</option>

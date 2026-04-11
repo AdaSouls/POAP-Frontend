@@ -1,13 +1,13 @@
 import React from "react";
-import Dropdown from "react-bootstrap/Dropdown";
+// import Dropdown from "react-bootstrap/Dropdown";
 import { Link } from "react-router-dom";
 import loadingGif from "../../images/loading.gif";
 import logo from "../../images/logo.png";
 
 const Header = () => {
-  const onClick = (value) => {
-    document.querySelector("body").classList.toggle("dark-theme");
-  };
+  // const onClick = (value) => {
+  //   document.querySelector("body").classList.toggle("dark-theme");
+  // };
 
   return (
     <div className="header">
