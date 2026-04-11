@@ -72,7 +72,7 @@ export default function CreateSoulToken() {
       const txSigned = await txComplete.complete();
 
       const txHash = await txSigned.submit();
-      const success = await provider.awaitTx(txHash);
+      await provider.awaitTx(txHash);
 
       const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata });
       collection.tokens.push(token);

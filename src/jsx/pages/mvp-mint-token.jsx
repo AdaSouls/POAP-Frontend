@@ -52,11 +52,12 @@ const MVPMintToken = () => {
     } finally {
       setLoadingEvents(false);
     }
-  }, [debugInfo]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (provider && provider.address) {
-      mvpSmartContractService.testContract().then(console.log);
+      mvpSmartContractService.testContract();
       loadEvents();
       setFormData(prev => ({
         ...prev,

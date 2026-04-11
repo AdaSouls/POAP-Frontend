@@ -73,7 +73,7 @@ const useEthereum = () => {
 
     try {
       // 1. Request account access
-      const accounts = await window.ethereum.request({
+      await window.ethereum.request({
         method: "eth_requestAccounts",
       });
 
