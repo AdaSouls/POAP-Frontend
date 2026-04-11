@@ -1,7 +1,7 @@
 import React from "react";
 // import Dropdown from "react-bootstrap/Dropdown";
 import { Link } from "react-router-dom";
-import loadingGif from "../../images/loading.gif";
+
 import logo from "../../images/logo.png";
 
 const Header = () => {
@@ -21,20 +21,9 @@ const Header = () => {
                     <img src={logo} alt="" />
                     <span>AdaSouls</span>
                   </Link>
-                </div>                
+                </div>
               </div>
-              <div className="header-right">
-                {/* {globalLoading.length &&
-                  <div className="dark-light-toggle">
-                    <span className="dark">
-                      <img
-                      src={loadingGif}
-                      width="24"
-                      height="24"
-                      />
-                    </span>                  
-                  </div>                
-                } */}
+{/*               <div className="header-right">
                 <div className="dark-light-toggle" onClick={() => onClick()}>
                   <span className="dark">
                     <i className="icofont-moon"></i>
@@ -42,8 +31,8 @@ const Header = () => {
                   <span className="light">
                     <i className="icofont-sun-alt"></i>
                   </span>
-                </div>                
-                {/* <Dropdown className="notification pr-0 mr-0">
+                </div>
+                <Dropdown className="notification">
                   <Dropdown.Toggle>
                     <div className="notify-bell" data-toggle="dropdown">
                       <span>
@@ -55,7 +44,7 @@ const Header = () => {
                     className="notification-list mt-4"
                     align={"right"}
                   >
-                    <h4>Notifications</h4>
+                    <h4>Announcements</h4>
                     <div className="lists">
                       <Link to={"#"} className="">
                         <div className="d-flex align-items-center">
@@ -81,12 +70,8 @@ const Header = () => {
                       </Link>
                       <Link to={"#"} className="">
                         <div className="d-flex align-items-center">
-                          <span className="mr-3 icon loading">
-                          <img
-                            src={loadingGif}
-                            width="24"
-                            height="24"
-                          />
+                          <span className="mr-3 icon success">
+                            <i className="icofont-check"></i>
                           </span>
                           <div>
                             <p>Device confirmation completed</p>
@@ -106,11 +91,13 @@ const Header = () => {
                         </div>
                       </Link>
 
-                      
+                      <Link to={"./settings-activity"}>
+                        More <i className="icofont-simple-right"></i>
+                      </Link>
                     </div>
                   </Dropdown.Menu>
-                </Dropdown> */}
-              </div>
+                </Dropdown>
+              </div> */}
             </div>
           </div>
         </div>
