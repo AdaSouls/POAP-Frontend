@@ -269,6 +269,11 @@ export const buildCollectionContracts = (mint_script: string, redeem_script: str
     };
 }
 
+export function getMaxUtxo(utxos: UTxO[]): UTxO {
+    return utxos.reduce((maxItem, currentItem) =>
+        currentItem.assets.lovelace > maxItem.assets.lovelace ? currentItem : maxItem
+    );
+}
 
 export const mintToken = async (tokenName: string, metadata: any, policyId: string, policyHash: string, beneficiary: string, signatures: {[key: string]: string}, smartContract: string, mint: MintingPolicy, utxo: UTxO, lucid: Lucid): Promise<{ txComplete: TxComplete, mintUtxo: UTxO }> => {
     const lovelace = 1_000_000;
