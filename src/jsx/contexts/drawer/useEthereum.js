@@ -76,29 +76,20 @@ const useEthereum = () => {
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      console.log("Connected accounts:", accounts);
 
       // 2. Get the current chainId
       const currentChainId = await window.ethereum.request({
         method: "eth_chainId",
       });
-      console.log("Current chainId:", currentChainId);
       const DESIRED_CHAIN_ID_CHECK = "0x13882";
       // 3. Check if the current chainId matches the desired one
       if (currentChainId !== DESIRED_CHAIN_ID_CHECK) {
         // 4. Attempt to switch to the desired network
-        console.log("Switching to the desired network...");
         await window.ethereum.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: DESIRED_CHAIN_ID_CHECK }],
         });
-        console.log(
-          "Current chainId after request switching network:",
-          currentChainId
-        );
-        console.log("Switched to desired network!");
       } else {
-        console.log("Already connected to the desired network");
       }
     } catch (error) {
       if (error.code === 4902) {
@@ -108,7 +99,6 @@ const useEthereum = () => {
             method: "wallet_addEthereumChain",
             params: [DESIRED_CHAIN_PARAMS],
           });
-          console.log("Added and switched to the desired network!");
         } catch (addError) {
           console.error("Failed to add the desired network:", addError);
         }
@@ -121,7 +111,6 @@ const useEthereum = () => {
     // const api = new ethers.BrowserProvider(window.ethereum, "any", { chainId: DESIRED_CHAIN_ID });
     const networkId = await api.getNetwork();
     const signer = await api.getSigner();
-    console.log("🚀 ~ setProvider ~ signer:", signer);
     const address = await signer.getAddress();
     // const balance = api.getBalance(address);
     // const balanceFormated = formatEther(balance);
@@ -134,7 +123,6 @@ const useEthereum = () => {
       chainId: networkId.chainId,
       // balanceFormated: balanceFormated ? balanceFormated : 0,
     };
-    console.log("🚀 ~ setProvider ~ newWalletState:", newWalletState);
     setCurrentProvider(newWalletState);
     return newWalletState;
   }, []);

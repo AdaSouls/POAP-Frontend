@@ -74,7 +74,6 @@ const Collections = () => {
     const invitation = getInvitation(collection);
     const { addr, user } = invitation;
     const message = getSigningMessage(collection.policyHash);
-    console.log('Address', wallet.address, addr);
     const signature = await wallet.api.signData(addr, message);
     const coseSig = buildSignature(addr, message, signature);
     const col = await sign(collection.collectionId, user, coseSig);
@@ -125,7 +124,7 @@ const Collections = () => {
         <div className="row">
           <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
             <div className="card card-create bg-soulbound card-classic">
-              <div className="card-body card-classic-max-height" onClick={wallet ? createSoul : console.log("alert! wallect connect")} >
+              <div className="card-body card-classic-max-height" onClick={wallet ? createSoul : undefined} >
                 <h4>CREATE <span> SOUL COLLECTION</span></h4>               
                 <div className={(wallet ? "plus-button" : "axis-button")+" align-content-center"} >
                   <div></div><div></div>
@@ -147,7 +146,6 @@ const Collections = () => {
           </div>
         {wallet && (
           collections.map(c => {
-            console.log(c);
             return (
               <div key={c.collectionId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
                 <div className={ (c.invited.length === 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>
@@ -218,7 +216,6 @@ const Collections = () => {
         )}
         {wallet && (
           invitedCollections.map(c => {
-            console.log(c);
             return (
               <div key={c.collectionId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
                 <div className={ (c.invited.length === 1 ? (c.aikenCourse ? ("bg-collection-aiken-normal"):("bg-collection-normal")) : (c.aikenCourse ? ("bg-collection-aiken-multisig"):("bg-collection-multisig")))+" card card-collection card-classic" }>

@@ -59,7 +59,6 @@ export default function CreateSoul() {
 
     // Create collection SC
     const validators = readValidators();
-    console.log('Validators', validators);
 
     const addr = wallet.address;
     const ownerDetails = wallet.utils.getAddressDetails(addr);

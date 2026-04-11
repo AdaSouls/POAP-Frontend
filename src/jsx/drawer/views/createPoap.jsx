@@ -49,7 +49,6 @@ export default function CreatePoap() {
   }, [event, provider]);
 
   const handleEventSelect = useCallback((selectedEvent) => {
-    console.log("🚀 ~ handleEventSelect ~ selectedEvent:", selectedEvent);
     setSelectedEvent(selectedEvent);
     setFormData({
       eventId: selectedEvent.eventId,
@@ -67,11 +66,9 @@ export default function CreatePoap() {
         if (!isNaN(eventIdNumber)) {
           const eventFromUrl = events.find(evt => evt.eventId === eventIdNumber);
           if (eventFromUrl) {
-            console.log("🚀 ~ URL Event Selection ~ eventFromUrl:", eventFromUrl);
             handleEventSelect(eventFromUrl);
           }
         } else {
-          console.log("🚀 ~ Invalid eventId in URL:", eventIdFromUrl);
         }
       }
     }
@@ -88,7 +85,6 @@ export default function CreatePoap() {
   const loadEvents = async () => {
     try {
       const allEvents = await getAllEventsService();
-      console.log("🚀 ~ loadEvents ~ allEvents:", allEvents);
       setEvents(allEvents);
     } catch (error) {
       console.error("Error loading events:", error);

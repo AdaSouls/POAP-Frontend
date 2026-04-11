@@ -50,7 +50,6 @@ const PoapManagement = () => {
         // Get user's POAPs
         const userPoaps = await getUserPoaps(provider.address);
         // Use POAPs from context if available
-        console.log("🚀 ~ fetchPoaps ~ userPoaps:", userPoaps);
         setMyPoaps(userPoaps);
         // if (poapCollection && poapCollection.length > 0) {
         //   setPoaps(poapCollection);
@@ -115,7 +114,7 @@ const PoapManagement = () => {
           {/* CREATE POAP CARD */}
           <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
             <div className="card card-create bg-poap card-classic">
-              <div className="card-body card-classic-max-height" onClick={provider ? createPoap : console.log("alert! wallet connect")}>
+              <div className="card-body card-classic-max-height" onClick={provider ? createPoap : undefined}>
                 <h4>CREATE <span> POAP</span></h4>               
                 <div className={(provider ? "plus-button" : "axis-button")+" align-content-center"} >
                   <div></div><div></div>

@@ -66,7 +66,6 @@ const EventDetailsModal = ({ event, isOpen, onClose }) => {
               className="btn btn-primary"
               onClick={() => {
                 // Add mint functionality here if needed
-                console.log('Mint token for event:', event.eventId);
               }}
               disabled={event.isExpired || event.available <= 0}
             >

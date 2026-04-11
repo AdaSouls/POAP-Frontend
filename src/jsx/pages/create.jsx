@@ -28,10 +28,6 @@ const Create = () => {
 
   const createEvent = async () => {
     if (provider && poapIssuer === null) {
-      console.log(
-        "🚀 ~ createEvent ~ poapIssuer === null:",
-        poapIssuer === null
-      );
       const issuer = await getIssuerByAddressService(
         provider.address.toLowerCase()
       );
@@ -70,7 +66,6 @@ const Create = () => {
   }, [dispatch]);
 
   const updateEvents = useCallback((events) => {
-    console.log("updating events in context:", events)
     dispatch({
       type: "UPDATE_EVENTS",
       payload: events,
@@ -93,10 +88,6 @@ const Create = () => {
 
   const updateIssuersEvents = useCallback(() => {
     if (provider && poapEvents?.length > 0) {
-      console.log(
-        "🚀 ~ updateIssuersEvents ~ poapEvents.length:",
-        poapEvents.length
-      );
       const ownersEvents = poapEvents.filter((event) => {
         return (
           // event?.issuerUuid === poapIssuer?.issuerUuid &&
@@ -104,7 +95,6 @@ const Create = () => {
           event?.issuerId === poapIssuer?.issuerId
         );
       });
-      console.log("🚀 ~ ownersEvents ~ ownersEvents:", ownersEvents);
       setAddressEvents(ownersEvents);
     }
   }, [provider, poapEvents, poapIssuer]);
@@ -174,7 +164,6 @@ const Create = () => {
   }, [provider, fetchIssuer, fetchOwner, getOwnerPoaps, updateEvents, updatePoaps]);
 
   useEffect(() => {
-    console.log("Inside useEffect for fetching address events");
     updateIssuersEvents();
   }, [updateIssuersEvents]);
 

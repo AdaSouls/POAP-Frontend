@@ -47,16 +47,13 @@ const Collection = () => {
         const tokenUtxo = token.claimUtxo || token.mintUtxo;
         const signatures = invited.reduce((dict, sig) => ({...dict, [sig.keyHash]: sig.signature}), {});
         const txSigned = await burnToken(token.name, policy, policyId, signatures, mint, redeem, tokenUtxo, utxo, provider);
-        console.log('Tx Cbor:', txSigned.toString());
         const txId = txSigned.toHash();
         await updateToken(collectionId, token.soulboundId, { burnTx: txId });
         const updatedCollection = await get(collectionId, wallet.stake_address);
         setCollection(updatedCollection);
 
         await txSigned.submit();
-        console.log('Tx Id:', txId);
         const success = await provider.awaitTx(txId);
-        console.log('Success?', success);
     }
 
     useEffect(() => {
@@ -231,7 +228,6 @@ const Collection = () => {
                   {/* TOKEN */}
                   { collection && (
                       collection.tokens.map(t => {
-                        console.log(t);
                         return (
                           <div key={t.soulboundId} className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6 card-token-select">
                             <div className="card card-small">

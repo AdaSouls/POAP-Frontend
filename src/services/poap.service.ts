@@ -62,7 +62,7 @@ export interface IPoapEvent {
 
 export async function getUserPoaps(ownerAddress: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/owner_poaps?walletAddress=${ownerAddress}`, {
+    const response = await fetch(`${API_BASE_URL}/owner_poaps?ownerAddress=${ownerAddress}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

@@ -63,7 +63,6 @@ export default function CreateIssuer() {
         "Issuer created successfully",
         "You can now create POAP events."
       );
-      console.log("Created issuer on DB", createdIssuerOnDB);
       closeDrawer();
     } catch (error) {
       console.error("Error creating issuer:", error);

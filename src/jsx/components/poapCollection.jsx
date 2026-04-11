@@ -42,7 +42,6 @@ const PoapCollection = () => {
         const poaps = await getOwnerPoapsService(
           provider.address.toLowerCase()
         );
-        console.log("🚀 ~ fetchData ~ poaps:", poaps);
         const owner = await getOwnerByAddressService(
           provider.address.toLowerCase()
         );

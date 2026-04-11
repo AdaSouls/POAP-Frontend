@@ -182,9 +182,6 @@ export default function CreateEvent() {
         timestamp = Math.floor(endDate.getTime() / 1000);
       }
 
-      console.log("✅ Timestamp:", timestamp);
-      console.log("✅ Event End Date:", eventEndDate);
-      console.log("✅ Event Start Date:", finalEventStartDate);
 
       // STEP 1: Store both offchain and onchain data in backend FIRST
       // Convert date format to ISO string
@@ -203,7 +200,6 @@ export default function CreateEvent() {
         startDate.setHours(0, 0, 0, 0);
         startTimeStamp = Math.floor(startDate.getTime() / 1000);
       }
-      console.log("✅ Start Time Stamp:", startTimeStamp);
 
       // Build event data object with both onchain and offchain data
       // Note: eventId is NOT included - backend will auto-generate it
@@ -220,13 +216,11 @@ export default function CreateEvent() {
         eventEndDate: convertToISO(eventEndDate) || '',
       };
 
-      console.log("✅ Storing event data in backend (offchain + onchain):", eventData);
       loadingFunction("Storing Event Data", "Saving event information...", "");
       
       // Store in backend first - this stores both offchain and onchain data
       // Backend will auto-generate eventId and return it in the response
       const storedEvent = await createEvent(eventData);
-      console.log("✅ Event stored in backend:", storedEvent);
 
       // Check if backend returned an error
       if (!storedEvent || storedEvent.error) {
@@ -238,10 +232,8 @@ export default function CreateEvent() {
       if (!generatedEventId) {
         throw new Error("Backend did not return an eventId. Event creation may have failed.");
       }
-      console.log("✅ Generated eventId from backend:", generatedEventId);
 
       // STEP 2: Generate blockchain transaction using the generated eventId
-      console.log("✅ Generating blockchain transaction with eventId:", generatedEventId);
       loadingFunction("Preparing Transaction", "Please confirm the transaction in your wallet...", "");
       
       // Generate and send transaction to blockchain with the generated eventId
@@ -262,7 +254,6 @@ export default function CreateEvent() {
         // and updates the existing database record with transaction_hash and block_number
         // No manual update needed here - the indexer handles it automatically
         
-        console.log("✅ Blockchain transaction successful. Indexer will update event metadata automatically.");
         
         closeDrawer();
         succesfullBlockchainCreation(

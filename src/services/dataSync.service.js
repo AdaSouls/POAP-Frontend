@@ -38,7 +38,6 @@ class DataSyncService {
     this.pollingIntervals.set('events', intervalId);
     this.isPolling = true;
 
-    console.log('Started events polling with interval:', intervalMs);
   }
 
   /**
@@ -68,7 +67,6 @@ class DataSyncService {
     this.pollingIntervals.set('poaps', intervalId);
     this.isPolling = true;
 
-    console.log('Started POAPs polling with interval:', intervalMs);
   }
 
   /**
@@ -79,7 +77,6 @@ class DataSyncService {
     if (intervalId) {
       clearInterval(intervalId);
       this.pollingIntervals.delete('events');
-      console.log('Stopped events polling');
     }
   }
 
@@ -91,7 +88,6 @@ class DataSyncService {
     if (intervalId) {
       clearInterval(intervalId);
       this.pollingIntervals.delete('poaps');
-      console.log('Stopped POAPs polling');
     }
   }
 
@@ -101,7 +97,6 @@ class DataSyncService {
   stopAllPolling() {
     this.pollingIntervals.forEach((intervalId, key) => {
       clearInterval(intervalId);
-      console.log(`Stopped ${key} polling`);
     });
     this.pollingIntervals.clear();
     this.isPolling = false;

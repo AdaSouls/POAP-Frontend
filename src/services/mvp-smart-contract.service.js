@@ -201,10 +201,8 @@ export class MVPSmartContractService {
             mintExpiration,
             eventOrganizer
           );
-          console.log("Gas estimate:", gasEstimate.toString());
         } catch (estimateError) {
           // Extract revert reason from gas estimation error
-          console.log("🚀 ~ MVPSmartContractService ~ createEvent ~ estimateError:", estimateError);
           const revertReason = this.extractRevertReason(estimateError);
           throw new Error(revertReason || "Transaction would fail. Please check your permissions and event parameters.");
         }
@@ -265,7 +263,6 @@ export class MVPSmartContractService {
     
     // Check error message for revert reason
     const errorMessage = error.message || error.toString();
-    console.log("🚀 ~ MVPSmartContractService ~ extractRevertReason ~ errorMessage:", errorMessage);
     
     // Common revert reasons to look for
     if (errorMessage.includes("onlyAdmin") || errorMessage.includes("AccessControl")) {
@@ -357,10 +354,8 @@ export class MVPSmartContractService {
             eventId,
             to
           );
-          console.log("Gas estimate:", gasEstimate.toString());
         } catch (estimateError) {
           // Extract revert reason from gas estimation error
-          console.log("🚀 ~ MVPSmartContractService ~ mintToken ~ estimateError:", estimateError);
           const revertReason = this.extractRevertReason(estimateError);
           throw new Error(revertReason || "Transaction would fail. Please check your permissions and event parameters.");
         }

@@ -28,8 +28,7 @@ const MVPMintToken = () => {
     try {
       setLoadingEvents(true);
       setDebugInfo("Loading events...");
-      console.log("debugInfo", debugInfo);
-      
+
       // Check if service is initialized
       if (!mvpSmartContractService.contract) {
         setDebugInfo("Initializing smart contract service...");

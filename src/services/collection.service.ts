@@ -1,9 +1,8 @@
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-const CODE_MASTER = process.env.REACT_APP_API_CODE_MASTER;
 
 export async function getAll(owner: string) {
     try {
-        const response = await fetch(`${API_BASE_URL}/users/${owner}/collections?code=${CODE_MASTER}`);
+        const response = await fetch(`${API_BASE_URL}/users/${owner}/collections`);
         if (!response.ok) {
             throw new Error('Network response was not ok' + response.statusText);
         }
@@ -17,7 +16,7 @@ export async function getAll(owner: string) {
 
 export async function getAllInvited(owner: string) {
     try {
-        const response = await fetch(`${API_BASE_URL}/users/${owner}/collections/invited?code=${CODE_MASTER}`);
+        const response = await fetch(`${API_BASE_URL}/users/${owner}/collections/invited`);
         if (!response.ok) {
             throw new Error('Network response was not ok' + response.statusText);
         }
@@ -31,7 +30,7 @@ export async function getAllInvited(owner: string) {
 
 export async function get(id: string, owner?: string) {
     try {
-        const response = await fetch(`${API_BASE_URL}/collections/${id}?code=${CODE_MASTER}`);
+        const response = await fetch(`${API_BASE_URL}/collections/${id}`);
         if (!response.ok) {
             throw new Error('Network response was not ok' + response.statusText);
         }
@@ -45,7 +44,7 @@ export async function get(id: string, owner?: string) {
 
 export async function insert(owner: string, payload: any) {
     try {
-        const response = await fetch(`${API_BASE_URL}/collections/${owner}?code=${CODE_MASTER}`, {
+        const response = await fetch(`${API_BASE_URL}/collections/${owner}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -65,7 +64,7 @@ export async function insert(owner: string, payload: any) {
 
 export async function sign(collenctionId: string, owner: string, signature: string) {
     try {
-        const response = await fetch(`${API_BASE_URL}/collections/${collenctionId}/user/${owner}/sign?code=${CODE_MASTER}`, {
+        const response = await fetch(`${API_BASE_URL}/collections/${collenctionId}/user/${owner}/sign`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -85,7 +84,7 @@ export async function sign(collenctionId: string, owner: string, signature: stri
 
 export async function updateToken(collectionId: string, tokenId: string, payload: any) {
     try {
-        const response = await fetch(`${API_BASE_URL}/collections/${collectionId}/soulbounds/${tokenId}?code=${CODE_MASTER}`, {
+        const response = await fetch(`${API_BASE_URL}/collections/${collectionId}/soulbounds/${tokenId}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -106,7 +105,7 @@ export async function updateToken(collectionId: string, tokenId: string, payload
 
 export async function getClaimableTokens(userId: string) {
     try {
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/soulbounds/claimable?code=${CODE_MASTER}`);
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/soulbounds/claimable`);
         if (!response.ok) {
             throw new Error('Network response was not ok' + response.statusText);
         }

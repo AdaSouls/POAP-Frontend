@@ -177,15 +177,22 @@ The application supports:
 
 ## Contributing
 
-1. Create a feature branch
-2. Make your changes
-3. Write or update tests
-4. Ensure all tests pass
-5. Submit a pull request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Write or update tests
+5. Ensure all tests pass
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+## Environment Setup
+
+1. Copy `.env.example` to `.env`
+2. Fill in the required values (API keys, contract addresses, etc.)
+3. Never commit your `.env` file
 
 ## License
 
-This project is private and proprietary.
-
-
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

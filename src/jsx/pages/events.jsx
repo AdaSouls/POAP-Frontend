@@ -162,7 +162,7 @@ const EventsPage = () => {
           {/* CREATE EVENT CARD */}
           <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
             <div className="card card-create bg-event card-classic">
-              <div className="card-body card-classic-max-height" onClick={provider ? createEvent : console.log("alert! wallet connect")}>
+              <div className="card-body card-classic-max-height" onClick={provider ? createEvent : undefined}>
                 <h4>CREATE <span> EVENT</span></h4>               
                 <div className={(provider ? "plus-button" : "axis-button")+" align-content-center"} >
                   <div></div><div></div>

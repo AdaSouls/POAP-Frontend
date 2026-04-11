@@ -1,10 +1,8 @@
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-const CODE_MASTER = process.env.REACT_APP_API_CODE_MASTER;
-
 
 export async function addSoulbound(collectionId: string, payload: any) {
     try {
-        const response = await fetch(`${API_BASE_URL}/collections/${collectionId}/soulbounds?code=${CODE_MASTER}`, {
+        const response = await fetch(`${API_BASE_URL}/collections/${collectionId}/soulbounds`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

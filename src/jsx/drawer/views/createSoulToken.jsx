@@ -69,12 +69,9 @@ export default function CreateSoulToken() {
       const { txComplete, mintUtxo } = await mintToken(name, _metadata, policyId, policyHash, beneficiary, signatures, smartContract, mint, utxo, provider);
       // console.log(txSigned.toString());
       const txSigned = await txComplete.complete();
-      console.log('cbor', txSigned.toString());
 
       const txHash = await txSigned.submit();
-      console.log('Tx Id:', txHash);
       const success = await provider.awaitTx(txHash);
-      console.log('Success?', success);
 
       const token = await addSoulbound(collectionId, { mintUtxo, beneficiary: address, beneficiary_stake: stakeAddress, name, metadata: _metadata , aikenCourseApproved });
       collection.tokens.push(token);
@@ -84,7 +81,7 @@ export default function CreateSoulToken() {
       
     } catch (error) {
       setLoading(false);
-      console.log('Error', error);
+      console.error('Error minting token:', error);
     }
   };
   

@@ -38,7 +38,6 @@ export default function CreateOwner() {
       return;
     } else {
       updateOwner(createdOwnerOnDB);
-      console.log("Created owner on DB", createdOwnerOnDB);
     }
     closeDrawer();
   };

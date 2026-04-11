@@ -120,7 +120,6 @@ export async function createEventService(eventInfo: ICreateEventParams) {
       throw new Error("Network response was not ok" + response.statusText);
     }
     const data = await response.json();
-    console.log("🚀 ~ getAllEvents ~ data:", data);
     return data;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -139,12 +138,14 @@ export async function getIssuerByAddressService(address: string) {
         },
       }
     );
-    console.log("🚀 ~ getIssuerByAddressService ~ response:", response);
     if (!response.ok) {
+      // 400 Bad Request typically means issuer not found - return null instead of throwing
+      if (response.status === 400) {
+        return null;
+      }
       throw new Error("Network response was not ok" + response.statusText);
     }
     const { issuer } = await response.json();
-    console.log("🚀 ~ getIssuerByAddressService ~ issuer:", issuer);
     return issuer;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -165,7 +166,6 @@ export async function createIssuerService(issuerInfo: ICreateIssuerParams) {
       throw new Error("Network response was not ok" + response.statusText);
     }
     const data = await response.json();
-    console.log("🚀 ~ createIssuerService ~ data:", data);
     return data;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -186,7 +186,6 @@ export async function createOwnerService(ownerInfo: ICreateOwnerParams) {
       throw new Error("Network response was not ok" + response.statusText);
     }
     const data = await response.json();
-    console.log("🚀 ~ createOwnerService ~ data:", data);
     return data;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -197,7 +196,7 @@ export async function createOwnerService(ownerInfo: ICreateOwnerParams) {
 export async function getOwnerPoapsService(ownerAddress: string) {
   try {
     const response = await fetch(
-      `${baseUrl}/owner_poaps?walletAddress=${ownerAddress}`,
+      `${baseUrl}/owner_poaps?ownerAddress=${ownerAddress}`,
       {
         method: "GET",
         headers: {
@@ -206,10 +205,13 @@ export async function getOwnerPoapsService(ownerAddress: string) {
       }
     );
     if (!response.ok) {
+      // 400 Bad Request typically means owner not found - return empty array
+      if (response.status === 400) {
+        return [];
+      }
       throw new Error("Network response was not ok" + response.statusText);
     }
     const poaps = await response.json();
-    console.log("🚀 ~ getOwnerPoapsService ~ poaps:", poaps);
     return poaps;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -229,10 +231,13 @@ export async function getOwnerByAddressService(address: string) {
       }
     );
     if (!response.ok) {
+      // 400 Bad Request typically means owner not found - return null
+      if (response.status === 400) {
+        return null;
+      }
       throw new Error("Network response was not ok" + response.statusText);
     }
-    const {owner} = await response.json();
-    console.log("🚀 ~ getOwnerByAddressService ~ owner:", owner);
+    const { owner } = await response.json();
     return owner;
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -253,7 +258,6 @@ export async function getAllPoapsService() {
       throw new Error("Network response was not ok" + response.statusText);
     }
     const poaps = await response.json();
-    console.log("🚀 ~ getAllPoapsService ~ poaps:", poaps);
     return poaps;
   } catch (error) {
     console.error("Error fetching data:", error);

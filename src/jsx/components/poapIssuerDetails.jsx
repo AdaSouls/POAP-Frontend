@@ -24,15 +24,11 @@ const PoapIssuerDetails = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    console.log("🚀 ~ PoapIssuerDetails ~ provider changed");
     async function fetchData() {
-      console.log("🚀 ~ fetchData");
       if (provider && !poapIssuer) {
-        console.log("🚀 ~ fetchData ~ !poapIssuer");
         const issuer = await getIssuerByAddressService(
           provider.address.toLowerCase()
         );
-        console.log("🚀 ~ fetchData ~ issuer:", issuer);
         if (!issuer) {
           return;
         }

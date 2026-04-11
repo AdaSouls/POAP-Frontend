@@ -274,14 +274,12 @@ export const mintToken = async (tokenName: string, metadata: any, policyId: stri
     const lovelace = 1_000_000;
     const assetName = `${policyId}${fromText(tokenName)}`;
     const msg = fromText("Issued");
-    console.log('Signatures', signatures);
     
     const _signatures: Signatures = new Map(
         Object.entries(signatures).map(([key, s]) => [key, Data.from(s, CoseSignature)])
     )
     const minter: MintRedeemer = { Mint: { msg, signatures: _signatures } };
     const mintRedeemer = Data.to(minter, MintRedeemer);
-    console.log('Redeemer:', mintRedeemer);
 
     const data = Data.fromJson({
         [policyId]: {
@@ -470,7 +468,6 @@ export const getStakeAddress = (address: string): string | null => {
         }
         return stakeAddr;
     } catch (err) {
-        console.log('Error (getStakeAddress):', err);
         
         return null;
     }
@@ -483,7 +480,6 @@ export const getAddressPaymentKeyHash = (address: string | C.Address | any): str
         const baseAddr = C.BaseAddress.from_address(addr) || C.EnterpriseAddress.from_address(addr);
         return baseAddr?.payment_cred()?.to_keyhash().to_hex();
     } catch (err) {
-        console.log('Error (getAddressPaymentKeyHash):', err);
         
         return null;
     }
