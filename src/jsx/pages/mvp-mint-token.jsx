@@ -15,7 +15,7 @@ const MVPMintToken = () => {
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
-  const [debugInfo, setDebugInfo] = useState("");
+  const [, setDebugInfo] = useState("");
   const [canMint, setCanMint] = useState(false);
   const [mintingRestrictions, setMintingRestrictions] = useState([]);
   const [formData, setFormData] = useState({

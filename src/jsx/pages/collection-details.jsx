@@ -53,7 +53,7 @@ const Collection = () => {
         setCollection(updatedCollection);
 
         await txSigned.submit();
-        const success = await provider.awaitTx(txId);
+        await provider.awaitTx(txId);
     }
 
     useEffect(() => {

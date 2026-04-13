@@ -35,7 +35,7 @@ const SoulboundClaim = () => {
         const updatedToken = await updateToken(collectionId, token.soulboundId, { claimUtxo });
         setTokens(tokens.map((t) => t.soulboundId !== token.soulboundId ? t : {...token, ...updatedToken}))
         const txId = await txSigned.submit();
-        const success = await provider.awaitTx(txId);
+        await provider.awaitTx(txId);
       } catch(err) {
         console.error('Wallet submit tx error:', err);
       }
