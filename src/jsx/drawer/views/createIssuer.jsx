@@ -4,73 +4,52 @@ import {
 } from "../../contexts/drawer/drawer.provider";
 import { useState } from "react";
 import { Button } from "react-bootstrap";
-import { createIssuerService } from "../../../services/paima.service";
-import { 
-  succesfullMessage, 
-  errorFunction, 
-  loadingFunction 
+import { useUserRoles } from "../../contexts/user-roles/user-roles.provider";
+import {
+  succesfullBlockchainCreation,
+  errorFunction,
+  loadingFunction,
 } from "../../toasts/sweetAlerts";
 
+// registerIssuer(issuerPk) is admin-only on-chain (poap.compact: `assert is_admin()`) — there is no
+// self-service "become an organizer" flow on Midnight, unlike the old Paima-backed signup form.
+// Non-admins get a "contact the admin" message instead of a form they can't actually submit.
 export default function CreateIssuer() {
-  const state = useDrawer();
+  const { midnight } = useDrawer();
+  const { isAdmin } = useUserRoles();
   const dispatch = useDrawerDispatch();
 
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [organization, setOrganization] = useState("");
+  const [issuerPkHex, setIssuerPkHex] = useState("");
   const [loading, setLoading] = useState(false);
 
   const closeDrawer = () => {
-    dispatch({
-      type: "CLOSE_DRAWER",
-    });
-  };
-
-  const updateIssuer = (issuer) => {
-    dispatch({
-      type: "UPDATE_ISSUER",
-      payload: issuer,
-    });
+    dispatch({ type: "CLOSE_DRAWER" });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (!midnight?.provider) return;
 
-    try {
-      const createInfo = {
-        email: email,
-        name: name,
-        organization: organization,
-        address: state.ethereum.provider.address.toLowerCase(),
-      };
-
-      loadingFunction("Creating Issuer", "Please wait...", "");
-      
-      const createdIssuerOnDB = await createIssuerService(createInfo);
-      
-      if (!createdIssuerOnDB) {
-        errorFunction(
-          "Error",
-          "Failed to create issuer. Please try again.",
-          ""
-        );
-        return;
-      }
-
-      updateIssuer(createdIssuerOnDB);
-      succesfullMessage(
-        "Issuer created successfully",
-        "You can now create POAP events."
-      );
-      closeDrawer();
-    } catch (error) {
-      console.error("Error creating issuer:", error);
+    if (!/^[0-9a-fA-F]{64}$/.test(issuerPkHex.trim())) {
       errorFunction(
-        "Error",
-        "An error occurred while creating the issuer. Please try again.",
+        "Invalid Public Key",
+        "Issuer public key must be a 32-byte hex string (64 hex characters).",
         ""
       );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      loadingFunction("Registering Issuer", "Please confirm the transaction in your Lace wallet…", "");
+      const issuerPk = Uint8Array.from(Buffer.from(issuerPkHex.trim(), "hex"));
+      const { txHash } = await midnight.provider.service.registerIssuer(issuerPk);
+
+      succesfullBlockchainCreation("Issuer Registered", `Transaction: ${txHash}`, "");
+      closeDrawer();
+    } catch (error) {
+      console.error("Error registering issuer:", error);
+      errorFunction("Error", error.message || "Failed to register issuer. Please try again.", "");
     } finally {
       setLoading(false);
     }
@@ -86,65 +65,53 @@ export default function CreateIssuer() {
             aria-label="close"
           ></button>
           <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold">
-            Create ISSUER
+            Register Issuer
           </h4>
         </div>
       </div>
       <div className="drawer-body">
-        <form
-          name="myform"
-          className="signin_validate row g-3"
-          onSubmit={handleSubmit}
-        >
-          <div className="col-12">
-            {/* <label className="form-label">Name</label> */}
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Name"
-              name="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
+        {isAdmin ? (
+          <form
+            name="registerIssuerForm"
+            className="signin_validate row g-3"
+            onSubmit={handleSubmit}
+          >
+            <div className="col-12">
+              <label className="form-label">Issuer Public Key (hex)</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="64-character hex public key"
+                name="issuerPkHex"
+                value={issuerPkHex}
+                onChange={(event) => setIssuerPkHex(event.target.value)}
+                required
+              />
+              <small className="form-text text-muted">
+                The Midnight public key of the organizer wallet you're authorizing. Ask them for
+                their address from the Wallet page.
+              </small>
+            </div>
+          </form>
+        ) : (
+          <div className="alert alert-info" role="alert">
+            Registering event organizers is an admin-only action on this contract. Contact the
+            AdaSouls admin to be added as an organizer.
           </div>
-          <div className="col-12">
-            {/* <label className="form-label">Name</label> */}
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Email"
-              name="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </div>
-          <div className="col-12">
-            {/* <label className="form-label">Description</label> */}
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Organization"
-              name="organization"
-              value={organization}
-              onChange={(event) => setOrganization(event.target.value)}
-              required
-            />
-          </div>
-          <hr className="col-12 my-4 mt-3"></hr>
-        </form>
+        )}
       </div>
-      <div className="drawer-footer">
-        <Button
-          type="submit"
-          className="btn btn-gradient btn-block"
-          onClick={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? "Creating..." : "Create"}
-        </Button>
-      </div>
+      {isAdmin && (
+        <div className="drawer-footer">
+          <Button
+            type="submit"
+            className="btn btn-gradient btn-block"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Registering…" : "Register"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

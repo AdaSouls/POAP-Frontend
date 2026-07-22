@@ -1,32 +1,16 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventsPage from '../../jsx/pages/events';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
-import { getAllEvents } from '../../services/event.service';
-import dataSyncService from '../../services/dataSync.service';
+import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
+import { getAllEvents } from '../../midnight/indexer.service';
 
-// Mock services
-jest.mock('../../services/event.service');
-jest.mock('../../services/dataSync.service', () => ({
-  startEventsPolling: jest.fn(),
-  stopEventsPolling: jest.fn(),
-}));
+jest.mock('../../midnight/indexer.service');
 
 describe('EventsPage', () => {
   const mockEvents = [
-    {
-      eventId: 1,
-      title: 'Test Event 1',
-      description: 'Test Description',
-      organiserAddress: '0x123',
-    },
-    {
-      eventId: 2,
-      title: 'Test Event 2',
-      description: 'Test Description 2',
-      organiserAddress: '0x456',
-    },
+    { eventId: 'aa'.repeat(32), issuerPk: 'bb'.repeat(32), maxSupply: 100, minted: 1, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 1 },
+    { eventId: 'cc'.repeat(32), issuerPk: 'dd'.repeat(32), maxSupply: 0, minted: 2, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 2 },
   ];
 
   beforeEach(() => {
@@ -48,84 +32,68 @@ describe('EventsPage', () => {
 
   it('loads and displays events', async () => {
     renderWithProviders(<EventsPage />);
-    
+
     await waitFor(() => {
       expect(getAllEvents).toHaveBeenCalled();
     });
+    await waitFor(() => {
+      expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
+    });
   });
 
-  it('dispatches CREATE_EVENT when create button is clicked with wallet', async () => {
+  it('dispatches CREATE_EVENT when create button is clicked by an organizer', async () => {
     const dispatch = jest.fn();
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'bb'.repeat(32) } },
     };
-    
-    renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
-    
+
+    renderWithProviders(<EventsPage />, {
+      drawerValue,
+      drawerDispatch: dispatch,
+      userRolesValue: { ...mockUserRoles, isIssuer: true },
+    });
+
     const createButton = screen.getByText(/CREATE/i).closest('.card-body');
     await userEvent.click(createButton);
-    
-    await waitFor(() => {
-      expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
-    });
+
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
+  });
+
+  it('does not dispatch CREATE_EVENT for a non-organizer wallet', async () => {
+    const dispatch = jest.fn();
+    const drawerValue = {
+      ...mockDrawerContext,
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'ee'.repeat(32) } },
+    };
+
+    renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
+
+    const createButton = screen.getByText(/CREATE/i).closest('.card-body');
+    await userEvent.click(createButton);
+
+    expect(dispatch).not.toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 
   it('shows wallet status when no wallet is connected', () => {
     renderWithProviders(<EventsPage />);
-    // Should show wallet connection required state
     expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
   });
 
-  it('starts polling when wallet is connected', async () => {
+  it('separates my events from other events for a connected organizer', async () => {
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'bb'.repeat(32) } },
     };
-    
-    renderWithProviders(<EventsPage />, { drawerValue });
-    
-    await waitFor(() => {
-      expect(dataSyncService.startEventsPolling).toHaveBeenCalled();
-    });
-  });
 
-  it('stops polling on unmount', () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
-    
-    const { unmount } = renderWithProviders(<EventsPage />, { drawerValue });
-    unmount();
-    
-    expect(dataSyncService.stopEventsPolling).toHaveBeenCalled();
-  });
-
-  it('filters and displays my events separately', async () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-      poapEvents: mockEvents,
-    };
-    
     renderWithProviders(<EventsPage />, { drawerValue });
-    
+
     await waitFor(() => {
       expect(getAllEvents).toHaveBeenCalled();
     });
+    await waitFor(() => {
+      expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
+    });
   });
 });
-

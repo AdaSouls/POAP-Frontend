@@ -2,21 +2,25 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { DrawerContext, DrawerDispatchContext } from './jsx/contexts/drawer/drawer.provider';
+import { UserRolesContext } from './jsx/contexts/user-roles/user-roles.provider';
 
 // Mock drawer context
 export const mockDrawerContext = {
   cardano: {
     wallet: null,
   },
-  ethereum: {
+  midnight: {
     provider: null,
-    address: null,
+    connecting: false,
+    error: null,
+    connect: jest.fn(),
+    disconnect: jest.fn(),
   },
   poapEvents: [],
   poapCollection: [],
   poapIssuer: null,
   showCardanoWallet: false,
-  showEthereumWallet: false,
+  showMidnightWallet: false,
   createSoul: false,
   createPoap: false,
   createEvent: false,
@@ -36,34 +40,40 @@ export const MockDrawerProvider = ({ children, value = mockDrawerContext, dispat
   );
 };
 
+// Mock user roles context
+export const mockUserRoles = {
+  userRoles: [],
+  isAdmin: false,
+  isIssuer: false,
+  isAttendee: false,
+  issuerId: null,
+  isInitialized: true,
+  isLoading: false,
+  initializeUserRole: jest.fn(),
+  resetRoles: jest.fn(),
+};
+
 // Custom render function with router and context
 export const renderWithProviders = (
   ui,
   {
     drawerValue = mockDrawerContext,
     drawerDispatch = mockDrawerDispatch,
+    userRolesValue = mockUserRoles,
     ...renderOptions
   } = {}
 ) => {
   const Wrapper = ({ children }) => (
     <BrowserRouter>
       <MockDrawerProvider value={drawerValue} dispatch={drawerDispatch}>
-        {children}
+        <UserRolesContext.Provider value={userRolesValue}>
+          {children}
+        </UserRolesContext.Provider>
       </MockDrawerProvider>
     </BrowserRouter>
   );
 
   return render(ui, { wrapper: Wrapper, ...renderOptions });
-};
-
-// Mock user roles context
-export const mockUserRoles = {
-  userRoles: [],
-  isAdmin: false,
-  isIssuer: false,
-  issuerId: null,
-  isInitialized: false,
-  isLoading: false,
 };
 
 // Re-export testing library helpers for convenience

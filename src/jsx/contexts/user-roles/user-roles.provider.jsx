@@ -1,11 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useDrawer } from '../drawer/drawer.provider';
-import { mvpSmartContractService } from '../../../services/mvp-smart-contract.service';
 
-const UserRolesContext = createContext();
+export const UserRolesContext = createContext();
+
+function hexToBytes(hex) {
+  return Uint8Array.from(Buffer.from(hex, 'hex'));
+}
+
+function bytesEqual(a, b) {
+  if (a.length !== b.length) return false;
+  return a.every((byte, i) => byte === b[i]);
+}
 
 export const UserRolesProvider = ({ children }) => {
-  const { ethereum } = useDrawer();
+  const { midnight } = useDrawer();
   const [userRoles, setUserRoles] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isIssuer, setIsIssuer] = useState(false);
@@ -14,43 +22,47 @@ export const UserRolesProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Roles are derived from public ledger state (adminPk, issuers map) plus this browser's private
+  // token state (one token record per issuer) — there is no self-service "become an organizer"
+  // flow on Midnight; issuers are admin-registered via registerIssuer().
   const initializeUserRole = useCallback(async () => {
-    if (isInitialized || isLoading || !ethereum?.provider) return; // Prevent multiple initializations
-    
+    if (isInitialized || isLoading || !midnight?.provider) return; // Prevent multiple initializations
+
     try {
       setIsLoading(true);
-      await mvpSmartContractService.initialize(ethereum.provider);
-      
-      const [adminStatus, issuerInfo, userTokens] = await Promise.all([
-        mvpSmartContractService.isAdmin(ethereum.provider.address),
-        mvpSmartContractService.isIssuer(ethereum.provider.address),
-        mvpSmartContractService.getUserTokens(ethereum.provider.address)
-      ]);
-      
+      const { service, address } = midnight.provider;
+      const callerPk = hexToBytes(address);
+      const { ledger, privateState } = await service.getState();
+
       const roles = [];
-      
-      if (adminStatus) {
+
+      const isCallerAdmin = bytesEqual(ledger.adminPk, callerPk);
+      if (isCallerAdmin) {
         roles.push('admin');
         setIsAdmin(true);
       }
-      
-      if (issuerInfo.isIssuer) {
-        roles.push('organizer');
-        setIsIssuer(true);
-        setIssuerId(issuerInfo.issuerId);
+
+      if (ledger.issuers.member(callerPk)) {
+        const issuer = ledger.issuers.lookup(callerPk);
+        if (issuer.isActive) {
+          roles.push('organizer');
+          setIsIssuer(true);
+          setIssuerId(address);
+        }
       }
-      
-      if (userTokens.length > 0) {
+
+      const hasTokens = Object.keys(privateState?.tokens ?? {}).length > 0;
+      if (hasTokens) {
         roles.push('attendee');
         setIsAttendee(true);
       }
-      
+
       // If no specific roles, default to attendee
       if (roles.length === 0) {
         roles.push('attendee');
         setIsAttendee(true);
       }
-      
+
       setUserRoles(roles);
       setIsInitialized(true);
     } catch (error) {
@@ -62,7 +74,7 @@ export const UserRolesProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [isInitialized, isLoading, ethereum]);
+  }, [isInitialized, isLoading, midnight]);
 
   const resetRoles = () => {
     setUserRoles([]);
@@ -75,12 +87,12 @@ export const UserRolesProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (ethereum && ethereum.provider && !isInitialized && !isLoading) {
+    if (midnight && midnight.provider && !isInitialized && !isLoading) {
       initializeUserRole();
-    } else if (!ethereum || !ethereum.provider) {
+    } else if (!midnight || !midnight.provider) {
       resetRoles();
     }
-  }, [ethereum, isInitialized, isLoading, initializeUserRole]);
+  }, [midnight, isInitialized, isLoading, initializeUserRole]);
 
   return (
     <UserRolesContext.Provider value={{

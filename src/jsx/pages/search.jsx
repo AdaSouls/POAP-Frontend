@@ -7,8 +7,6 @@ import PoapEvent from "../components/poapEvent";
 const Search = () => {
   const { poapEvents } = useDrawer();
 
-  const approvedEvents = poapEvents.filter(event => event.approved === "Approved");
-
   return (
     <Layout activeMenu={2}>
       <div className="row">
@@ -26,7 +24,7 @@ const Search = () => {
                     <td>No events found</td>
                   </tr>
                 ) : (
-                  approvedEvents.map((event, index) => (
+                  poapEvents.map((event, index) => (
                     <PoapEvent event={event} index={index} key={index} owned={event.isMinted}/>
                   ))
                 )}

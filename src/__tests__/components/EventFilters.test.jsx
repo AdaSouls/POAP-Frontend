@@ -18,91 +18,48 @@ describe('EventFilters Component', () => {
 
   it('expands and collapses filter panel', async () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
-    
+
     const expandButton = screen.getByText(/Expand/i);
     await userEvent.click(expandButton);
 
-    expect(screen.getByPlaceholderText(/Search events by title/i)).toBeInTheDocument();
-    
+    expect(screen.getByLabelText(/Event ID contains/i)).toBeInTheDocument();
+
     const collapseButton = screen.getByText(/Collapse/i);
     await userEvent.click(collapseButton);
 
-    expect(screen.queryByPlaceholderText(/Search events by title/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Event ID contains/i)).not.toBeInTheDocument();
   });
 
-  it('calls onFilterChange when title search is entered', async () => {
+  it('calls onFilterChange when event id search is entered', async () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
-    
-    const expandButton = screen.getByText(/Expand/i);
-    await userEvent.click(expandButton);
 
-    const searchInput = screen.getByPlaceholderText(/Search events by title/i);
-    await userEvent.type(searchInput, 'test event');
+    await userEvent.click(screen.getByText(/Expand/i));
+    await userEvent.type(screen.getByLabelText(/Event ID contains/i), 'ab');
 
     expect(mockOnFilterChange).toHaveBeenCalled();
   });
 
   it('calls onFilterChange when status is selected', async () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
-    
-    const expandButton = screen.getByText(/Expand/i);
-    await userEvent.click(expandButton);
 
-    const [statusSelect] = screen.getAllByRole('combobox');
-    await userEvent.selectOptions(statusSelect, 'Active');
+    await userEvent.click(screen.getByText(/Expand/i));
+    await userEvent.selectOptions(screen.getByLabelText(/^Status$/i), 'active');
 
-    expect(mockOnFilterChange).toHaveBeenCalled();
+    expect(mockOnFilterChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }));
   });
 
   it('calls onReset when clear button is clicked', async () => {
     render(
-      <EventFilters 
-        filters={{ titleSearch: 'test', calculatedStatus: 'active' }} 
-        onFilterChange={mockOnFilterChange} 
-        onReset={mockOnReset} 
+      <EventFilters
+        filters={{ eventIdSearch: 'ab', status: 'active' }}
+        onFilterChange={mockOnFilterChange}
+        onReset={mockOnReset}
       />
     );
 
-    const clearButton = screen.getByText(/Clear/i);
-    await userEvent.click(clearButton);
+    await userEvent.click(screen.getByText(/Clear/i));
 
     expect(mockOnReset).toHaveBeenCalled();
     expect(mockOnFilterChange).toHaveBeenCalledWith({});
   });
-
-  it('shows active filters badges', async () => {
-    render(
-      <EventFilters 
-        filters={{ titleSearch: 'test', calculatedStatus: 'active' }} 
-        onFilterChange={mockOnFilterChange} 
-        onReset={mockOnReset} 
-      />
-    );
-
-    const expandButton = screen.getByText(/Expand/i);
-    await userEvent.click(expandButton);
-
-    expect(screen.getByText(/Title: "test"/i)).toBeInTheDocument();
-    expect(screen.getByText(/Status: Active/i)).toBeInTheDocument();
-  });
-
-  it('allows removing individual filter badges', async () => {
-    render(
-      <EventFilters 
-        filters={{ titleSearch: 'test', calculatedStatus: 'active' }} 
-        onFilterChange={mockOnFilterChange} 
-        onReset={mockOnReset} 
-      />
-    );
-
-    const expandButton = screen.getByText(/Expand/i);
-    await userEvent.click(expandButton);
-
-    const closeButtons = screen.getAllByRole('button', { name: '' });
-    // Find the close button for title filter
-    await userEvent.click(closeButtons[0]);
-
-    expect(mockOnFilterChange).toHaveBeenCalled();
-  });
 });
-

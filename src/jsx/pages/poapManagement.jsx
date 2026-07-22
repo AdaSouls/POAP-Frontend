@@ -1,109 +1,75 @@
-import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import PoapCard from "../components/poapCard";
 import poapNormal from "../../images/svg/poap-normal.svg";
 import loadingGif from "../../images/loading.gif";
-import { getUserPoaps } from "../../services/poap.service";
-import dataSyncService from "../../services/dataSync.service";
 
-const PoapManagement = () => { 
-  const { eventId } = useParams();
+const REFRESH_INTERVAL_MS = 5000;
+
+// "My POAPs" reads from this browser's private state (one SPOAP token per issuer, with its own
+// attendance list) — see src/midnight/witnesses.ts. This is deliberately NOT sourced from the
+// public indexer: attendance history is private witness state and isn't indexed on-chain at all.
+const PoapManagement = () => {
   const [loading, setLoading] = useState(true);
-  // const [poaps, setPoaps] = useState([]);
   const [myPoaps, setMyPoaps] = useState([]);
-  const { poapCollection, ethereum: { provider, address } } = useDrawer();
+  const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const pollRef = useRef(null);
 
   const createPoap = () => {
-    dispatch({
-      type: 'CREATE_POAP'
-    });
+    dispatch({ type: "CREATE_POAP" });
   };
 
-  const updatePoaps = (poaps) => {
-    dispatch({
-      type: "UPDATE_POAPS",
-      payload: poaps,
-    });
+  const showMidnightWallet = () => {
+    dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
   };
 
-  const showEthereumWallet = () => {
-    dispatch({
-      type: "SHOW_ETHEREUM_WALLET",
-    });
-  };
+  const loadPoaps = useCallback(async () => {
+    if (!provider) {
+      setMyPoaps([]);
+      setLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    setLoading(true);
-    
-    async function fetchPoaps() {
-      if (!provider) {
-        // setPoaps([]);
-        setMyPoaps([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Get user's POAPs
-        const userPoaps = await getUserPoaps(provider.address);
-        // Use POAPs from context if available
-        setMyPoaps(userPoaps);
-        // if (poapCollection && poapCollection.length > 0) {
-        //   setPoaps(poapCollection);
-        // } else {
-        //   setPoaps(userPoaps);
-        // }
-      } catch (error) {
-        console.error("Error fetching POAPs:", error);
-        // setPoaps([]);
-        setMyPoaps([]);
-      }
-      
+    try {
+      const { privateState } = await provider.service.getState();
+      const poaps = Object.entries(privateState.tokens || {}).map(([issuerPkHex, token]) => ({
+        issuerPkHex,
+        tokenId: token.tokenId,
+        isSoulbound: token.attendance.isSoulbound,
+        attendedEventIds: token.attendance.eventIds.map((id) => Buffer.from(id).toString("hex")),
+      }));
+      setMyPoaps(poaps);
+    } catch (error) {
+      console.error("Error fetching POAPs:", error);
+      setMyPoaps([]);
+    } finally {
       setLoading(false);
     }
+  }, [provider]);
 
-    fetchPoaps();
-  }, [provider, address, poapCollection, eventId]);
-  // Polling for real-time events and POAPs data
   useEffect(() => {
-    if (provider && provider.address) {
-      // Start polling for both events and POAPs when POAP management page loads
-      // dataSyncService.startEventsPolling(updateEvents, 5000);
-      dataSyncService.startPoapsPolling(updatePoaps, 5000);
-    }
-
-    // Cleanup when leaving POAP management page
-    return () => {
-      // dataSyncService.stopEventsPolling();
-      dataSyncService.stopPoapsPolling();
-    };
-  // eslint-disable-next-line
-  }, [provider, eventId]);
+    loadPoaps();
+    pollRef.current = setInterval(loadPoaps, REFRESH_INTERVAL_MS);
+    return () => clearInterval(pollRef.current);
+  }, [loadPoaps]);
 
   return (
     <Layout activeMenu={3}>
       <>
         <div className="row">
-          {/* HEADER */}
           <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
             <div className="card inner-header">
               <div className="d-flex justify-content-between m-3">
                 <div className="inner-header-back">
                   <Link to="/events" className="simple-link">
-                    <i className="icofont-rounded-left"></i>   
-                  </Link>                            
+                    <i className="icofont-rounded-left"></i>
+                  </Link>
                 </div>
                 <div className="inner-header-title">
-                  <h4>
-                    <span className="text-uppercase"></span>
-                    POAP Management
-                  </h4>
-                </div>
-                <div className="inner-header-buttons">
-                  {/* Future: Add filter buttons */}
+                  <h4>My POAPs</h4>
                 </div>
               </div>
             </div>
@@ -111,103 +77,59 @@ const PoapManagement = () => {
         </div>
 
         <div className="row">
-          {/* CREATE POAP CARD */}
           <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
             <div className="card card-create bg-poap card-classic">
               <div className="card-body card-classic-max-height" onClick={provider ? createPoap : undefined}>
-                <h4>CREATE <span> POAP</span></h4>               
-                <div className={(provider ? "plus-button" : "axis-button")+" align-content-center"} >
+                <h4>CLAIM <span> SPOAP</span></h4>
+                <div className={(provider ? "plus-button" : "axis-button") + " align-content-center"}>
                   <div></div><div></div>
-                </div>              
+                </div>
               </div>
               <div className="d-flex justify-content-between m-3">
-                <div className="align-content-center mt-4">                    
+                <div className="align-content-center mt-4">
                   <span className="verified">
-                    {provider && <i className="icofont-check-alt"></i>}
-                    {!provider && <i className="icofont-close-line"></i>}
-                  </span>     
+                    {provider ? <i className="icofont-check-alt"></i> : <i className="icofont-close-line"></i>}
+                  </span>
                 </div>
                 <div className="align-content-center mt-4">
                   {!provider && (
-                      <button
-                      className="btn btn-white btn-small"
-                      onClick={showEthereumWallet}
-                      >
+                    <button className="btn btn-white btn-small" onClick={showMidnightWallet}>
                       Connect
-                      </button>
+                    </button>
                   )}
-                </div> 
+                </div>
               </div>
             </div>
           </div>
 
-          {/* LOADING STATE */}
           {loading ? (
             <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
               <div className="card card-poap card-classic">
                 <div className="card-body card-classic-max-height d-flex justify-content-center">
                   <div className="loading-poap-card">
-                    <img                        
-                      src={loadingGif}
-                      width="35"
-                      height="35"
-                      alt="Loading POAPs"
-                    />
-                  </div> 
-                </div>
-                <div className="d-flex justify-content-between m-3">
-                  <div className="align-content-center mt-4"></div>
-                  <div className="align-content-center mt-5"></div> 
+                    <img src={loadingGif} width="35" height="35" alt="Loading POAPs" />
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
             <>
-              {/* MY POAPS (if wallet connected) */}
               {provider && myPoaps.length > 0 && (
                 <>
-                  {myPoaps.map(poap => (
-                    <PoapCard key={`my-${poap.poapUuid}`} poap={poap} index={0} />
+                  {myPoaps.map((poap) => (
+                    <PoapCard key={poap.issuerPkHex} poap={poap} />
                   ))}
                 </>
               )}
 
-              {/* ALL POAPS */}
-              {/* {provider ? (
-                poaps.map(poap => (
-                  <PoapCard key={poap.poapUuid} poap={poap} index={0} />
-                ))
-              ) : (
-                <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
-                  <div className="card card-poap card-classic">
-                    <div className="wallet-non-connected">
-                      <img 
-                        className="mt-6"                       
-                        src={walletStatus}
-                        width="150"
-                        height="140"
-                        alt=""
-                      />
-                    </div>
-                  </div>
-                </div>
-              )} */}
-
-              {/* EMPTY STATE */}
-              {provider && myPoaps.length === 0 && !loading && (
+              {provider && myPoaps.length === 0 && (
                 <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
                   <div className="card card-poap card-classic">
                     <div className="card-body text-center py-5">
-                      <img
-                        src={poapNormal}
-                        width="100"
-                        height="100"
-                        alt="No POAPs"
-                        className="mb-3"
-                      />
+                      <img src={poapNormal} width="100" height="100" alt="No POAPs" className="mb-3" />
                       <h4>No POAPs Found</h4>
                       <p className="text-muted">
-                        You don't have any POAPs yet. Create your first POAP or attend an event to receive one!
+                        You don't have any POAPs yet. Claim your first SPOAP by attending an event!
                       </p>
                     </div>
                   </div>

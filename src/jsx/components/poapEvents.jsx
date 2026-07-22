@@ -6,7 +6,7 @@ import walletStatus from "../../images/collections/wallet-status.png";
 
 const PoapEvents = ({ addressEvents }) => {
   const {
-    ethereum: { provider },
+    midnight: { provider },
   } = useDrawer();
 
   return (

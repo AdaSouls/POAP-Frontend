@@ -1,36 +1,16 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventsPage from '../../jsx/pages/events';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
-import { getAllEvents } from '../../services/event.service';
-import dataSyncService from '../../services/dataSync.service';
+import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
+import { getAllEvents } from '../../midnight/indexer.service';
 
-// Mock services
-jest.mock('../../services/event.service');
-jest.mock('../../services/dataSync.service', () => ({
-  startEventsPolling: jest.fn(),
-  stopEventsPolling: jest.fn(),
-}));
+jest.mock('../../midnight/indexer.service');
 
 describe('Events Flow Integration', () => {
   const mockEvents = [
-    {
-      eventId: 1,
-      title: 'Test Event 1',
-      description: 'Description 1',
-      organiserAddress: '0x123',
-      maxSupply: 100,
-      totalSupply: 50,
-    },
-    {
-      eventId: 2,
-      title: 'Test Event 2',
-      description: 'Description 2',
-      organiserAddress: '0x456',
-      maxSupply: 200,
-      totalSupply: 100,
-    },
+    { eventId: 'aa'.repeat(32), issuerPk: 'bb'.repeat(32), maxSupply: 100, minted: 50, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 1 },
+    { eventId: 'cc'.repeat(32), issuerPk: 'dd'.repeat(32), maxSupply: 200, minted: 100, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 2 },
   ];
 
   beforeEach(() => {
@@ -38,60 +18,32 @@ describe('Events Flow Integration', () => {
     getAllEvents.mockResolvedValue(mockEvents);
   });
 
-  it('completes full events page flow', async () => {
+  it('loads events from the indexer, displays them, and lets an organizer create a new one', async () => {
     const dispatch = jest.fn();
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'bb'.repeat(32) } },
     };
 
-    renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
-
-    // Wait for events to load
-    await waitFor(() => {
-      expect(getAllEvents).toHaveBeenCalled();
+    renderWithProviders(<EventsPage />, {
+      drawerValue,
+      drawerDispatch: dispatch,
+      userRolesValue: { ...mockUserRoles, isIssuer: true },
     });
 
-    // Verify events are displayed
-    await waitFor(() => {
-      expect(screen.getByText(/Test Event 1/i)).toBeInTheDocument();
-    });
+    await waitFor(() => expect(getAllEvents).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0));
 
-    // Verify polling started
-    expect(dataSyncService.startEventsPolling).toHaveBeenCalled();
-
-    // Click on create event
     const createButton = screen.getByText(/CREATE/i).closest('.card-body');
     await userEvent.click(createButton);
 
-    // Verify dispatch was called
-    await waitFor(() => {
-      expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
-    });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 
-  it('handles filter changes and event updates', async () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
+  it('shows the correct event count badge once events load', async () => {
+    renderWithProviders(<EventsPage />);
 
-    renderWithProviders(<EventsPage />, { drawerValue });
-
-    await waitFor(() => {
-      expect(getAllEvents).toHaveBeenCalled();
-    });
-
-    // Verify initial events count
-    await waitFor(() => {
-      expect(screen.getByText(/2 Events/i)).toBeInTheDocument();
-    });
+    await waitFor(() => expect(getAllEvents).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText(/2 Events/i)).toBeInTheDocument());
   });
 });
-

@@ -1,79 +1,65 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventCard from '../../jsx/components/eventCard';
-import { mockDrawerDispatch, renderWithProviders } from '../../testUtils';
+import { renderWithProviders } from '../../testUtils';
 
 describe('EventCard Component', () => {
   const mockEvent = {
-    eventId: 1,
-    title: 'Test Event',
-    description: 'Test Description',
-    organiserAddress: '0x1234567890123456789012345678901234567890',
+    eventId: 'aa'.repeat(32),
+    issuerPk: 'bb'.repeat(32),
     maxSupply: 100,
-    totalSupply: 50,
-    eventStartDate: Math.floor(Date.now() / 1000) - 86400, // Yesterday
-    expiration: Math.floor(Date.now() / 1000) + 86400, // Tomorrow
-    imageUrl: 'https://example.com/image.jpg',
+    minted: 50,
+    expiration: Math.floor(Date.now() / 1000) + 86400, // tomorrow
+    isActive: true,
+    isPublicMint: true,
+    createdBlock: 42,
   };
 
-  it('renders event card with title', () => {
-    renderWithProviders(<EventCard event={mockEvent} index={0} />);
-    expect(screen.getByText(/Test Event/i)).toBeInTheDocument();
+  it('renders a truncated event id', () => {
+    renderWithProviders(<EventCard event={mockEvent} />);
+    expect(screen.getByText(/Event aaaaaaaa/i)).toBeInTheDocument();
   });
 
-  it('renders event description', () => {
-    renderWithProviders(<EventCard event={mockEvent} index={0} />);
-    expect(screen.getByText(/Test Description/i)).toBeInTheDocument();
+  it('shows the active status badge', () => {
+    renderWithProviders(<EventCard event={mockEvent} />);
+    expect(screen.getByText(/^active$/i)).toBeInTheDocument();
   });
 
   it('dispatches VIEW_EVENT when card is clicked', async () => {
     const dispatch = jest.fn();
-    renderWithProviders(<EventCard event={mockEvent} index={0} />, { drawerDispatch: dispatch });
+    renderWithProviders(<EventCard event={mockEvent} />, { drawerDispatch: dispatch });
 
-    const card = screen.getByText(/Test Event/i).closest('.card');
+    const card = screen.getByText(/Event aaaaaaaa/i).closest('.card');
     await userEvent.click(card);
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'VIEW_EVENT',
-      payload: { event: mockEvent, mintable: expect.any(Boolean) },
+      payload: { event: mockEvent, mintable: true },
     });
   });
 
-  it('displays progress bar when maxSupply is set', () => {
-    renderWithProviders(<EventCard event={mockEvent} index={0} />);
+  it('displays mint progress', () => {
+    renderWithProviders(<EventCard event={mockEvent} />);
     expect(screen.getByText(/Minted:/i)).toBeInTheDocument();
     expect(screen.getByText(/50\/100/i)).toBeInTheDocument();
   });
 
-  it('truncates long addresses', () => {
-    renderWithProviders(<EventCard event={mockEvent} index={0} />);
-    const address = screen.getByText(/0x1234\.\.\.7890/i);
-    expect(address).toBeInTheDocument();
-  });
-
   it('shows expired status for expired events', () => {
-    const expiredEvent = {
-      ...mockEvent,
-      expiration: Math.floor(Date.now() / 1000) - 86400, // Yesterday
-    };
-
-    renderWithProviders(<EventCard event={expiredEvent} index={0} />);
-    const expiredBadges = screen.getAllByText(/expired/i);
-    expect(expiredBadges.length).toBeGreaterThan(0);
+    const expiredEvent = { ...mockEvent, expiration: Math.floor(Date.now() / 1000) - 86400 };
+    renderWithProviders(<EventCard event={expiredEvent} />);
+    expect(screen.getAllByText(/expired/i).length).toBeGreaterThan(0);
   });
 
-  it('displays event image when imageUrl is provided', () => {
-    renderWithProviders(<EventCard event={mockEvent} index={0} />);
-    const image = screen.getByAltText(/Test Event/i);
-    expect(image).toHaveAttribute('src', mockEvent.imageUrl);
+  it('shows full status when max supply is reached', () => {
+    const fullEvent = { ...mockEvent, minted: 100 };
+    renderWithProviders(<EventCard event={fullEvent} />);
+    expect(screen.getAllByText(/full/i).length).toBeGreaterThan(0);
   });
 
-  it('falls back to default image when imageUrl is not provided', () => {
-    const eventWithoutImage = { ...mockEvent, imageUrl: null };
-    renderWithProviders(<EventCard event={eventWithoutImage} index={0} />);
-    const images = screen.getAllByAltText(/Event/i);
-    expect(images.length).toBeGreaterThan(0);
+  it('shows inactive status when the event is deactivated', () => {
+    const inactiveEvent = { ...mockEvent, isActive: false };
+    renderWithProviders(<EventCard event={inactiveEvent} />);
+    expect(screen.getAllByText(/inactive/i).length).toBeGreaterThan(0);
   });
 });
-

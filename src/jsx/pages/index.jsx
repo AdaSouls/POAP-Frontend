@@ -12,7 +12,7 @@ const indicators = (index) => <div className="indicator">{index + 1}</div>;
 
 const Dashboard = () => {
   const {
-    ethereum: { provider },
+    midnight: { provider },
   } = useDrawer();
   const images = [bannerWelcome, bannerWelcome];
 
@@ -30,8 +30,8 @@ const Dashboard = () => {
               <br></br>
               <p>
                 We are a multichain platform. Connect your Cardano wallet to
-                interact with SOUL and your Ethereum wallet to interact with
-                POAP.
+                interact with SOUL and your Lace wallet to interact with
+                POAP on Midnight.
               </p>
               <ul>
                 {/* <li>
@@ -58,9 +58,7 @@ const Dashboard = () => {
                       <i className="icofont-close-line"></i>
                     </span>
                   )}
-                  Ethereum Wallet
-                  {/* <Link to={"#"}> */}
-                  {/* </Link> */}
+                  Lace Wallet
                 </li>
               </ul>
             </div>

@@ -1,7 +1,6 @@
 import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import poapNormal from "../../images/svg/poap-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
-import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 
 const PoapToken = ({ poap, index }) => {
   const dispatch = useDrawerDispatch();
@@ -24,9 +23,9 @@ const PoapToken = ({ poap, index }) => {
           alt="Poap"
         />
       </td>
-      <td>Issuer ID: {poap.events[0].issuerIdInContract}</td>
-      <td>Instance: {poap.instance}</td>
-      <td>Minted: {formatDateToDDMMYYYY(poap.createdAt)}</td>
+      <td>Issuer: {poap.issuerPkHex?.slice(0, 10)}…</td>
+      <td>Token ID: {String(poap.tokenId)}</td>
+      <td>Events attended: {poap.attendedEventIds?.length ?? 0}</td>
       <td className="table-press-icon">
         <button
           className="btn btn-white btn-small"

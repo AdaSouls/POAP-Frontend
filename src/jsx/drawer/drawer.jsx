@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDrawer } from '../contexts/drawer/drawer.provider.jsx';
 import CardanoWallet from './views/cardanoWallet.jsx';
-import EthereumWallet from './views/ethereumWallet.jsx';
+import LaceWallet from './views/laceWallet.jsx';
 import CreateSoul from './views/createSoul.jsx';
 import CreatePoap from './views/createPoap.jsx';
 import CreateEvent from './views/createEvent.jsx';
@@ -10,7 +10,6 @@ import CheckCollection from './views/checkCollection.jsx';
 import ViewToken from './views/viewToken.jsx';
 import ViewEvent from './views/viewEvent.jsx';
 import CreateIssuer from './views/createIssuer.jsx';
-import CreateOwner from './views/createOwner.jsx';
 import ViewPoap from './views/viewPoap.jsx';
 
 export const Drawer = () => {
@@ -23,8 +22,8 @@ export const Drawer = () => {
       return <CardanoWallet />;
     }
 
-    if (state?.showEthereumWallet === true) {
-      return <EthereumWallet />;
+    if (state?.showMidnightWallet === true) {
+      return <LaceWallet />;
     }
 
     if (state?.createSoul === true) {
@@ -44,10 +43,6 @@ export const Drawer = () => {
 
     if (state?.createIssuer === true) {
       return <CreateIssuer />;
-    }
-
-    if (state?.createOwner === true) {
-      return <CreateOwner />;
     }
 
     if (state?.checkCollection === true) {

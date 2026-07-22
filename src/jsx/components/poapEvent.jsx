@@ -10,7 +10,7 @@ import {
 const PoapEvent = ({ event, index, mintable, owned }) => {
   const dispatch = useDrawerDispatch();
   const {
-    ethereum: { provider },
+    midnight: { provider },
   } = useDrawer();
 
   const viewEvent = () => {
@@ -35,11 +35,10 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
           alt="Poap Event"
         />
       </td>
-      <td className="col-2">Event ID: {event.eventIdInContract}</td>
-      <td className="col-2">Issuer ID: {event.issuerIdInContract}</td>
+      <td className="col-2">Event ID: {event.eventId?.slice(0, 10)}…</td>
+      <td className="col-2">Organizer: {event.issuerPk?.slice(0, 10)}…</td>
       <td className="col-3">
-        {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
-        Expiration: {formatDateToDDMMYYYY(event.expiryDate)}
+        Expiration: {event.expiration > 0 ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : "No expiry"}
         {event.isExpired && (
           <span
             alt="Expired"
@@ -58,7 +57,7 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
         )}
       </td>
       <td className="col-3">
-        Minted: {event.mintedPoaps} of {event.poapsToBeMinted}
+        Minted: {event.minted} of {event.maxSupply || "∞"}
         {owned && (
           <span
             alt="Already minted"

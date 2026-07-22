@@ -1,40 +1,40 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PoapCard from '../../jsx/components/poapCard';
-import { mockDrawerDispatch, renderWithProviders } from '../../testUtils';
+import { renderWithProviders } from '../../testUtils';
 
 describe('PoapCard Component', () => {
   const mockPoap = {
-    tokenId: 1,
-    eventId: 1,
-    issuerId: 1,
-    ownerAddress: '0x123',
-    createdAt: '2024-01-01T00:00:00Z',
-    events: [
-      {
-        eventId: 1,
-        title: 'Test Event',
-        image: 'https://example.com/image.jpg',
-        issuerId: 1,
-        isExpired: false,
-      },
-    ],
+    issuerPkHex: 'aa'.repeat(32),
+    tokenId: 1n,
+    isSoulbound: false,
+    attendedEventIds: ['bb'.repeat(32), 'cc'.repeat(32)],
   };
 
-  it('renders POAP card with event title', () => {
-    renderWithProviders(<PoapCard poap={mockPoap} index={0} />);
-    expect(screen.getByText(/Test Event/i)).toBeInTheDocument();
+  it('renders the token id', () => {
+    renderWithProviders(<PoapCard poap={mockPoap} />);
+    expect(screen.getByText(/SPOAP #1/i)).toBeInTheDocument();
   });
 
-  it('displays token ID', () => {
-    renderWithProviders(<PoapCard poap={mockPoap} index={0} />);
-    expect(screen.getByText(/Token:\s*1/i)).toBeInTheDocument();
+  it('shows how many events were attended', () => {
+    renderWithProviders(<PoapCard poap={mockPoap} />);
+    expect(screen.getByText(/2 events attended/i)).toBeInTheDocument();
+  });
+
+  it('shows a soulbound badge when isSoulbound is true', () => {
+    renderWithProviders(<PoapCard poap={{ ...mockPoap, isSoulbound: true }} />);
+    expect(screen.getByText(/Soulbound/i)).toBeInTheDocument();
+  });
+
+  it('does not show a soulbound badge when isSoulbound is false', () => {
+    renderWithProviders(<PoapCard poap={mockPoap} />);
+    expect(screen.queryByText(/Soulbound/i)).not.toBeInTheDocument();
   });
 
   it('dispatches VIEW_POAP_TOKEN when view details button is clicked', async () => {
     const dispatch = jest.fn();
-    renderWithProviders(<PoapCard poap={mockPoap} index={0} />, { drawerDispatch: dispatch });
+    renderWithProviders(<PoapCard poap={mockPoap} />, { drawerDispatch: dispatch });
 
     const viewButton = screen.getByRole('button', { name: /View Details/i });
     await userEvent.click(viewButton);
@@ -45,25 +45,8 @@ describe('PoapCard Component', () => {
     });
   });
 
-  it('displays issuer ID', () => {
-    renderWithProviders(<PoapCard poap={mockPoap} index={0} />);
-    expect(screen.getByText(/Issuer: 1/i)).toBeInTheDocument();
-  });
-
-  it('displays created date', () => {
-    renderWithProviders(<PoapCard poap={mockPoap} index={0} />);
-    // Date should be formatted and displayed
-    expect(screen.getByText(/Minted/i)).toBeInTheDocument();
-  });
-
-  it('handles POAP without events array', () => {
-    const poapWithoutEvents = {
-      ...mockPoap,
-      events: undefined,
-    };
-
-    renderWithProviders(<PoapCard poap={poapWithoutEvents} index={0} />);
-    expect(screen.getByText(/Event 1/i)).toBeInTheDocument();
+  it('handles a token with no attended events', () => {
+    renderWithProviders(<PoapCard poap={{ ...mockPoap, attendedEventIds: [] }} />);
+    expect(screen.getByText(/0 events attended/i)).toBeInTheDocument();
   });
 });
-

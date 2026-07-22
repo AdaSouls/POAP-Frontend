@@ -1,156 +1,79 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PoapManagement from '../../jsx/pages/poapManagement';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
-import { getUserPoaps } from '../../services/poap.service';
-import dataSyncService from '../../services/dataSync.service';
+import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 
-// Mock services
-jest.mock('../../services/poap.service');
-jest.mock('../../services/dataSync.service', () => ({
-  startPoapsPolling: jest.fn(),
-  stopPoapsPolling: jest.fn(),
-}));
+function connectedDrawerValue(getState) {
+  return {
+    ...mockDrawerContext,
+    midnight: {
+      ...mockDrawerContext.midnight,
+      provider: {
+        address: 'aa'.repeat(32),
+        service: { getState },
+      },
+    },
+  };
+}
 
 describe('PoapManagement Page', () => {
-  const mockPoaps = [
-    {
-      tokenId: 1,
-      eventId: 1,
-      ownerAddress: '0x123',
-      poapUuid: 'uuid-1',
+  const mockTokens = {
+    ['bb'.repeat(32)]: {
+      tokenId: 1n,
+      attendance: { eventIds: [Buffer.from('cc'.repeat(32), 'hex')], isSoulbound: false },
     },
-    {
-      tokenId: 2,
-      eventId: 1,
-      ownerAddress: '0x123',
-      poapUuid: 'uuid-2',
-    },
-  ];
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    getUserPoaps.mockResolvedValue(mockPoaps);
-  });
+  };
 
   it('renders POAP Management header', () => {
     renderWithProviders(<PoapManagement />);
-    expect(screen.getByText(/POAP Management/i)).toBeInTheDocument();
+    expect(screen.getByText(/My POAPs/i)).toBeInTheDocument();
   });
 
-  it('renders create POAP card', () => {
+  it('renders claim SPOAP card', () => {
     renderWithProviders(<PoapManagement />);
-    expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/POAP/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/CLAIM/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/SPOAP/i).length).toBeGreaterThan(0);
   });
 
-  it('shows loading state initially', async () => {
-    getUserPoaps.mockImplementation(() => new Promise(() => {})); // Never resolves
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
-    
-    renderWithProviders(<PoapManagement />, { drawerValue });
-    // Loading state should be visible
+  it('loads and displays tokens from private state when wallet is connected', async () => {
+    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: mockTokens } });
+    renderWithProviders(<PoapManagement />, { drawerValue: connectedDrawerValue(getState) });
+
     await waitFor(() => {
-      expect(screen.getByAltText(/Loading POAPs/i)).toBeInTheDocument();
+      expect(getState).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/SPOAP #1/i)).toBeInTheDocument();
     });
   });
 
-  it('loads and displays POAPs when wallet is connected', async () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
-
-    renderWithProviders(<PoapManagement />, { drawerValue });
-
-    await waitFor(() => {
-      expect(getUserPoaps).toHaveBeenCalledWith('0x123');
-    });
-  });
-
-  it('dispatches CREATE_POAP when create button is clicked with wallet', async () => {
+  it('dispatches CREATE_POAP when claim button is clicked with wallet', async () => {
     const dispatch = jest.fn();
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
+    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
 
-    renderWithProviders(<PoapManagement />, { drawerValue, drawerDispatch: dispatch });
+    renderWithProviders(<PoapManagement />, {
+      drawerValue: connectedDrawerValue(getState),
+      drawerDispatch: dispatch,
+    });
 
-    const createButton = screen.getByText(/CREATE/i).closest('.card-body');
+    const createButton = screen.getByText(/CLAIM/i).closest('.card-body');
     await userEvent.click(createButton);
 
-    await waitFor(() => {
-      expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_POAP' });
-    });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_POAP' });
   });
 
   it('shows wallet connection required when no wallet', () => {
     renderWithProviders(<PoapManagement />);
-    // Should show wallet connection required state
-    expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
-  });
-
-  it('starts polling when wallet is connected', async () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
-
-    renderWithProviders(<PoapManagement />, { drawerValue });
-
-    await waitFor(() => {
-      expect(dataSyncService.startPoapsPolling).toHaveBeenCalled();
-    });
-  });
-
-  it('stops polling on unmount', () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
-
-    const { unmount } = renderWithProviders(<PoapManagement />, { drawerValue });
-    unmount();
-
-    expect(dataSyncService.stopPoapsPolling).toHaveBeenCalled();
+    expect(screen.getByText(/CLAIM/i)).toBeInTheDocument();
   });
 
   it('shows empty state when no POAPs are found', async () => {
-    getUserPoaps.mockResolvedValue([]);
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-      poapCollection: [],
-    };
-
-    renderWithProviders(<PoapManagement />, { drawerValue });
+    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
+    renderWithProviders(<PoapManagement />, { drawerValue: connectedDrawerValue(getState) });
 
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();
     });
   });
 });
-

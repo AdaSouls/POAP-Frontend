@@ -19,9 +19,8 @@ describe('PoapEvents Component', () => {
   it('renders events table when wallet is connected', () => {
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
+      midnight: {
+        provider: { address: 'aa'.repeat(32) },
       },
     };
 
@@ -32,9 +31,8 @@ describe('PoapEvents Component', () => {
   it('displays events when addressEvents are provided', () => {
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
+      midnight: {
+        provider: { address: 'aa'.repeat(32) },
       },
     };
 
@@ -46,9 +44,8 @@ describe('PoapEvents Component', () => {
   it('shows loading state when no events are provided', () => {
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
+      midnight: {
+        provider: { address: 'aa'.repeat(32) },
       },
     };
 

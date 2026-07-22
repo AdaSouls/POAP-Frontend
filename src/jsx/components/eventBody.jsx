@@ -10,11 +10,9 @@ const EventBody = ({ event }) => {
     return value !== null && value !== undefined && value !== "";
   };
 
-  // Get transaction hash from event (supports both snake_case and camelCase)
-  const txHash = event.transaction_hash || event.txHash;
-  const explorerUrl = txHash && process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL
-    ? `${process.env.REACT_APP_POLYGON_AMOY_BLOCK_EXPLORER_URL}/tx/${txHash}`
-    : null;
+  // Get transaction hash from event (indexer field is createdTx; keep legacy fallbacks too)
+  const txHash = event.createdTx || event.transaction_hash || event.txHash;
+  const explorerUrl = null;
 
   return (
     <div className="row g-3">
@@ -98,11 +96,11 @@ const EventBody = ({ event }) => {
         </div>
       )} */}
 
-      {/* Issuer ID */}
-      {hasValue(event.issuerId) && (
+      {/* Organizer */}
+      {hasValue(event.issuerPk || event.issuerId) && (
         <div className="col-6">
-          <p className="m-0 small gray">Issuer ID</p>
-          <p className="m-0 mb-3">{event.issuerId}</p>
+          <p className="m-0 small gray">Organizer</p>
+          <p className="m-0 mb-3 text-break small">{event.issuerPk || event.issuerId}</p>
         </div>
       )}
 
@@ -122,11 +120,11 @@ const EventBody = ({ event }) => {
         </div>
       )}
 
-      {/* Total Supply */}
-      {hasValue(event.totalSupply) && (
+      {/* Minted */}
+      {hasValue(event.minted ?? event.totalSupply) && (
         <div className="col-6">
-          <p className="m-0 small gray">Available Supply</p>
-          <p className="m-0 mb-3">{event.maxSupply - event.totalSupply}</p>
+          <p className="m-0 small gray">Minted</p>
+          <p className="m-0 mb-3">{event.minted ?? event.totalSupply}{event.maxSupply ? ` / ${event.maxSupply}` : ''}</p>
         </div>
       )}
 

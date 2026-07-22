@@ -14,7 +14,7 @@ const EventItem = ({ event, index, mintable, owned }) => {
   const [imageError, setImageError] = useState(false);
   const dispatch = useDrawerDispatch();
   const {
-    ethereum: { provider },
+    midnight: { provider },
   } = useDrawer();
 
   // Helper function to check if imageUrl exists
@@ -89,8 +89,8 @@ const EventItem = ({ event, index, mintable, owned }) => {
           )}
         </div>
       </td>
-      <td className="col-2">Event ID: {event.eventId}</td>
-      <td className="col-2">Issuer ID: {event.issuerId}</td>
+      <td className="col-2">Event ID: {event.eventId?.slice(0, 10)}…</td>
+      <td className="col-2">Organizer: {event.issuerPk?.slice(0, 10)}…</td>
       <td className="col-3">
         {/* Expiration: {formatDateToDDMMYYYY(event.mintExpiration * 1000)} */}
         Expiration: 
@@ -115,7 +115,7 @@ const EventItem = ({ event, index, mintable, owned }) => {
         
       </td>
       <td className="col-3">
-        Minted: {event.mintedPoaps} of {event.maxSupply}
+        Minted: {event.minted} of {event.maxSupply || '∞'}
         {owned && (
           <span
             alt="Already minted"

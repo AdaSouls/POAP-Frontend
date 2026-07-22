@@ -1,16 +1,35 @@
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import PoapEvent from "../components/poapEvent";
-import { checkEventsMintedByAddress } from "../../utils/poapContractInteractions";
+import { checkEventsMintedByAddress } from "../../utils/poapHelpers";
 
 const ClaimMint = () => {
-  const {
-    poapEvents,
-    poapCollection
-  } = useDrawer();
+  const { poapEvents, midnight: { provider } } = useDrawer();
+  const [myTokens, setMyTokens] = useState([]);
 
-  const events = checkEventsMintedByAddress(poapEvents, poapCollection)
+  const loadMyTokens = useCallback(async () => {
+    if (!provider) {
+      setMyTokens([]);
+      return;
+    }
+    try {
+      const { privateState } = await provider.service.getState();
+      const tokens = Object.entries(privateState.tokens || {}).map(([issuerPkHex, token]) => ({
+        issuerPkHex,
+        attendedEventIds: token.attendance.eventIds.map((id) => Buffer.from(id).toString("hex")),
+      }));
+      setMyTokens(tokens);
+    } catch (error) {
+      console.error("Error loading tokens:", error);
+    }
+  }, [provider]);
+
+  useEffect(() => {
+    loadMyTokens();
+  }, [loadMyTokens]);
+
+  const events = checkEventsMintedByAddress(poapEvents, myTokens);
 
   return (
     <Layout activeMenu={8}>

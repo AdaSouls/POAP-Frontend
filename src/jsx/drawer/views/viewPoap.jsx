@@ -1,86 +1,29 @@
-import { useState } from "react";
 import {
   useDrawer,
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
-import formatDateToDDMMYYYY from "../../../utils/formatDateToDDMMYYYY";
-import EventBody from "../../components/eventBody";
-import circlePlus from "../../../icons/svg/circle-plus.svg";
-import poapNormal from "../../../images/svg/poap-normal.svg";
+import { getLastClaimTx } from "../../../midnight/attendance-proof";
 
+const truncateHex = (hex) => {
+  if (!hex) return "N/A";
+  return `${hex.slice(0, 8)}…${hex.slice(-6)}`;
+};
+
+// The "poap" here is a private-state SPOAP token — see poapCard.jsx / poapManagement.jsx. There is
+// no on-chain event metadata (title/image/description) to show; attendance is a list of event ids
+// this token has been updated for, known only to this browser's private state.
 export default function ViewPoap() {
-  const {
-    poap,
-  } = useDrawer();
+  const { poap } = useDrawer();
   const dispatch = useDrawerDispatch();
-  const [expandedEvents, setExpandedEvents] = useState([]);
+  const lastClaimTx = poap?.issuerPkHex ? getLastClaimTx(poap.issuerPkHex) : null;
 
   const closeDrawer = () => {
-    dispatch({
-      type: "CLOSE_DRAWER",
-    });
+    dispatch({ type: "CLOSE_DRAWER" });
   };
 
-  const event = poap?.events?.[0] || null;
-
-  // Calculate status based on eventStartDate and expiration (like EventCard)
-  const calculateStatus = () => {
-    if (!event) return 'active';
-    
-    const now = Date.now();
-    
-    // Check if expired first
-    if (event.expiration && event.expiration > 0) {
-      const expirationTime = event.expiration * 1000;
-      if (expirationTime <= now) {
-        return 'expired';
-      }
-    }
-    
-    // Check event start date
-    if (event.eventStartDate) {
-      const startTime = event.eventStartDate * 1000;
-      if (startTime > now) {
-        return 'pending';
-      } else {
-        return 'active';
-      }
-    }
-    
-    // Default to active if no dates available
-    return 'active';
+  const copyTxHash = () => {
+    if (lastClaimTx) navigator.clipboard?.writeText(lastClaimTx);
   };
-
-  const getStatusBadgeClass = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'pending':
-        return 'badge bg-warning';
-      case 'active':
-        return 'badge bg-success';
-      case 'completed':
-        return 'badge bg-info';
-      case 'expired':
-        return 'badge bg-danger';
-      default:
-        return 'badge bg-secondary';
-    }
-  };
-  
-  // Toggle event expansion
-  const toggleEvent = (index) => {
-    setExpandedEvents((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
-  };
-
-  // Check if an event is expanded
-  const isEventExpanded = (index) => {
-    return expandedEvents.includes(index);
-  };
-
-  const eventStatus = calculateStatus();
-  const eventTitle = event?.title || `Event ${poap?.eventId || 'N/A'}`;
-  const eventImageUrl = event?.imageUrl || event?.image || poapNormal;
 
   return (
     <div className="container absolute top-0 start-0 w-100 h-100 p-3 overflow-auto">
@@ -98,154 +41,81 @@ export default function ViewPoap() {
       </div>
 
       <div className="drawer-body">
-        {/* POAP Token Section */}
         <div className="mb-4">
-          <h3 className="mb-3" style={{ fontSize: '20px', fontWeight: '600' }}>
-            Token Information
-          </h3>
-          
           <div className="row g-3">
-            {/* Token ID - Prominent Display */}
             <div className="col-12">
               <div className="card bg-light p-3 mb-3">
                 <p className="m-0 small text-muted mb-1">Token ID</p>
-                <h3 className="m-0" style={{ fontSize: '24px', fontWeight: '700' }}>
-                  {poap?.tokenId || 'N/A'}
+                <h3 className="m-0" style={{ fontSize: "24px", fontWeight: "700" }}>
+                  {poap?.tokenId !== undefined ? String(poap.tokenId) : "N/A"}
                 </h3>
               </div>
             </div>
 
-            {/* Event ID and Issuer ID */}
-            <div className="col-6">
-              <p className="m-0 small text-muted mb-1">Event ID</p>
-              <p className="m-0 mb-3 font-weight-semibold">{poap?.eventId || 'N/A'}</p>
-            </div>
-            
-            <div className="col-6">
-              <p className="m-0 small text-muted mb-1">Issuer ID</p>
-              <p className="m-0 mb-3 font-weight-semibold">{poap?.issuerId || 'N/A'}</p>
-            </div>
-
-            {/* Minted Date */}
             <div className="col-12">
-              <p className="m-0 small text-muted mb-1">Minted Date</p>
-              <p className="m-0 mb-3">
-                {poap?.createdAt ? formatDateToDDMMYYYY(new Date(poap.createdAt)) : 'N/A'}
-              </p>
-            </div>
-
-            {/* Owner Address */}
-            <div className="col-12">
-              <p className="m-0 small text-muted mb-1">Owner Address</p>
+              <p className="m-0 small text-muted mb-1">Issuer (Organizer)</p>
               <p className="m-0 mb-3 text-break small font-weight-semibold">
-                {poap?.ownerAddress || 'N/A'}
+                {poap?.issuerPkHex || "N/A"}
               </p>
             </div>
 
-            {/* Blockchain Metadata */}
-            {(poap?.block_number || poap?.transaction_hash) && (
-              <>
-                
-                {poap?.block_number && (
-                  <div className="col-6">
-                    <p className="m-0 small text-muted mb-1">Block Number</p>
-                    <p className="m-0 mb-3">{poap.block_number}</p>
-                  </div>
-                )}
+            <div className="col-6">
+              <p className="m-0 small text-muted mb-1">Soulbound</p>
+              <p className="m-0 mb-3 font-weight-semibold">{poap?.isSoulbound ? "Yes" : "No"}</p>
+            </div>
 
-                {poap?.transaction_hash && (
-                  <div className="col-12">
-                    <p className="m-0 small text-muted mb-1">Transaction Hash</p>
-                    <p className="m-0 mb-3 text-break small">
-                      {poap.transaction_hash}
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+            <div className="col-6">
+              <p className="m-0 small text-muted mb-1">Events Attended</p>
+              <p className="m-0 mb-3 font-weight-semibold">{poap?.attendedEventIds?.length ?? 0}</p>
+            </div>
           </div>
         </div>
 
-        {/* Event Information Section */}
-        {event && (
-          <div className="mb-4">
-            <hr className="my-4" />
-            <div
-              className="mb-3"
-              style={{
-                border: "1px solid rgba(255,255,255,0.2)",
-                padding: "15px 20px",
-                borderRadius: "8px",
-                boxSizing: "border-box",
-                backgroundColor: "rgba(255,255,255,0.05)",
-              }}
-            >
-              <div
-                className="d-flex align-items-center justify-content-between cursor-pointer"
-                onClick={() => toggleEvent(0)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="d-flex align-items-center">
-                  {eventImageUrl && (
-                    <img
-                      src={eventImageUrl}
-                      alt={eventTitle}
-                      className="rounded-circle mr-3"
-                      width="40"
-                      height="40"
-                      style={{
-                        objectFit: "cover",
-                        border: "2px solid rgba(255,255,255,0.3)",
-                      }}
-                      onError={(e) => {
-                        e.target.src = poapNormal;
-                      }}
-                    />
-                  )}
-                  <div>
-                    <h4 className="m-0 mb-1" style={{ opacity: `${isEventExpanded(0) ? "0%" : "100%"}` }}>
-                      {eventTitle}
-                    </h4>
-                    <div className="d-flex align-items-center">
-                      <span className={`${getStatusBadgeClass(eventStatus)} mr-2`} style={{ fontSize: '10px', padding: '2px 8px', textTransform: 'capitalize' }}>
-                        {eventStatus}
-                      </span>
-                      {event.createdAt && (
-                        <span className="text-muted small">
-                          Created: {formatDateToDDMMYYYY(new Date(event.createdAt))}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    transform: isEventExpanded(0) ? "rotate(45deg)" : "",
-                    transition: "transform 0.3s",
-                  }}
-                >
-                  <img src={circlePlus} width="20" height="20" alt="" />
-                </div>
+        <div className="mb-4">
+          <hr className="my-4" />
+          <h4 className="mb-3" style={{ fontSize: "16px" }}>Prove Attendance</h4>
+          {lastClaimTx ? (
+            <>
+              <div className="d-flex align-items-center mb-2">
+                <span className="badge bg-success mr-2">Verified ✓</span>
+                <span className="small text-muted">This token was claimed with a ZK-proved on-chain transaction.</span>
               </div>
+              <div className="d-flex align-items-center">
+                <code className="text-break small flex-grow-1">{lastClaimTx}</code>
+                <button className="btn btn-sm btn-outline-secondary ml-2" onClick={copyTxHash}>
+                  Copy
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="text-muted small mb-0">
+              No recent claim transaction recorded on this device. Claim (or reconcile) this token
+              here to generate a shareable proof.
+            </p>
+          )}
+          <small className="text-muted d-block mt-2">
+            This proves you hold a token for this contract — every claim is already a ZK-proved
+            transaction verified on-chain. Proving specific attendance counts without revealing
+            which events requires new contract circuits (planned follow-up work).
+          </small>
+        </div>
 
-              {isEventExpanded(0) && (
-                <div className="mt-4">
-                  <EventBody event={event} />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* No Event Information */}
-        {!event && poap?.eventId && (
+        {poap?.attendedEventIds?.length > 0 && (
           <div className="mb-4">
             <hr className="my-4" />
-            <div className="alert alert-info" role="alert">
-              <p className="m-0">
-                Event information is not available for Event ID: {poap.eventId}
-              </p>
-            </div>
+            <h4 className="mb-3" style={{ fontSize: "16px" }}>Attendance (this device only)</h4>
+            <ul className="list-unstyled mb-0">
+              {poap.attendedEventIds.map((eventId) => (
+                <li key={eventId} className="d-flex align-items-center mb-2">
+                  <i className="icofont-calendar mr-2"></i>
+                  <span className="text-break small">{truncateHex(eventId)}</span>
+                </li>
+              ))}
+            </ul>
+            <small className="text-muted d-block mt-2">
+              This list is stored only in this browser's private state and is never sent to any
+              server — see the "private state is per-browser" note in the migration docs.
+            </small>
           </div>
         )}
       </div>

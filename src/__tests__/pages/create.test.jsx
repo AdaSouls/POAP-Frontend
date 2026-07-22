@@ -1,33 +1,16 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Create from '../../jsx/pages/create';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
-import * as paimaService from '../../services/paima.service';
-import dataSyncService from '../../services/dataSync.service';
+import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
+import { getAllEvents } from '../../midnight/indexer.service';
 
-// Mock services
-jest.mock('../../services/paima.service');
-jest.mock('../../services/dataSync.service', () => ({
-  startEventsPolling: jest.fn(),
-  startPoapsPolling: jest.fn(),
-  stopAllPolling: jest.fn(),
-}));
+jest.mock('../../midnight/indexer.service');
 
 describe('Create Page', () => {
-  const mockIssuer = {
-    issuerId: 1,
-    issuerUuid: 'issuer-uuid-1',
-    address: '0x123',
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
-    paimaService.getIssuerByAddressService = jest.fn().mockResolvedValue(mockIssuer);
-    paimaService.getAllEventsService = jest.fn().mockResolvedValue([]);
-    paimaService.getAllPoapsService = jest.fn().mockResolvedValue([]);
-    paimaService.getOwnerPoapsService = jest.fn().mockResolvedValue([]);
-    paimaService.getOwnerByAddressService = jest.fn().mockResolvedValue(null);
+    getAllEvents.mockResolvedValue([]);
   });
 
   it('renders POAP Event Creation header', () => {
@@ -41,38 +24,30 @@ describe('Create Page', () => {
     expect(screen.getAllByText(/POAP EVENT/i).length).toBeGreaterThan(0);
   });
 
-  it('dispatches CREATE_EVENT when create button is clicked with wallet and issuer', async () => {
+  it('dispatches CREATE_EVENT when create button is clicked by an organizer', async () => {
     const dispatch = jest.fn();
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-      poapIssuer: mockIssuer,
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'aa'.repeat(32) } },
     };
 
-    renderWithProviders(<Create />, { drawerValue, drawerDispatch: dispatch });
+    renderWithProviders(<Create />, {
+      drawerValue,
+      drawerDispatch: dispatch,
+      userRolesValue: { ...mockUserRoles, isIssuer: true },
+    });
 
     const createButton = screen.getByText(/CREATE/i).closest('.card-body');
     await userEvent.click(createButton);
 
-    await waitFor(() => {
-      expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
-    });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 
-  it('dispatches CREATE_ISSUER when wallet has no issuer', async () => {
+  it('shows an admin-contact message instead of creating when wallet is not an organizer', async () => {
     const dispatch = jest.fn();
-    paimaService.getIssuerByAddressService.mockResolvedValue(null);
-    
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-      poapIssuer: null,
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'aa'.repeat(32) } },
     };
 
     renderWithProviders(<Create />, { drawerValue, drawerDispatch: dispatch });
@@ -80,9 +55,7 @@ describe('Create Page', () => {
     const createButton = screen.getByText(/CREATE/i).closest('.card-body');
     await userEvent.click(createButton);
 
-    await waitFor(() => {
-      expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_ISSUER' });
-    });
+    expect(dispatch).not.toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 
   it('shows connect wallet button when no wallet is connected', () => {
@@ -90,52 +63,16 @@ describe('Create Page', () => {
     expect(screen.getByRole('button', { name: /Connect/i })).toBeInTheDocument();
   });
 
-  it('starts polling when wallet is connected', async () => {
+  it('loads the organizer\'s own events when a wallet is connected', async () => {
     const drawerValue = {
       ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'aa'.repeat(32) } },
     };
 
     renderWithProviders(<Create />, { drawerValue });
 
     await waitFor(() => {
-      expect(dataSyncService.startEventsPolling).toHaveBeenCalled();
-      expect(dataSyncService.startPoapsPolling).toHaveBeenCalled();
-    });
-  });
-
-  it('stops polling on unmount', () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
-
-    const { unmount } = renderWithProviders(<Create />, { drawerValue });
-    unmount();
-
-    expect(dataSyncService.stopAllPolling).toHaveBeenCalled();
-  });
-
-  it('fetches issuer data on mount when wallet is connected', async () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      ethereum: {
-        provider: { address: '0x123' },
-        address: '0x123',
-      },
-    };
-
-    renderWithProviders(<Create />, { drawerValue });
-
-    await waitFor(() => {
-      expect(paimaService.getIssuerByAddressService).toHaveBeenCalledWith('0x123');
+      expect(getAllEvents).toHaveBeenCalled();
     });
   });
 });
-

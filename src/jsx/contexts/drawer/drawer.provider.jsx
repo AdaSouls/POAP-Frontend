@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer } from 'react';
 import useCardano from './useCardano';
-import useEthereum from './useEthereum';
+import useMidnight from './useMidnight';
 import {
   Blockfrost
 } from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js";
@@ -11,21 +11,21 @@ const DrawerDispatchContext = createContext(null);
 export function DrawerProvider({ children }) {
   const cardanoState = useCardano(
     {
-      network: process.env.REACT_APP_BLOCKFROST_NETWORK, 
+      network: process.env.REACT_APP_BLOCKFROST_NETWORK,
       provider: new Blockfrost(
           process.env.REACT_APP_BLOCKFROST_URL,
           process.env.REACT_APP_BLOCKFROST_PROJECT_ID
       )
     }
   );
-  
-  const ethereumState = useEthereum();
 
-  const initialState = {  
+  const midnightState = useMidnight();
+
+  const initialState = {
     cardano: cardanoState,
-    ethereum: ethereumState,
+    midnight: midnightState,
     showCardanoWallet: false,
-    showEthereumWallet: false,
+    showMidnightWallet: false,
     createSoul: false,
     createSoulToken: false,
     createPoap: false,
@@ -64,11 +64,11 @@ export function useDrawerDispatch() {
 
 function drawerReducer(state, action) {
   switch (action.type) {
-    case 'UPDATE_ETHEREUM_WALLET':
-      return { 
-        ...state, 
-        ethereum: {
-          ...state.ethereum,
+    case 'UPDATE_MIDNIGHT_WALLET':
+      return {
+        ...state,
+        midnight: {
+          ...state.midnight,
           provider: action.payload
         }
       };
@@ -84,7 +84,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: true,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
@@ -97,11 +97,11 @@ function drawerReducer(state, action) {
         viewToken: false,
         open: true,
       };
-    case 'SHOW_ETHEREUM_WALLET':
+    case 'SHOW_MIDNIGHT_WALLET':
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: true,
+        showMidnightWallet: true,
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
@@ -118,7 +118,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: true,
         createSoulToken: false,
         createPoap: false,
@@ -135,7 +135,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: true,
         createPoap: false,
@@ -153,7 +153,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
@@ -171,7 +171,7 @@ function drawerReducer(state, action) {
         return {
           ...state,
           showCardanoWallet: false,
-          showEthereumWallet: false,
+          showMidnightWallet: false,
           createSoul: false,
           createSoulToken: false,
           createPoap: false,
@@ -189,7 +189,7 @@ function drawerReducer(state, action) {
         return {
           ...state,
           showCardanoWallet: false,
-          showEthereumWallet: false,
+          showMidnightWallet: false,
           createSoul: false,
           createSoulToken: false,
           createPoap: false,
@@ -207,7 +207,7 @@ function drawerReducer(state, action) {
         return {
           ...state,
           showCardanoWallet: false,
-          showEthereumWallet: false,
+          showMidnightWallet: false,
           createSoul: false,
           createSoulToken: false,
           createPoap: false,
@@ -225,7 +225,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
@@ -242,7 +242,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: false,
         createPoap: true,
@@ -259,7 +259,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
@@ -276,7 +276,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
@@ -293,7 +293,7 @@ function drawerReducer(state, action) {
       return {
         ...state,
         showCardanoWallet: false,
-        showEthereumWallet: false,
+        showMidnightWallet: false,
         createSoul: false,
         createSoulToken: false,
         createPoap: false,
