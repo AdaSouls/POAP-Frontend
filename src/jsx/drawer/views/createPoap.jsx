@@ -82,17 +82,17 @@ export default function CreatePoap() {
 
     setLoading(true);
     try {
-      loadingFunction("Claiming SPOAP", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Claiming POAP", "Please confirm the transaction in your Lace wallet…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
       const { txHash } = await provider.service.claimOrUpdate(eventIdBytes, isSoulbound);
       recordLastClaimTx(selectedEvent.issuerPk, txHash);
 
-      succesfullBlockchainCreation("SPOAP Claimed Successfully", `Transaction: ${txHash}`, "");
+      succesfullBlockchainCreation("POAP Claimed Successfully", `Transaction: ${txHash}`, "");
       closeDrawer();
       navigate("/poap-management");
     } catch (error) {
       console.error("Error claiming POAP:", error);
-      errorFunction("Error", error.message || "Failed to claim SPOAP. Please try again.", "");
+      errorFunction("Error", error.message || "Failed to claim POAP. Please try again.", "");
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ export default function CreatePoap() {
             aria-label="close"
           ></button>
           <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold">
-            Claim SPOAP
+            Claim POAP
           </h4>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function CreatePoap() {
           onClick={handleSubmit}
           disabled={loading || !selectedEvent || !mintable}
         >
-          {loading ? 'Claiming…' : 'Claim SPOAP'}
+          {loading ? 'Claiming…' : 'Claim POAP'}
         </button>
       </div>
     </div>

@@ -1,9 +1,14 @@
-import React from "react";
+import React, { forwardRef, useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import { Calendar, Info, X } from "lucide-react";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import eventNormal from "../../images/svg/event-normal.svg";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
+import { getEventStatus } from "../../utils/poapHelpers";
+import { getEvent } from "../../midnight/indexer.service";
 
 // Event data now comes entirely from the on-chain-only Midnight indexer (see
 // src/midnight/indexer.service.ts) — there is no title/description/image metadata to show, only
@@ -14,21 +19,21 @@ const truncateHex = (hex) => {
   return `${hex.slice(0, 8)}…${hex.slice(-6)}`;
 };
 
-const EventCard = ({ event }) => {
+// Same collapsed/expanded dual-mode pattern as poapCard.jsx — same component instance either way
+// (parent keeps it mounted across expand/collapse), forwardRef for AnimatePresence's
+// mode="popLayout", layout on wrapper+card+icon, borderRadius/boxShadow set via style so
+// framer-motion's layout FLIP auto-corrects them, and text hidden synchronously on click (fading
+// out before the resize starts, back in only once onLayoutAnimationComplete fires).
+const EventCard = forwardRef(({ event, isExpanded = false, onExpand = () => {}, onCollapse = () => {} }, ref) => {
+  const status = getEventStatus(event);
+  const { midnight: { provider } } = useDrawer();
+  const { isAdmin, isIssuer } = useUserRoles();
   const dispatch = useDrawerDispatch();
+  const canMintForEvent = isAdmin || (isIssuer && provider?.address === event.issuerPk);
 
-  const viewEvent = () => {
-    dispatch({
-      type: "VIEW_EVENT",
-      payload: { event, mintable: canMint() },
-    });
+  const openMintDrawer = () => {
+    dispatch({ type: "CREATE_MINT", payload: event });
   };
-
-  const isExpired = Boolean(event.expiration && event.expiration > 0 && event.expiration * 1000 <= Date.now());
-  const isFull = Boolean(event.maxSupply && event.maxSupply > 0 && event.minted >= event.maxSupply);
-  const status = !event.isActive ? "inactive" : isExpired ? "expired" : isFull ? "full" : "active";
-
-  const canMint = () => status === "active";
 
   const statusBadgeClass = {
     active: "badge bg-success",
@@ -40,120 +45,251 @@ const EventCard = ({ event }) => {
   const available = event.maxSupply > 0 ? Math.max(0, event.maxSupply - event.minted) : undefined;
   const progressPercentage = event.maxSupply > 0 ? Math.min((event.minted / event.maxSupply) * 100, 100) : 0;
 
+  const TEXT_FADE_MS = 150;
+  const [showText, setShowText] = useState(true);
+  const textStyle = { opacity: showText ? 1 : 0, transition: `opacity ${TEXT_FADE_MS}ms ease` };
+  const pendingActionRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (pendingActionRef.current) clearTimeout(pendingActionRef.current);
+    };
+  }, []);
+
+  const handleExpand = () => {
+    setShowText(false);
+    pendingActionRef.current = setTimeout(() => {
+      pendingActionRef.current = null;
+      onExpand();
+    }, TEXT_FADE_MS);
+  };
+
+  const handleCollapse = () => {
+    setShowText(false);
+    pendingActionRef.current = setTimeout(() => {
+      pendingActionRef.current = null;
+      onCollapse();
+    }, TEXT_FADE_MS);
+  };
+
+  // Fetched only once expanded — getAllEvents() (the page's own poll, event.* here) doesn't
+  // include liveTokens, only GET /api/events/:id does. This live count is the only thing the
+  // indexer can tell us about "POAPs from this event" — there's no by-event token lookup to list
+  // individual holders (see indexer.service.ts).
+  const [eventDetail, setEventDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isExpanded) return undefined;
+    let cancelled = false;
+    setDetailLoading(true);
+    getEvent(event.eventId)
+      .then((detail) => {
+        if (!cancelled) setEventDetail(detail);
+      })
+      .catch((error) => {
+        console.error("Error loading event detail:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isExpanded, event.eventId]);
+
   return (
-    <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6 mb-3">
-      <div
-        className={`card card-event card-classic ${isExpired ? "bg-event-expired" : "bg-event-normal"}`}
+    <motion.div
+      ref={ref}
+      layout
+      className={isExpanded ? "col-12 mb-3" : "col-xxl-6 col-lg-6 col-md-12 mb-3"}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ layout: { duration: 0.3, ease: "easeInOut" }, duration: 0.2, ease: "easeInOut" }}
+    >
+      <motion.div
+        layout
+        className={`card card-event card-classic card-outline-only${isExpanded ? " card-detail-expanded" : ""}`}
         style={{
-          transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-          cursor: "pointer",
+          cursor: isExpanded ? "default" : "pointer",
+          borderRadius: 16,
+          border: "none",
+          boxShadow: "inset 0 0 0 1px var(--glass-border)",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-4px)";
-          e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.2)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "";
-        }}
-        onClick={viewEvent}
+        whileHover={!isExpanded ? { y: -2 } : undefined}
+        whileTap={!isExpanded ? { scale: 0.99 } : undefined}
+        transition={{ layout: { duration: 0.3, ease: "easeInOut" }, duration: 0.2, ease: "easeInOut" }}
+        onClick={!isExpanded ? handleExpand : undefined}
+        onLayoutAnimationComplete={() => setShowText(true)}
       >
-        <div className="card-body card-classic-max-height">
-          <div className="d-flex justify-content-start mb-3">
-            <img
+        <div className="card-body card-outline-only-body">
+          {isExpanded && (
+            <button
+              type="button"
+              className="card-expand-close-btn"
+              onClick={handleCollapse}
+              aria-label="Collapse event details"
+            >
+              <X size={16} />
+            </button>
+          )}
+
+          <div className="d-flex justify-content-start align-items-center mb-2">
+            <motion.img
+              layout
               className="mr-3 rounded-circle"
               src={eventNormal}
-              width="60"
-              height="60"
+              width="48"
+              height="48"
               alt=""
               style={{ border: "2px solid rgba(255,255,255,0.3)", flexShrink: 0 }}
             />
-            <div className="event-info flex-grow-1">
-              <h4 className="mb-2" style={{ fontSize: "16px", fontWeight: "600" }}>
+            <div className="event-info flex-grow-1" style={textStyle}>
+              <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
                 Event {truncateHex(event.eventId)}
               </h4>
               <span className={`${statusBadgeClass} text-capitalize`} style={{ fontSize: "10px", padding: "2px 8px" }}>
                 {status}
               </span>
             </div>
-          </div>
-
-          <ul className="list-unstyled mb-3" style={{ fontSize: "13px" }}>
-            <li className="d-flex align-items-center mb-2">
-              <img className="mr-2" src={eventOwnerIcon} width="16" height="16" alt="" style={{ flexShrink: 0 }} />
-              <span className="text-muted small">
-                Organizer: <span className="text-white">{truncateHex(event.issuerPk)}</span>
-              </span>
-            </li>
-            <li className="d-flex align-items-center mb-2">
-              <i className="icofont-calendar mr-2" style={{ fontSize: "16px", width: "20px" }}></i>
-              <span className="text-muted">
-                {event.expiration > 0
-                  ? `Expires: ${formatDateToDDMMYYYY(new Date(event.expiration * 1000))}`
-                  : "No expiry"}
-              </span>
-            </li>
-            <li className="d-flex align-items-center mb-2">
-              <i className="icofont-info-circle mr-2" style={{ fontSize: "16px", width: "20px" }}></i>
-              <span className="text-muted">{event.isPublicMint ? "Public mint" : "Organizer-minted"}</span>
-            </li>
-          </ul>
-
-          <div className="mb-3">
-            <div className="d-flex justify-content-between align-items-center mb-1">
-              <small className="text-muted" style={{ fontSize: "11px" }}>
-                Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
-                {available !== undefined && (
-                  <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
-                )}
+            {event.createdBlock && (
+              <small className="text-muted flex-shrink-0" style={{ fontSize: "10px", ...textStyle }}>
+                Block: {event.createdBlock}
               </small>
-              {event.maxSupply > 0 && (
-                <small className="text-muted" style={{ fontSize: "11px" }}>{Math.round(progressPercentage)}%</small>
-              )}
-            </div>
-            {event.maxSupply > 0 && (
-              <div className="progress" style={{ height: "6px", backgroundColor: "rgba(255,255,255,0.2)", borderRadius: "3px" }}>
-                <div
-                  className="progress-bar bg-white"
-                  role="progressbar"
-                  style={{ width: `${progressPercentage}%`, transition: "width 0.3s ease" }}
-                  aria-valuenow={progressPercentage}
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                ></div>
-              </div>
             )}
           </div>
+
+          {!isExpanded && (
+            <div style={textStyle}>
+              <ul className="list-unstyled mb-2" style={{ fontSize: "12px" }}>
+                <li className="d-flex align-items-center mb-1">
+                  <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
+                  <span className="text-muted small">
+                    Organizer: <span className="text-white">{truncateHex(event.issuerPk)}</span>
+                  </span>
+                  <span className="mx-2 text-muted">·</span>
+                  <Calendar size={14} className="mr-1" />
+                  <span className="text-muted small">
+                    {event.expiration > 0 ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : "No expiry"}
+                  </span>
+                </li>
+                <li className="d-flex align-items-center">
+                  <Info size={14} className="mr-2" style={{ width: "18px" }} />
+                  <span className="text-muted small">{event.isPublicMint ? "Public mint" : "Organizer-minted"}</span>
+                </li>
+              </ul>
+
+              <div className="d-flex justify-content-between align-items-center">
+                <small className="text-muted" style={{ fontSize: "11px" }}>
+                  Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
+                  {available !== undefined && (
+                    <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
+                  )}
+                </small>
+                {status !== "active" ? (
+                  <span className="btn btn-white btn-small disabled" style={{ fontSize: "11px", padding: "3px 10px" }}>
+                    {status === "expired" ? "Expired" : status === "full" ? "Sold Out" : "Inactive"}
+                  </span>
+                ) : (
+                  <Link
+                    to={`/poap-management?eventId=${event.eventId}`}
+                    className="btn btn-white btn-small"
+                    style={{ fontSize: "11px", padding: "3px 10px" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View POAPs
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isExpanded && (
+            <div className="mt-3" style={textStyle}>
+              <p className="m-0 small text-muted mb-1">Event ID</p>
+              <p className="m-0 mb-3 text-break small font-weight-semibold">{event.eventId}</p>
+
+              <p className="m-0 small text-muted mb-1">Organizer</p>
+              <p className="m-0 mb-3 text-break small font-weight-semibold">{event.issuerPk}</p>
+
+              <hr className="my-4" />
+              <h4 className="mb-3" style={{ fontSize: "16px" }}>Created</h4>
+              <p className="m-0 mb-1 small">
+                Block: <span className="text-white">{event.createdBlock ?? "N/A"}</span>
+              </p>
+              {event.createdTx && (
+                <p className="m-0 mb-3 text-break small">
+                  Tx: <code className="small">{event.createdTx}</code>
+                </p>
+              )}
+
+              {!event.isActive && event.deactivatedBlock && (
+                <p className="text-muted small mb-3">
+                  Deactivated at block <span className="text-white">{event.deactivatedBlock}</span>.
+                </p>
+              )}
+
+              <hr className="my-4" />
+              <h4 className="mb-3" style={{ fontSize: "16px" }}>POAPs from this event</h4>
+              {detailLoading ? (
+                <p className="text-muted small mb-0">Loading…</p>
+              ) : (
+                <p className="m-0 mb-1">
+                  <span className="text-white" style={{ fontSize: "20px", fontWeight: 700 }}>
+                    {eventDetail?.liveTokens ?? "—"}
+                  </span>
+                  <span className="text-muted small ml-2">
+                    live token{eventDetail?.liveTokens === 1 ? "" : "s"}
+                  </span>
+                </p>
+              )}
+              <small className="text-muted d-block mt-2">
+                The indexer can only report a live count, not individual holders — listing which
+                POAPs belong to this event would need a by-event lookup the backend doesn't expose
+                yet.
+              </small>
+
+              {canMintForEvent && (
+                <>
+                  <hr className="my-4" />
+                  <h4 className="mb-3" style={{ fontSize: "16px" }}>Mint to Recipient</h4>
+                  <p className="text-muted small mb-2">
+                    Push-mint a POAP directly to a wallet, without them needing to claim it
+                    themselves.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={openMintDrawer}
+                  >
+                    Mint POAP
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="card-footer border-0 bg-transparent p-3 pt-0">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              {event.createdBlock && (
-                <small className="text-muted" style={{ fontSize: "10px" }}>Block: {event.createdBlock}</small>
-              )}
-            </div>
-            <div>
-              {status !== "active" ? (
-                <span className="btn btn-white btn-small disabled" style={{ fontSize: "12px", padding: "4px 12px" }}>
-                  {status === "expired" ? "Expired" : status === "full" ? "Sold Out" : "Inactive"}
-                </span>
-              ) : (
-                <Link
-                  to={`/poap-management?eventId=${event.eventId}`}
-                  className="btn btn-white btn-small"
-                  style={{ fontSize: "12px", padding: "4px 12px" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  View POAPs
-                </Link>
-              )}
-            </div>
+        {/* Minted bar — the one element that sits flush against the card's own bottom edge,
+            outside card-body's padding, instead of just being "near the bottom" inside it. */}
+        {event.maxSupply > 0 && (
+          <div className="card-event-minted-bar">
+            <div
+              className="card-event-minted-bar-fill"
+              role="progressbar"
+              style={{ width: `${progressPercentage}%` }}
+              aria-valuenow={progressPercentage}
+              aria-valuemin="0"
+              aria-valuemax="100"
+            ></div>
           </div>
-        </div>
-      </div>
-    </div>
+        )}
+      </motion.div>
+    </motion.div>
   );
-};
+});
+
+EventCard.displayName = "EventCard";
 
 export default EventCard;

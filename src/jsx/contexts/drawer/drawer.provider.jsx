@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useReducer, useEffect } from 'react';
 import useCardano from './useCardano';
 import useMidnight from './useMidnight';
 import {
@@ -33,6 +33,7 @@ export function DrawerProvider({ children }) {
     createIssuer: false,
     checkCollection: false,
     viewToken: false,
+    createMint: false,
     open: false,
     poapEvents: [],
     poapCollection: [],
@@ -43,6 +44,16 @@ export function DrawerProvider({ children }) {
     drawerReducer,
     initialState
   );
+
+  // useReducer only reads `initialState` once, on mount — after that, `state.midnight` only
+  // changes when something dispatches UPDATE_MIDNIGHT_WALLET. laceWallet.jsx's manual "Connect
+  // Lace" flow already does this itself, but useMidnight's own mock-mode auto-connect effect
+  // (see useMidnight.js) only updates its own local state, with no dispatch access — without this
+  // mirror, that update would never reach useDrawer() consumers (header.jsx, poapManagement.jsx,
+  // etc.), which would keep reading the stale `provider: null` from the initial render forever.
+  useEffect(() => {
+    dispatch({ type: 'UPDATE_MIDNIGHT_WALLET', payload: midnightState.provider });
+  }, [midnightState.provider]);
 
   return (
     <DrawerContext.Provider value={state}>
@@ -92,9 +103,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true,
       };
     case 'SHOW_MIDNIGHT_WALLET':
@@ -109,9 +119,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true
       };
     case 'CREATE_SOUL':
@@ -126,9 +135,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true
       };
     case 'CREATE_SOUL_TOKEN':
@@ -143,9 +151,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true,
         collection: action.payload
       };
@@ -161,9 +168,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: true,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true, 
         items: action.payload
       };
@@ -179,48 +185,28 @@ function drawerReducer(state, action) {
           createIssuer: false,
           createOwner: false,
           checkCollection: false,
-          viewEvent: false,
-          viewPoapToken: false,
           viewToken: true,
-          open: true, 
+          createMint: false,
+          open: true,
           token: action.payload
         };
-    case 'VIEW_EVENT':
-        return {
-          ...state,
-          showCardanoWallet: false,
-          showMidnightWallet: false,
-          createSoul: false,
-          createSoulToken: false,
-          createPoap: false,
-          createEvent: false,
-          createIssuer: false,
-          createOwner: false,
-          checkCollection: false,
-          viewEvent: true,
-          viewPoapToken: true,
-          viewToken: false,
-          open: true, 
-          event: action.payload
-        };
-    case 'VIEW_POAP_TOKEN':
-        return {
-          ...state,
-          showCardanoWallet: false,
-          showMidnightWallet: false,
-          createSoul: false,
-          createSoulToken: false,
-          createPoap: false,
-          createEvent: false,
-          createIssuer: false,
-          createOwner: false,
-          checkCollection: false,
-          viewEvent: false,
-          viewPoapToken: true,
-          viewToken: false,
-          open: true, 
-          poap: action.payload
-        };
+    case 'CREATE_MINT':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showMidnightWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: false,
+        createOwner: false,
+        checkCollection: false,
+        viewToken: false,
+        createMint: true,
+        open: true,
+        mintEvent: action.payload
+      };
     case 'CLOSE_DRAWER':
       return {
         ...state,
@@ -233,9 +219,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: false
       };
     case 'CREATE_POAP':
@@ -250,9 +235,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true
       };
     case 'CREATE_EVENT':
@@ -267,9 +251,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true
       };
     case 'CREATE_ISSUER':
@@ -284,9 +267,8 @@ function drawerReducer(state, action) {
         createIssuer: true,
         createOwner: false,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true
       };
     case 'CREATE_OWNER':
@@ -301,9 +283,8 @@ function drawerReducer(state, action) {
         createIssuer: false,
         createOwner: true,
         checkCollection: false,
-        viewEvent: false,
-        viewPoapToken: false,
         viewToken: false,
+        createMint: false,
         open: true
       };
     case 'UPDATE_EVENTS':

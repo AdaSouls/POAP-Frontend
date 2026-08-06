@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Check, X } from "lucide-react";
 import bannerWelcome from "../../images/banner/banner-welcome.jpg";
 import adaSolusLogoBanner from "../../images/banner/adasouls-logo-banner.png";
 import Layout from "../layout/layout";
@@ -51,11 +52,11 @@ const Dashboard = () => {
                 <li>
                   {provider ? (
                     <span className="verified">
-                      <i className="icofont-check-alt"></i>
+                      <Check size={14} />
                     </span>
                   ) : (
                     <span className="not-verified">
-                      <i className="icofont-close-line"></i>
+                      <X size={14} />
                     </span>
                   )}
                   Lace Wallet

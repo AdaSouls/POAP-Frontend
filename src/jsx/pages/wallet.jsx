@@ -1,4 +1,5 @@
 import React from "react";
+import { Check, X } from "lucide-react";
 import Layout from "../layout/layout";
 import {
   useDrawer,
@@ -21,9 +22,17 @@ const Wallet = () => {
 
   return (
     <Layout activeMenu={5}>
+      <div className="inner-header">
+        <div className="inner-header-row">
+          <div className="inner-header-row-left">
+            <h4>Wallet</h4>
+          </div>
+        </div>
+      </div>
+
       <div className="row">
         <div className="col-xxl-6 col-xl-6 col-lg-12">
-          <div className="card card-small">
+          <div className="card card-outline-only">
             <div className="card-wallet">
               {midnight.provider ? (
                 <>
@@ -41,7 +50,7 @@ const Wallet = () => {
                     <div className="card-body d-flex justify-content-between">
                       <div className="align-content-center wallet-status">
                         <span className="verified">
-                          <i className="icofont-check-alt"></i>
+                          <Check size={14} />
                         </span>
                         Connected
                       </div>
@@ -64,7 +73,7 @@ const Wallet = () => {
                     <div className="card-body d-flex justify-content-between">
                       <div className="align-content-center wallet-status">
                         <span className="not-verified">
-                          <i className="icofont-close-line"></i>
+                          <X size={14} />
                         </span>
                         Disconnected
                       </div>

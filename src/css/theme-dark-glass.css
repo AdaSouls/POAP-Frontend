@@ -1,0 +1,1162 @@
+/* New dark/glass visual system — replaces the old `.dark-theme` class entirely (see
+   docs/ and the memory note on the visual redesign). The app is dark-only now, no toggle,
+   so these rules apply unconditionally — no `.dark-theme` prefix needed anywhere, which also
+   sidesteps the old `.dark-theme .card { ... !important; }` cascade fights.
+
+   Every glass surface gets a real `backdrop-filter: blur()` — that's the point of "liquid
+   glass", things behind it should actually defocus. Singleton chrome (header, drawer, dropdown
+   menu) uses the full `--glass-blur` (16px); repeated grid surfaces (event/poap cards, which can
+   be a few dozen on screen at once and poll every few seconds) use the lighter `--glass-blur-sm`
+   (8px) to keep GPU compositing cost down while still visibly blurring. Solid surfaces
+   (`--solid-*`, trust-critical: wallet connect, forms, drawer views that trigger a tx) stay
+   opaque with no blur at all — that's the deliberate contrast with glass, not an oversight. */
+
+:root {
+  /* "Color Palette For Coding" reference (dark → light: #06141B, #11212D, #253745, #4A5C6A,
+     #9BA8AB, #CCD0CF) — a monochrome slate scale, replacing the old blue/violet brand palette
+     (--bs-adasouls-*) everywhere in this file. Not just the named accent vars below: every
+     hardcoded rgba(124,106,173,…) (old violet) / rgba(92,164,218,…) (old blue) in this file was
+     swapped to the matching palette-3/-4/-5 rgb triplets too, so nothing blue/violet is left. */
+  --palette-1: #06141b; /* rgb(6, 20, 27) */
+  --palette-2: #11212d; /* rgb(17, 33, 45) */
+  --palette-3: #253745; /* rgb(37, 55, 69) */
+  --palette-4: #4a5c6a; /* rgb(74, 92, 106) */
+  --palette-5: #9ba8ab; /* rgb(155, 168, 171) */
+  --palette-6: #ccd0cf; /* rgb(204, 208, 207) */
+
+  /* base surfaces (opaque, app background) */
+  --surface-base: var(--palette-1);
+  --surface-base-raised: var(--palette-2);
+
+  /* glass (exploration/browsing) */
+  --glass-bg: rgba(17, 33, 45, 0.55);
+  --glass-bg-hover: rgba(17, 33, 45, 0.72);
+  /* Lighter alternative to --glass-bg — a barely-there white tint instead of a dark-slate one, so
+     the surface reads as translucent glass over the (now textured) body background rather than a
+     solid-ish dark panel. Used by the event/POAP grid cards and, per explicit request, the nav
+     dropdowns / wallet-connect popup / filter popover — anything meant to feel light and
+     floating rather than heavy chrome. */
+  --glass-bg-light: rgba(255, 255, 255, 0.045);
+  --glass-border: rgba(74, 92, 106, 0.4);
+  --glass-blur: 16px;
+  --glass-blur-sm: 8px;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+
+  /* solid (trust-critical) */
+  --solid-bg: #0a1820;
+  --solid-border: rgba(155, 168, 171, 0.4);
+  --solid-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+
+  /* accents — same variable names every other rule in this file already reads from, repointed to
+     the new palette instead of the AdaSouls brand purple/blue (--bs-adasouls-*, style.css/legacy
+     Cardano-native pages only now). */
+  --accent-violet: var(--palette-4);
+  --accent-violet-2: var(--palette-3);
+  --accent-blue: var(--palette-5);
+  --accent-teal: var(--palette-6);
+
+  /* text */
+  --text-on-glass: rgba(255, 255, 255, 0.92);
+  --text-on-glass-muted: rgba(255, 255, 255, 0.65);
+  --text-on-solid: #f4f6ff;
+  --text-on-solid-muted: rgba(244, 246, 255, 0.7);
+}
+
+/* Second background pass — ref this time was "shapes, not color": a handful of large, distinct
+   soft-edged blobs (not the many small dispersed ones from the first attempt, which read as too
+   flat/subtle). Kept out of the top ~30% of the viewport on purpose, so the strip right under the
+   fixed header (.header, var(--glass-bg) ≈ palette-2 blended over whatever's behind it) stays
+   close to flat --palette-1, just slightly lighter than the header's own blended tone — darker
+   overall than the first pass, which had light blobs right at the top corners. */
+body {
+  background:
+    radial-gradient(ellipse 75% 60% at 78% 55%, rgba(74, 92, 106, 0.38), transparent 72%),
+    radial-gradient(ellipse 70% 60% at 15% 68%, rgba(155, 168, 171, 0.2), transparent 70%),
+    radial-gradient(ellipse 80% 65% at 40% 102%, rgba(37, 55, 69, 0.45), transparent 68%),
+    linear-gradient(
+      180deg,
+      #0a1a24 0%,
+      #0c1b25 22%,
+      #0d1e28 48%,
+      #0a1a23 72%,
+      #06141b 100%
+    );
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: var(--text-on-glass);
+}
+
+/* ── Glass / solid primitives ──────────────────────────────────────────────────── */
+
+.glass-panel,
+.glass-panel-light {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  color: var(--text-on-glass);
+}
+
+.glass-panel {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+.glass-panel-light {
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+
+.surface-solid {
+  background: var(--solid-bg);
+  border: 1px solid var(--solid-border);
+  box-shadow: var(--solid-shadow);
+  color: var(--text-on-solid);
+}
+
+/* ── Applied to existing selectors (no JSX changes needed for these) ────────────── */
+
+/* Base card shell used by every POAP/event/dashboard card — grids of these render many at
+   once (events.jsx, poapManagement.jsx), so the lighter blur tier keeps compositing cost down
+   while still actually defocusing whatever scrolls behind a card. */
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  color: var(--text-on-glass);
+}
+
+.card .text-muted {
+  color: var(--text-on-glass-muted) !important;
+}
+
+/* Event/POAP grid cards — barely-there light fill + blur (not fully transparent, and lighter
+   than .card's own var(--glass-bg), which leans dark-slate) so the card still reads as a
+   distinct glass surface floating over the new textured body background instead of a flat
+   cutout. Same flat 1px var(--glass-border) as the wallet-connect popup (.drawer.drawer-modal)
+   so the two read as the same "filete" language, just without that popup's bevel shadow — these
+   sit in dense grids where a filled/beveled surface per card would be too heavy. Uses
+   --glass-blur-sm like every other grid card (a few dozen on screen at once, polled every few
+   seconds) to keep compositing cost down. */
+.card-outline-only {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: none;
+  overflow: hidden;
+  /* style.css's .card-classic hardcodes height:400px for the old tall single-column layout —
+     these cards are shorter and shrink-wrap their (now more compact) content instead. */
+  height: auto;
+}
+
+.card-outline-only-body {
+  padding: 16px 18px;
+}
+
+/* wallet.jsx's internal top-area/bottom-area divider. `.border-top` is a Bootstrap utility
+   (style.css) hardcoded to #f1f1f1 !important — a bright line meant for a white card, standing
+   out sharply against every dark card here. Overridden to the same --glass-border every card's
+   own outline uses, scoped to .card-wallet so the shared .border-top utility (still used as-is by
+   the out-of-scope Cardano-native pages) isn't touched. */
+.card-wallet .bottom-area.border-top {
+  border-top-color: var(--glass-border) !important;
+}
+
+/* Minted progress bar — deliberately outside .card-outline-only-body's padding so it can sit
+   flush against the card's own bottom edge ("contra el margen inferior de cada card") instead of
+   just being the last padded element. */
+.card-event-minted-bar {
+  height: 4px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.card-event-minted-bar-fill {
+  height: 100%;
+  background: var(--palette-5, #9ba8ab);
+  transition: width 0.3s ease;
+}
+
+/* sharedCollection.jsx's "declared by holder" cards — same card-outline-only shell as the
+   verified ones, just a dashed border so the two stay visually distinguishable (verified fact vs.
+   holder-reported, unverified claim) without relying on color alone. */
+.shared-collection-item--declared {
+  border-style: dashed;
+}
+
+/* sharedCollection.jsx's "← AdaSouls" link. Deliberately not .simple-link: that class resolves to
+   --bs-primary/--bs-adasouls-three (leftover purple/blue), which the monochrome-only palette
+   decision (see theme-dark-glass-decisions memory) dropped everywhere except the still-in-scope
+   Cardano-native pages that also use .simple-link — retheming the shared class would bleed into
+   those out-of-scope pages. */
+.shared-collection-back-link {
+  text-decoration: none;
+  color: var(--text-on-glass-muted);
+}
+
+.shared-collection-back-link:hover {
+  color: var(--text-on-glass);
+}
+
+/* ── Generic Bootstrap elements with no prior dark treatment ─────────────────────
+   These are template-era defaults (headings, alerts, outline buttons, tables) that never had a
+   `.dark-theme` override at all — found while spot-checking overview.jsx/search.jsx, which lean
+   on raw Bootstrap classes instead of the POAP-specific card/button classes already fixed above. */
+
+/* style.css:130-147 sets every heading to a fixed dark-gray (#495057), globally, with no
+   dark-theme override — affects card titles, page headers (.inner-header h4), and headings
+   outside any card too (sharedCollection.jsx has none of its headings inside a .card). */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6,
+.card-title {
+  color: var(--text-on-glass);
+}
+
+.alert {
+  border: 1px solid var(--glass-border);
+}
+
+.alert-success {
+  color: var(--text-on-glass);
+  background-color: rgba(52, 195, 143, 0.18);
+  border-color: rgba(52, 195, 143, 0.35);
+}
+
+.alert-warning {
+  color: var(--text-on-glass);
+  background-color: rgba(241, 180, 76, 0.18);
+  border-color: rgba(241, 180, 76, 0.35);
+}
+
+.alert-danger {
+  color: var(--text-on-glass);
+  background-color: rgba(244, 106, 106, 0.18);
+  border-color: rgba(244, 106, 106, 0.35);
+}
+
+.alert-info {
+  color: var(--text-on-glass);
+  background-color: rgba(80, 165, 241, 0.18);
+  border-color: rgba(80, 165, 241, 0.35);
+}
+
+.btn-outline-primary {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.btn-outline-primary:hover {
+  color: var(--text-on-solid);
+  background-color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.04);
+  --bs-table-striped-color: var(--text-on-glass);
+  color: var(--text-on-glass);
+}
+
+.table td,
+.table th {
+  border-color: var(--glass-border);
+}
+
+/* Form inputs — used throughout the trust-critical create/claim drawers (createEvent,
+   createIssuer, createPoap). Previously only had a `.dark-theme .form-control` override, which
+   no longer applies now that the toggle/class is gone — was solid white with dark text. */
+.form-control,
+.form-select {
+  background: var(--solid-bg);
+  border-color: var(--solid-border);
+  color: var(--text-on-solid);
+}
+
+.form-control::placeholder,
+.form-select::placeholder {
+  color: var(--text-on-solid-muted);
+}
+
+.form-control:hover,
+.form-select:hover {
+  background: var(--solid-bg);
+  border-color: var(--solid-border);
+  color: var(--text-on-solid);
+}
+
+.form-control:focus,
+.form-control:active,
+.form-select:focus,
+.form-select:active {
+  background: var(--solid-bg);
+  border-color: var(--accent-blue);
+  color: var(--text-on-solid);
+  box-shadow: 0 0 0 0.2rem rgba(155, 168, 171, 0.25) !important;
+}
+
+/* ── poap.xyz structural echo ─────────────────────────────────────────────────────
+   Structure only (badge grid, stat bar, numbered steps) — not poap.xyz's own pastel/cartoon
+   palette, confirmed with the user via an actual screenshot of the live site. */
+
+/* Badge-grid glow ring — the white circle backing behind the poap/event icon art
+   (.card-poap/.card-event .rounded-circle, style.css) stays as-is, this just adds a colored ring
+   around it so the grid reads more like a set of medallions. */
+.card-poap .rounded-circle,
+.card-event .rounded-circle {
+  box-shadow: 0 0 0 3px rgba(155, 168, 171, 0.25), 0 0 20px rgba(74, 92, 106, 0.35);
+}
+
+/* Expanded detail card (poapCard.jsx and eventCard.jsx both use this — in-place expansion
+   replacing the old lateral drawer for both) — its own close button needs a positioning anchor,
+   since .card-outline-only-body itself has no position set. Same visual treatment as
+   .wallet-modal-close above and for the same reason: Bootstrap's .btn-close's `filter: invert()`
+   would desaturate this button's own hover border/shadow along with the glyph, so a lucide-react
+   <X> (stroke="currentColor") is used instead. */
+.card-detail-expanded .card-outline-only-body {
+  position: relative;
+}
+
+.card-expand-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  color: var(--text-on-glass);
+  border-radius: 50%;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 2px 3px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 3px 0 rgba(0, 0, 0, 0.4);
+  opacity: 1;
+  transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.card-expand-close-btn:hover {
+  color: #ff6b6b;
+  border-color: rgba(220, 53, 69, 0.8);
+  box-shadow:
+    inset 0 2px 3px 0 rgba(255, 99, 99, 0.55),
+    inset 0 -2px 3px 0 rgba(139, 0, 0, 0.6);
+}
+
+/* Stat bar (event/POAP counts in page headers) — was a plain small Bootstrap badge pill.
+   .inner-header-row-right is the current inner-nav markup (events.jsx/poapManagement.jsx/
+   organizerDashboard.jsx); .inner-header-buttons is kept alongside it as a legacy alias so this
+   doesn't silently stop matching again if a page's markup drifts. */
+.inner-header-row-right .badge.bg-primary,
+.inner-header-buttons .badge.bg-primary {
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-violet-2)) !important;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  box-shadow: 0 0 16px rgba(74, 92, 106, 0.35);
+}
+
+/* "How it works" numbered steps (overview.jsx) */
+.how-it-works-step {
+  text-align: center;
+}
+
+.how-it-works-step .step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet-2));
+  color: var(--text-on-solid);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* Wallet connect/disconnect card (wallet.jsx) — trust-critical, solid. Comes after .card so it
+   wins on equal specificity without needing !important. Explicitly resets backdrop-filter:
+   the element carries both "card" and "card-small" classes, so without this it would still
+   inherit .card's blur even though solid surfaces are meant to be opaque/unblurred. */
+.card-small {
+  background: var(--solid-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--solid-shadow);
+  color: var(--text-on-solid);
+  overflow: hidden;
+}
+
+.card-small .text-muted {
+  color: var(--text-on-solid-muted) !important;
+}
+
+/* Every "View Details" / "View POAPs" / "Connect" / "Share my collection" button — previously
+   had no dark-mode override at all (white bg, white-ish hover), effectively invisible on any
+   dark surface. */
+.btn-white {
+  background: var(--glass-bg-hover);
+  color: var(--text-on-glass) !important;
+  border: 1px solid var(--glass-border);
+}
+
+.btn-white:hover {
+  background: var(--accent-blue);
+  color: var(--text-on-solid) !important;
+  border-color: var(--accent-blue);
+  filter: none;
+}
+
+/* Drawer — singleton chrome, gets the real blur. drawer.jsx computes a `drawer-glass`/
+   `drawer-solid` modifier from the same activeViewKey it already derives for the
+   AnimatePresence key, since the drawer hosts both browsing views (viewToken) and
+   transaction-triggering ones (laceWallet, createEvent, createIssuer, createPoap). Default
+   (no modifier yet applied) stays glass. */
+.drawer {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-left: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  color: var(--text-on-glass);
+}
+
+.drawer.drawer-solid {
+  background: var(--solid-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-left: 1px solid var(--solid-border);
+  box-shadow: var(--solid-shadow);
+  color: var(--text-on-solid);
+}
+
+.drawer.drawer-solid .text-muted {
+  color: var(--text-on-solid-muted) !important;
+}
+
+.drawer.drawer-glass .text-muted {
+  color: var(--text-on-glass-muted) !important;
+}
+
+/* Wallet-connect popup — centered modal instead of the lateral drawer.js/create views use, and a
+   single liquid-glass surface (one blurred, tinted panel with one edge highlight) rather than a
+   frame-plus-inset-box — ref: a "liquid glass" overflow-menu style, one translucent panel with
+   content sitting directly on it, not nested boxes. .drawer-modal-inner (laceWallet.jsx's own
+   root) is layout-only now (flex/padding), no background of its own. Only laceWallet.jsx opts
+   into this — every other drawer view keeps the lateral .drawer-cart layout untouched. */
+.drawer.drawer-modal {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  width: 92%;
+  max-width: 480px;
+  height: auto;
+  min-height: 340px;
+  max-height: 85vh;
+  border-radius: 20px;
+  /* Background is --glass-bg-light, same lighter/softer tint as the nav's own dropdown menus
+     (.header-nav-dropdown-menu) and the event/POAP grid cards — a single flat layer, nothing else
+     painted into the same background stacking context. The earlier gradient-border attempts
+     (linear-gradient border-box layers, radial corner glows) all bled into this fill because they
+     shared a background/alpha stack with it — verified by pixel-sampling with/without each.
+     Volume now comes from box-shadow and per-side border-color instead, which are separate paint
+     layers and don't alpha-blend with the fill the way stacked background layers did. */
+  background: var(--glass-bg-light);
+  /* Border back to flat and uniform — same as .header-nav-dropdown-menu, no per-side bevel
+     coloring (tried border-style: outset/inset and per-side border-color; neither read well,
+     especially with this border-radius). The bevel/volume comes only from the box-shadow pair
+     below: straight top/bottom now (no horizontal offset — this isn't a corner-to-corner diagonal
+     anymore, just light overhead / dark underneath), bigger reach (6px blur) but lower opacity
+     than the diagonal version, so it's felt more than seen. The outer shadow is unrelated — that's
+     the panel floating above the page, not part of the bevel. */
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  /* translate() stays constant between closed/open — only opacity animates, no grow/shrink. */
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+  /* Pre-promotes this element to its own compositing layer before the fade starts — without it,
+     Chromium can visibly pop/flicker the first frame a backdrop-filter layer is created mid-
+     opacity-transition instead of blending smoothly from frame one. */
+  will-change: opacity;
+}
+
+.drawer.drawer-modal.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Flex chain so .drawer-modal-inner actually fills the outer frame's height (including the
+   min-height above) instead of shrink-wrapping its own content and leaving dead space below it —
+   framer-motion's wrapper div has no height of its own by default, so without this the inner
+   layer only ever matches its content's height, not the frame's. min-height:0 on each flex parent
+   is the standard fix for a flex child's percentage/flex sizing being ignored otherwise. */
+.drawer-modal-motion {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.drawer.drawer-modal .drawer-header,
+.drawer.drawer-modal .drawer-footer {
+  height: auto;
+  flex: none;
+}
+
+/* Anchors .wallet-modal-close (top-right, absolute) and pulls the header content up — less
+   breathing room above the title/close button than the drawer-header default gave them. */
+.drawer.drawer-modal .drawer-header {
+  position: relative;
+  padding-top: 4px;
+  padding-bottom: 12px;
+}
+
+/* Close button — top-right, same 20px inset as .drawer-modal-inner's own padding (so it lines up
+   with the wallet card's edge below it, not an arbitrary smaller margin), vertically centered on
+   the header row (top:50% + translateY, not a guessed pixel offset, so it tracks the title's
+   actual line-box regardless of font metrics). No fill at rest — just the same light-top/
+   dark-bottom bevel shadow as the popup itself, inside a fully round frame.
+   Deliberately NOT Bootstrap's .btn-close/.btn-close-white: that pairs a black SVG
+   background-image with `filter: invert(1) grayscale(1) brightness(2)` to turn it white — but
+   `filter` applies to the whole element, not just the background-image, so it was also
+   desaturating this button's own red-on-hover border/shadow back to gray/white. Using a
+   lucide-react <X> glyph instead (stroke="currentColor", colored via `color`) sidesteps that
+   entirely — the icon's color and the border/shadow's colors are independent now. */
+.wallet-modal-close {
+  position: absolute;
+  top: 50%;
+  /* 0, not 20px — .drawer-header is already inset by .drawer-modal-inner's own 20px padding
+     (both are direct children of it), so right:0 here already lines this up with the wallet
+     card's right edge below. right:20px doubled the inset (40px total) instead of matching it. */
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  font-size: 15px;
+  color: var(--text-on-glass);
+  border-radius: 50%;
+  background-color: transparent;
+  /* var(--glass-border) (rgba(124,106,173,0.25)) all but disappeared at this small a size — a
+     plain, brighter neutral reads clearly instead. */
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  /* Both purely inset (no outer/drop shadow on this button at all) — light from above, shadow
+     from below, bigger and more opaque than a first pass so they're actually visible at 32px
+     instead of near-invisible hairlines. */
+  box-shadow:
+    inset 0 2px 3px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 3px 0 rgba(0, 0, 0, 0.4);
+  opacity: 1;
+  transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Hover: reads as "this closes something" — icon, border, and both the top (light) and bottom
+   (shadow) inset layers all shift to red instead of changing fill, so it still looks lit rather
+   than just recolored. Kept strong enough (0.55/0.6) to actually read as red, not just a slightly
+   warmer version of the rest-state gray. */
+.wallet-modal-close:hover {
+  opacity: 1;
+  color: #ff6b6b;
+  border-color: rgba(220, 53, 69, 0.8);
+  box-shadow:
+    inset 0 2px 3px 0 rgba(255, 99, 99, 0.55),
+    inset 0 -2px 3px 0 rgba(139, 0, 0, 0.6);
+}
+
+/* justify-content:center vertically centers the wallet card (laceWallet.jsx's own
+   flex-column wrapper is its only child) within whatever space drawer-body has between the
+   header and footer, instead of it sitting flush at the top with a growing gap below as the
+   popup's min-height gives it more room than the card alone needs. */
+.drawer.drawer-modal .drawer-body {
+  height: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 16px 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Layout only — no background of its own. The single glass surface lives on .drawer.drawer-modal
+   above; this just owns the padding/flex arrangement of laceWallet.jsx's own content. */
+.drawer-modal-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px;
+}
+
+/* Wallet option row (laceWallet.jsx's "Lace / Midnight Network Wallet" card) — no fill at rest
+   (not even a lighter tint), no shadow/bevel — just the same flat border as the popup itself
+   (var(--glass-border), not its own bespoke tone). backdrop-filter is reset to none too:
+   .card-button inherits .card's own blur(8px) elsewhere in the app, and leaving that on here
+   stacks a second blur pass on top of .drawer-modal-inner's already-blurred-and-darkened
+   background — two translucent blurred layers compounding read visibly darker than either alone,
+   which is why this block kept looking darker than the inner layer around it even with no
+   background-color of its own. Clickable/selectable now — see .selected below. */
+.drawer-modal-inner .card-button {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  /* A dark slate (--palette-3), not var(--glass-border)'s lighter one — darker at rest and in
+     every other state below too. */
+  border: 1px solid rgba(37, 55, 69, 0.7);
+  /* .card's global margin-bottom:30px (the qash template's own grid spacing, style.css) was
+     pushing this card up off-center inside .drawer-body's centered flex — 30px more space below
+     it than above, matching the 30px it was inheriting. Cancelled here since this card isn't part
+     of a grid. */
+  margin: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.drawer-modal-inner .card-button:hover {
+  background: rgba(74, 92, 106, 0.08);
+  border-color: rgba(37, 55, 69, 0.85);
+}
+
+/* Selected state — same slate-tinted fill/border language as the nav dropdown's own
+   pressed/active states, so "selected" reads consistently with the rest of the app. */
+.drawer-modal-inner .card-button.selected {
+  background: rgba(74, 92, 106, 0.18);
+  border-color: rgba(74, 92, 106, 0.85);
+}
+
+/* Click-outside-to-close only — no dimming of the page behind it, per feedback (the modal's own
+   blur already separates it from the page without needing to darken everything else too). */
+.drawer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 21;
+  background: transparent;
+}
+
+/* ── Shared chrome: horizontal header, no sidebar ────────────────────────────────
+   Replaces the old vertical sidebar entirely (see header.jsx/layout.jsx) — structure now
+   matches the poap.xyz reference: one horizontal bar (logo, nav links, single CTA), full-width
+   content below, not just a re-colored version of the old fixed-sidebar layout. */
+
+/* style.css's #main-wrapper still carries margin-top:80px from the old (pre-horizontal-header)
+   template layout — with the header now position:fixed, that margin does nothing but stack an
+   extra 80px on top of .content-body's own (actually necessary) 68px clearance below, which is
+   what was reading as "too much distance from the nav". Zeroed here instead of at the source so
+   the reason stays next to the padding-top it was fighting with. */
+#main-wrapper {
+  margin-top: 0;
+}
+
+.content-body {
+  margin-left: 0;
+  padding-top: 68px; /* clears the fixed horizontal header — keep in sync with its height below */
+}
+
+.header.header-horizontal {
+  left: 0;
+  padding: 10px 0;
+  /* Darker/more opaque than --glass-bg (palette-2 based) on purpose: this is the one glass
+     surface that always needs to read as the darkest layer in the page — the body background's
+     own top edge is tuned to sit just a touch lighter than this, so the page reads as receding
+     up out of the nav rather than the nav floating on top of an equally-dark page. Because this
+     backdrop-blurs whatever's behind it, a lighter tint here would always average lighter than
+     the body color it's blurring, no matter how dark the body gradient itself is — hence the
+     separate (darker, palette-1) base instead of reusing --glass-bg. */
+  background: rgba(6, 20, 27, 0.72);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Logo + nav grouped together on the left, wallet CTA pushed to the far right (margin-left:auto
+   on .header-cta) — not a 3-column centered layout. Original was padding:20px + min-height:70px
+   ≈ 111px; went too far down to ≈56px, settled here ≈68px. */
+.header-horizontal .header-content {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  min-height: 48px;
+}
+
+.header-horizontal .brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.header-horizontal .brand-logo img {
+  max-width: 26px;
+}
+
+.header-horizontal .brand-logo span {
+  color: var(--text-on-glass);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-nav-dropdown {
+  position: relative;
+}
+
+/* Two-layer button, invisible at rest — the outer `<button>` is a frame (~4px of padding, more
+   generous rounding) and the inner `<span>` carries its own fill, inset from the frame's edge.
+   Neither shows a background at rest:
+     - hover:  outer background only.
+     - pressed/open (aria-expanded=true): outer + inner both visible, inner a bit lighter than
+       outer.
+     - route-active (.active): outer + inner both visible (like pressed) plus a real border —
+       border-width doesn't change between states (transparent by default) so nothing shifts.
+   `outline: none` on :focus/:active — otherwise the browser's default focus ring shows as a
+   border-like line around the button after a click, which isn't wanted here. */
+.header-nav-dropdown-toggle {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-on-glass-muted);
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.header-nav-dropdown-toggle:focus,
+.header-nav-dropdown-toggle:active {
+  outline: none;
+}
+
+.header-nav-dropdown-toggle-inner {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: 999px;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+/* Slate-tinted (accent-violet's rgb, 74/92/106) instead of flat white-on-dark — reads as
+   "the same color, just lighter" between outer and inner instead of a disconnected gray. */
+.header-nav-dropdown-toggle:hover {
+  background: rgba(74, 92, 106, 0.22);
+}
+
+.header-nav-dropdown-toggle[aria-expanded="true"] {
+  background: rgba(74, 92, 106, 0.22);
+}
+
+.header-nav-dropdown-toggle[aria-expanded="true"] .header-nav-dropdown-toggle-inner {
+  background: rgba(74, 92, 106, 0.28);
+  color: var(--text-on-glass);
+}
+
+/* Active (current page) is border-only — no fill on either layer, so the border alone carries
+   the "you are here" signal instead of competing with hover/pressed's background treatment. */
+.header-nav-dropdown-toggle.active {
+  background: transparent;
+  border-color: rgba(155, 168, 171, 0.3);
+}
+
+.header-nav-dropdown-toggle.active .header-nav-dropdown-toggle-inner {
+  background: transparent;
+  color: var(--text-on-glass);
+}
+
+/* position:fixed + top/left set inline from the toggle button's own getBoundingClientRect() —
+   see header.jsx. The menu is portaled to <body>, so it's positioned relative to the viewport,
+   not to its old (now nonexistent) DOM parent. */
+.header-nav-dropdown-menu {
+  position: fixed;
+  transform: translateX(-50%);
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+  z-index: 10;
+}
+
+/* Icon + title + smaller description per row — same pattern as the poap.xyz reference's own
+   nav dropdowns (icon box, bold title, muted description underneath), in our palette. */
+.header-nav-dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.header-nav-dropdown-item:hover {
+  background: var(--glass-bg-hover);
+}
+
+.header-nav-dropdown-item.active {
+  background: linear-gradient(90deg, rgba(155, 168, 171, 0.25), rgba(74, 92, 106, 0.25));
+}
+
+.header-nav-dropdown-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  color: #ffffff;
+}
+
+.header-nav-dropdown-item-title {
+  display: block;
+  color: var(--text-on-glass);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.header-nav-dropdown-item-desc {
+  display: block;
+  color: var(--text-on-glass-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Same two-layer frame+fill pattern as the nav dropdown toggles (outer padding/rounding, inner
+   span carries the actual fill) instead of a single flat full-pill Bootstrap button. */
+.header-cta {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  padding: 4px;
+  border-radius: 999px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Same border treatment as the nav dropdown toggles' active state — replaces the browser's
+   default focus ring (which otherwise shows as a bright white outline on click) with the same
+   subtle violet used there, instead of leaving it unstyled. */
+.header-cta:focus,
+.header-cta:active {
+  outline: none;
+  border-color: rgba(155, 168, 171, 0.3);
+}
+
+.header-cta-inner {
+  display: flex;
+  align-items: center;
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-violet-2));
+  color: var(--text-on-solid);
+  transition: filter 0.15s ease-in-out;
+}
+
+.header-cta:hover .header-cta-inner {
+  filter: brightness(1.12);
+}
+
+/* Already-connected state ("Wallet" link) — same frame, a softer tinted fill instead of the
+   full-strength CTA gradient, since it's no longer prompting an action. */
+.header-cta-connected .header-cta-inner {
+  background: rgba(74, 92, 106, 0.28);
+  color: var(--text-on-glass);
+}
+
+@media only screen and (max-width: 767px) {
+  .header-horizontal .header-content {
+    flex-wrap: wrap;
+    row-gap: 10px;
+    padding: 12px 0;
+  }
+
+  .header-nav {
+    gap: 2px;
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* ── "Less boxes" pass ────────────────────────────────────────────────────────────
+   Page title bars and filter toolbars read as plain sections on the page background instead
+   of another card nested inside the page — cards stay reserved for the actual grid items
+   (individual events/POAPs). */
+
+.inner-header {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-bottom: 1px solid var(--glass-border);
+  border-radius: 0;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+}
+
+/* Row inside .inner-header (title [+ filter button] on the left, action button on the right) —
+   replaces the old m-3 3-column layout (back-arrow / centered title / badge) now that the
+   back-arrow is gone and the title is left-aligned instead of centered. Deliberately tight
+   top margin — this bar sits right under the main header now, not with a full card's worth of
+   breathing room above it. */
+.inner-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 4px 0;
+  /* Matches the tallest row-right control's real rendered height — .inner-header-action-btn,
+     measured at 45.5px (not the 36px .filter-icon-btn circle, which is shorter) — so pages with
+     no action button (wallet.jsx, organizerDashboard.jsx without canView) still get a row this
+     tall. Without this, align-items:center centers the title within a shorter box and it sits
+     visibly higher than on every other page's title bar. Verified via computed
+     getBoundingClientRect(), not guessed — re-measure if .inner-header-action-btn's own padding
+     ever changes. */
+  min-height: 45.5px;
+  flex-wrap: wrap;
+}
+
+.inner-header-row-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inner-header-row-left h4 {
+  margin: 0;
+}
+
+.inner-header-row-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The "Create Event" / "Claim POAP" / "Create POAP Event" cards moved here — one full-rounded
+   button on the right of each page's inner nav instead of a big gradient card in the grid. Same
+   two-layer frame+fill pattern as .header-cta (outer padding/rounding, inner span carries the
+   fill) so it reads as the same button language as the header's own CTA, just page-scoped. */
+.inner-header-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.inner-header-action-btn:focus,
+.inner-header-action-btn:active {
+  outline: none;
+  border-color: rgba(155, 168, 171, 0.3);
+}
+
+.inner-header-action-btn-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-violet-2));
+  color: var(--text-on-solid);
+  transition: filter 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.inner-header-action-btn:hover .inner-header-action-btn-inner {
+  filter: brightness(1.12);
+}
+
+/* Outline state — wallet not connected yet. The button always shows the page's real action
+   (Create Event / Claim POAP / etc.), never "Connect wallet" text; this is just the visual
+   "not usable yet" version of the same button (line only, no fill), clicking it still opens the
+   wallet-connect flow. Once connected, .is-outline is dropped and the filled/gradient version
+   above takes over. */
+.inner-header-action-btn.is-outline {
+  background: transparent;
+}
+
+.inner-header-action-btn.is-outline .inner-header-action-btn-inner {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-on-glass-muted);
+}
+
+.inner-header-action-btn.is-outline:hover .inner-header-action-btn-inner {
+  filter: none;
+  border-color: var(--palette-5);
+  color: var(--text-on-glass);
+}
+
+/* .btn-gradient/.btn-gradient-purple (style.css) are the template's main CTA button — teal/blue
+   and violet/blue gradients respectively, both straight from the pre-redesign brand palette and
+   missed by the earlier palette pass because they're template classes, not component-scoped
+   ones. Used across most drawer forms (connect wallet, create event/issuer/poap, etc.) so fixed
+   once here rather than touching every call site. Black text (style.css) swapped for
+   --text-on-solid too — unreadable against these darker slate tones. */
+.btn-gradient,
+.btn-gradient-purple {
+  color: var(--text-on-solid);
+  background: linear-gradient(90deg, var(--palette-4), var(--palette-3));
+  border: 1px solid var(--palette-4);
+}
+
+.btn-gradient:hover,
+.btn-gradient-purple:hover {
+  color: var(--text-on-solid);
+  border-color: var(--palette-5);
+}
+
+.btn-check:focus + .btn-gradient,
+.btn-gradient:focus,
+.btn-check:focus + .btn-gradient-purple,
+.btn-gradient-purple:focus {
+  color: var(--text-on-solid);
+  background-color: var(--palette-4);
+  border-color: var(--palette-5);
+  box-shadow: 0 0 0 0.25rem rgba(74, 92, 106, 0.5);
+}
+
+.btn-check:checked + .btn-gradient,
+.btn-check:active + .btn-gradient,
+.btn-gradient:active,
+.btn-gradient.active,
+.show > .btn-gradient.dropdown-toggle,
+.btn-check:checked + .btn-gradient-purple,
+.btn-check:active + .btn-gradient-purple,
+.btn-gradient-purple:active,
+.btn-gradient-purple.active,
+.show > .btn-gradient-purple.dropdown-toggle {
+  color: var(--text-on-solid);
+  background-color: var(--palette-5);
+  border-color: var(--palette-5);
+}
+
+.btn-gradient:disabled,
+.btn-gradient.disabled,
+.btn-gradient-purple:disabled,
+.btn-gradient-purple.disabled {
+  color: var(--text-on-solid-muted);
+  background-color: var(--palette-3);
+  border-color: var(--palette-3);
+}
+
+.inner-header-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Filter icon button — full round, same light-top/dark-bottom inset bevel as the wallet popup's
+   own close button, just neutral instead of red-on-hover (this isn't a destructive action). */
+.filter-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 2px 3px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 3px 0 rgba(0, 0, 0, 0.4);
+  color: var(--text-on-glass);
+  cursor: pointer;
+  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+/* padding:0 above matters even with an SVG icon (lucide-react's <Filter size={15}/>, not an <i>
+   glyph anymore): style.css's generic `button, .btn { padding: 12px 20px }` still applies to any
+   <button> that doesn't declare its own padding, and would otherwise force this wider than its
+   own 36px, turning the circle into an oval. */
+
+.filter-icon-btn:hover {
+  background-color: rgba(74, 92, 106, 0.16);
+}
+
+/* Active (at least one filter set) — same accent-tinted border the nav's own "active page"
+   state uses, so "filters are on" reads consistently with the rest of the app's active-state
+   language. */
+.filter-icon-btn.active {
+  border-color: rgba(155, 168, 171, 0.7);
+  color: var(--palette-6);
+}
+
+/* Filter popover — same glass surface as the wallet-connect popup (.drawer.drawer-modal): same
+   background/border/bevel box-shadow, just narrower and anchored to the filter button instead of
+   centered full-screen. Tall/narrow on purpose — filters stack in a single column, not a grid. */
+.filter-popover {
+  position: fixed;
+  z-index: 30;
+  width: 240px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-radius: 16px;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.filter-popover .form-label {
+  margin-bottom: 4px;
+}
+
+.filter-bar {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 12px;
+}

@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { ChevronLeft, Check, X, Trash2 } from "lucide-react";
 import { get, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import { useEffect, useState } from "react";
@@ -88,8 +89,8 @@ const Collection = () => {
                           <div className="d-flex justify-content-between m-3">
                               <div className="inner-header-back">
                                   <Link to="/collections/souls" className="simple-link">
-                                      <i className="icofont-rounded-left"></i>   
-                                  </Link>                            
+                                      <ChevronLeft size={16} />
+                                  </Link>                          
                               </div>
                               <div className="inner-header-title">
                                   <h4>                                      
@@ -124,9 +125,9 @@ const Collection = () => {
                       <div className="d-flex justify-content-between m-3">
                             <div className="align-content-center mt-4">                    
                             <span className="verified">
-                            { wallet && <i className="icofont-check-alt"></i> }
-                            { !wallet && <i className="icofont-close-line"></i> }
-                            </span>     
+                            { wallet && <Check size={14} /> }
+                            { !wallet && <X size={14} /> }
+                            </span>
                             </div>
                         <div className="align-content-center mt-4"></div> 
                       </div>
@@ -252,14 +253,14 @@ const Collection = () => {
                                   <div className="card-body d-flex justify-content-between">
                                     <div className="d-flex justify-content-start">
                                       <div className="align-content-center token-status mr-1">
-                                        { t.burnTx ? (                                        
-                                          <span className="not-verified">
-                                            <i className="icofont-close-line" title="Burned"></i>
+                                        { t.burnTx ? (
+                                          <span className="not-verified" title="Burned">
+                                            <X size={14} />
                                           </span>
                                         ) :(
-                                          <span className="verified">
-                                            <i className="icofont-check-alt" title="Active"></i>
-                                          </span>                                        
+                                          <span className="verified" title="Active">
+                                            <Check size={14} />
+                                          </span>
                                         )}
                                       </div>
                                       <div className="align-content-center token-status">
@@ -339,7 +340,7 @@ const Collection = () => {
                                                       { !t.burnTx && (
                                                         <Link to="#" className="table-link" onClick={() => burnSoulToken(t)}>
                                                         <span className="dark">
-                                                          <i className="icofont-trash"></i>
+                                                          <Trash2 size={14} />
                                                         </span>
                                                         </Link>
                                                       ) }

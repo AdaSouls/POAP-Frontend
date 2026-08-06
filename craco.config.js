@@ -6,6 +6,13 @@ module.exports = {
   webpack: {
     configure: (webpackConfig) => {
       const wasmExtensionRegExp = /\.wasm$/;
+      // CRA's default JS rule only tests .js/.mjs/.jsx/.ts/.tsx (see react-scripts'
+      // webpack.config.js), so a literal require of a .cjs file (as several Midnight
+      // wasm-bindgen packages ship, e.g. onchain-runtime.cjs, ledger.cjs) falls through to the
+      // generic "everything else" asset/resource rule and gets served as a URL string instead of
+      // being parsed/executed as CommonJS — surfaces as "X.someExport is not a function" at
+      // runtime, not a build error, since require() still "succeeds" with the wrong value.
+      const cjsExtensionRegExp = /\.cjs$/;
       webpackConfig.resolve.extensions.push(".wasm");
       webpackConfig.experiments = {
         asyncWebAssembly: true,
@@ -13,6 +20,12 @@ module.exports = {
       webpackConfig.resolve.fallback = {
         buffer: require.resolve("buffer/"),
         stream: false,
+        // Needed by object-inspect (a compact-runtime dependency) now that its .cjs files are
+        // actually parsed as JS instead of falling through to the asset/resource rule (see the
+        // cjsExtensionRegExp exclusion above) — that previously masked this requirement entirely.
+        // (The actual redirect to our shim is in resolve.alias below, not here — see that entry's
+        // comment for why `fallback` alone doesn't work once a real `util` package is installed.)
+        util: require.resolve("util/"),
       };
       webpackConfig.resolve.alias = {
         ...webpackConfig.resolve.alias,
@@ -34,11 +47,17 @@ module.exports = {
         ),
         "@midnight-ntwrk/ledger$": path.resolve(__dirname, "src/shims/ledger-cjs.js"),
         "@midnight-ntwrk/onchain-runtime$": path.resolve(__dirname, "src/shims/onchain-runtime-cjs.js"),
+        // `resolve.fallback` (above) is only consulted when normal resolution FAILS — since
+        // `npm install util` put a real package at node_modules/util, plain `require('util')`
+        // resolves there directly and fallback never even gets checked. `resolve.alias` applies
+        // unconditionally, so route it to our shim (adds TextDecoder/TextEncoder — see its
+        // comment) the same way the other Midnight package shims above are forced.
+        util$: path.resolve(__dirname, "src/shims/util-browser-shim.js"),
       };
       webpackConfig.module.rules.forEach((rule) => {
         (rule.oneOf || []).forEach((oneOf) => {
           if (oneOf.type === "asset/resource") {
-            oneOf.exclude.push(wasmExtensionRegExp);
+            oneOf.exclude.push(wasmExtensionRegExp, cjsExtensionRegExp);
           }
         });
       });

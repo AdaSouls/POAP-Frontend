@@ -35,9 +35,9 @@ describe('POAP Management Flow Integration', () => {
     });
 
     await waitFor(() => expect(getState).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByText(/SPOAP #1/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/POAP #1/i)).toBeInTheDocument());
 
-    const createButton = screen.getByText(/CLAIM/i).closest('.card-body');
+    const createButton = screen.getByRole('button', { name: /claim poap/i });
     await userEvent.click(createButton);
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_POAP' });

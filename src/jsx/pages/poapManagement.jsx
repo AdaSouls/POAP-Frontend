@@ -1,10 +1,14 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { Plus } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import PoapCard from "../components/poapCard";
 import poapNormal from "../../images/svg/poap-normal.svg";
+import walletStatus from "../../images/collections/wallet-status.png";
 import loadingGif from "../../images/loading.gif";
+import { getEventVisibility, encodeShareableCollection, buildShareUrl } from "../../midnight/collection-share";
+import { filterVisibleEvents } from "../../utils/poapHelpers";
 
 const REFRESH_INTERVAL_MS = 5000;
 
@@ -14,9 +18,24 @@ const REFRESH_INTERVAL_MS = 5000;
 const PoapManagement = () => {
   const [loading, setLoading] = useState(true);
   const [myPoaps, setMyPoaps] = useState([]);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
+
+  const copyCollectionShareLink = () => {
+    if (!provider || myPoaps.length === 0) return;
+    const entries = myPoaps.map((poap) => ({
+      issuerPkHex: poap.issuerPkHex,
+      tokenId: poap.tokenId,
+      visibleEventIds: filterVisibleEvents(poap, getEventVisibility),
+    }));
+    const encoded = encodeShareableCollection(entries);
+    navigator.clipboard?.writeText(buildShareUrl(provider.address, encoded));
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
 
   const createPoap = () => {
     dispatch({ type: "CREATE_POAP" });
@@ -56,56 +75,48 @@ const PoapManagement = () => {
     return () => clearInterval(pollRef.current);
   }, [loadPoaps]);
 
+  // If the expanded token drops out of myPoaps mid-poll (e.g. private state changed), don't leave
+  // the grid stuck showing zero cards — fall back to the full grid instead.
+  useEffect(() => {
+    if (expandedId && !myPoaps.some((p) => p.issuerPkHex === expandedId)) {
+      setExpandedId(null);
+    }
+  }, [myPoaps, expandedId]);
+
+  const visiblePoaps = expandedId ? myPoaps.filter((p) => p.issuerPkHex === expandedId) : myPoaps;
+
   return (
     <Layout activeMenu={3}>
       <>
-        <div className="row">
-          <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
-            <div className="card inner-header">
-              <div className="d-flex justify-content-between m-3">
-                <div className="inner-header-back">
-                  <Link to="/events" className="simple-link">
-                    <i className="icofont-rounded-left"></i>
-                  </Link>
-                </div>
-                <div className="inner-header-title">
-                  <h4>My POAPs</h4>
-                </div>
-              </div>
+        <div className="inner-header">
+          <div className="inner-header-row">
+            <div className="inner-header-row-left">
+              <h4>My POAPs</h4>
+            </div>
+            <div className="inner-header-row-right">
+              {provider && myPoaps.length > 0 && (
+                <button className="btn btn-white btn-small" onClick={copyCollectionShareLink}>
+                  {shareCopied ? "Link copied ✓" : "Share my collection"}
+                </button>
+              )}
+              <button
+                className={`inner-header-action-btn${!provider ? " is-outline" : ""}`}
+                onClick={!provider ? showMidnightWallet : createPoap}
+                title={!provider ? "Connect your wallet to claim a POAP" : "Claim a POAP"}
+              >
+                <span className="inner-header-action-btn-inner">
+                  <Plus size={14} /> Claim POAP
+                </span>
+              </button>
             </div>
           </div>
         </div>
 
         <div className="row">
-          <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
-            <div className="card card-create bg-poap card-classic">
-              <div className="card-body card-classic-max-height" onClick={provider ? createPoap : undefined}>
-                <h4>CLAIM <span> SPOAP</span></h4>
-                <div className={(provider ? "plus-button" : "axis-button") + " align-content-center"}>
-                  <div></div><div></div>
-                </div>
-              </div>
-              <div className="d-flex justify-content-between m-3">
-                <div className="align-content-center mt-4">
-                  <span className="verified">
-                    {provider ? <i className="icofont-check-alt"></i> : <i className="icofont-close-line"></i>}
-                  </span>
-                </div>
-                <div className="align-content-center mt-4">
-                  {!provider && (
-                    <button className="btn btn-white btn-small" onClick={showMidnightWallet}>
-                      Connect
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
           {loading ? (
-            <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
-              <div className="card card-poap card-classic">
-                <div className="card-body card-classic-max-height d-flex justify-content-center">
+            <div className="col-xxl-6 col-lg-6 col-md-12">
+              <div className="card card-poap card-classic card-outline-only">
+                <div className="card-outline-only-body d-flex justify-content-center">
                   <div className="loading-poap-card">
                     <img src={loadingGif} width="35" height="35" alt="Loading POAPs" />
                   </div>
@@ -115,22 +126,38 @@ const PoapManagement = () => {
           ) : (
             <>
               {provider && myPoaps.length > 0 && (
-                <>
-                  {myPoaps.map((poap) => (
-                    <PoapCard key={poap.issuerPkHex} poap={poap} />
+                <AnimatePresence mode="popLayout">
+                  {visiblePoaps.map((poap) => (
+                    <PoapCard
+                      key={poap.issuerPkHex}
+                      poap={poap}
+                      isExpanded={poap.issuerPkHex === expandedId}
+                      onExpand={() => setExpandedId(poap.issuerPkHex)}
+                      onCollapse={() => setExpandedId(null)}
+                    />
                   ))}
-                </>
+                </AnimatePresence>
               )}
 
               {provider && myPoaps.length === 0 && (
                 <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
-                  <div className="card card-poap card-classic">
-                    <div className="card-body text-center py-5">
+                  <div className="card card-poap card-classic card-outline-only">
+                    <div className="card-outline-only-body text-center py-5">
                       <img src={poapNormal} width="100" height="100" alt="No POAPs" className="mb-3" />
                       <h4>No POAPs Found</h4>
                       <p className="text-muted">
-                        You don't have any POAPs yet. Claim your first SPOAP by attending an event!
+                        You don't have any POAPs yet. Claim your first POAP by attending an event!
                       </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!provider && (
+                <div className="col-xxl-6 col-lg-6 col-md-12">
+                  <div className="card card-poap card-classic card-outline-only">
+                    <div className="wallet-non-connected">
+                      <img className="mt-6" src={walletStatus} width="150" height="140" alt="" />
                     </div>
                   </div>
                 </div>

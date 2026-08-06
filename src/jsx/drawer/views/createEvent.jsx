@@ -108,7 +108,7 @@ export default function CreateEvent() {
               min="0"
             />
             <small className="form-text text-muted">
-              Maximum number of SPOAPs that can be claimed for this event. 0 means unlimited.
+              Maximum number of POAPs that can be claimed for this event. 0 means unlimited.
             </small>
           </div>
 

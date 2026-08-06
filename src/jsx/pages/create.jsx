@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Layout from "../layout/layout";
 import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
 import collectionMenu from "../../icons/svg/collection-menu.svg";
 import {
   useDrawer,
@@ -57,62 +58,37 @@ const Create = () => {
 
   return (
     <Layout activeMenu={2}>
-      <div className="row">
-        <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
-          <div className="card inner-header">
-            <div className="d-flex justify-content-center m-3">
-              <div className="inner-header-title">
-                <h4>POAP EVENT CREATION</h4>
-              </div>
-            </div>
+      <div className="inner-header">
+        <div className="inner-header-row">
+          <div className="inner-header-row-left">
+            <h4>POAP Event Creation</h4>
+          </div>
+          <div className="inner-header-row-right">
+            <button
+              className={`inner-header-action-btn${!provider ? " is-outline" : ""}`}
+              onClick={!provider ? showMidnightWallet : createEvent}
+              title={!provider ? "Connect your wallet to create an event" : isAdmin || isIssuer ? "Create a new event" : "Organizer access required"}
+            >
+              <span className="inner-header-action-btn-inner">
+                <Plus size={14} /> Create POAP Event
+              </span>
+            </button>
           </div>
         </div>
       </div>
       <div className="row">
-        <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-5 col-sm-12">
-          <div className="card card-create bg-poap card-classic">
-            <div className="card-body card-classic-max-height" onClick={provider ? createEvent : undefined}>
-              <h4>CREATE <span> POAP EVENT</span></h4>
-              <div className={(provider ? "plus-button" : "axis-button") + " align-content-center"}>
-                <div></div>
-                <div></div>
-              </div>
-            </div>
-            <div className="d-flex justify-content-between m-3">
-              <div className="align-content-center mt-4">
-                <span className={isAdmin || isIssuer ? "verified" : "not-verified"}>
-                  <i className={isAdmin || isIssuer ? "icofont-check-alt" : "icofont-close-line"}></i>
-                </span>
-              </div>
-              <div className="align-content-center mt-4">
-                {!provider && (
-                  <button className="btn btn-white btn-small" onClick={showMidnightWallet}>
-                    Connect
-                  </button>
-                )}
+        <div className="col-12">
+          <div className="card card-outline-only">
+            <div className="card-outline-only-body">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <p className="m-0 small text-muted">My Events</p>
                 {provider && (
-                  <button className="btn btn-danger btn-small" onClick={showMidnightWallet}>
-                    Change Wallet
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-xxl-9 col-xl-9 col-lg-8 col-md-7">
-          <div className="card card-classic">
-            <div className="card-header">
-              <h4 className="card-title">My Events</h4>
-              {provider && (
-                <span>
                   <Link to={"/events"} className="btn btn-gradient-purple btn-icon rounded-lg">
                     <img className="p-1" src={collectionMenu} width="35" height="35" alt="" />
                   </Link>
-                </span>
-              )}
-            </div>
-            <div className="card-body card-classic-max-height-title" style={{ overflow: "hidden", overflowY: "auto" }}>
-              <div className="table-responsive">
+                )}
+              </div>
+              <div className="table-responsive" style={{ maxHeight: 340, overflowY: "auto" }}>
                 <PoapEvents addressEvents={addressEvents} />
               </div>
             </div>

@@ -15,13 +15,21 @@ describe('Create Page', () => {
 
   it('renders POAP Event Creation header', () => {
     renderWithProviders(<Create />);
-    expect(screen.getByText(/POAP EVENT CREATION/i)).toBeInTheDocument();
+    expect(screen.getByText(/POAP Event Creation/i)).toBeInTheDocument();
   });
 
-  it('renders create event card', () => {
+  it('shows the create-event button in an outline state when no wallet is connected', () => {
     renderWithProviders(<Create />);
-    expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/POAP EVENT/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /create poap event/i })).toHaveClass('is-outline');
+  });
+
+  it('dispatches SHOW_MIDNIGHT_WALLET when the outline create-event button is clicked without a wallet', async () => {
+    const dispatch = jest.fn();
+    renderWithProviders(<Create />, { drawerDispatch: dispatch });
+
+    await userEvent.click(screen.getByRole('button', { name: /create poap event/i }));
+
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });
   });
 
   it('dispatches CREATE_EVENT when create button is clicked by an organizer', async () => {
@@ -37,7 +45,7 @@ describe('Create Page', () => {
       userRolesValue: { ...mockUserRoles, isIssuer: true },
     });
 
-    const createButton = screen.getByText(/CREATE/i).closest('.card-body');
+    const createButton = screen.getByRole('button', { name: /create poap event/i });
     await userEvent.click(createButton);
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
@@ -52,15 +60,10 @@ describe('Create Page', () => {
 
     renderWithProviders(<Create />, { drawerValue, drawerDispatch: dispatch });
 
-    const createButton = screen.getByText(/CREATE/i).closest('.card-body');
+    const createButton = screen.getByRole('button', { name: /create poap event/i });
     await userEvent.click(createButton);
 
     expect(dispatch).not.toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
-  });
-
-  it('shows connect wallet button when no wallet is connected', () => {
-    renderWithProviders(<Create />);
-    expect(screen.getByRole('button', { name: /Connect/i })).toBeInTheDocument();
   });
 
   it('loads the organizer\'s own events when a wallet is connected', async () => {

@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventsPage from '../../jsx/pages/events';
 import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
-import { getAllEvents } from '../../midnight/indexer.service';
+import { getAllEvents, getEvent } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
 
@@ -16,6 +16,7 @@ describe('EventsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     getAllEvents.mockResolvedValue(mockEvents);
+    getEvent.mockResolvedValue({ ...mockEvents[0], liveTokens: 3 });
   });
 
   it('renders events page header', () => {
@@ -24,10 +25,18 @@ describe('EventsPage', () => {
     expect(headers.length).toBeGreaterThan(0);
   });
 
-  it('renders create event card', () => {
+  it('shows the create-event button in an outline state when no wallet is connected', () => {
     renderWithProviders(<EventsPage />);
-    expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/EVENT/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /create event/i })).toHaveClass('is-outline');
+  });
+
+  it('dispatches SHOW_MIDNIGHT_WALLET when the outline create-event button is clicked without a wallet', async () => {
+    const dispatch = jest.fn();
+    renderWithProviders(<EventsPage />, { drawerDispatch: dispatch });
+
+    await userEvent.click(screen.getByRole('button', { name: /create event/i }));
+
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });
   });
 
   it('loads and displays events', async () => {
@@ -54,7 +63,7 @@ describe('EventsPage', () => {
       userRolesValue: { ...mockUserRoles, isIssuer: true },
     });
 
-    const createButton = screen.getByText(/CREATE/i).closest('.card-body');
+    const createButton = screen.getByRole('button', { name: /create event/i });
     await userEvent.click(createButton);
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
@@ -69,15 +78,10 @@ describe('EventsPage', () => {
 
     renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
 
-    const createButton = screen.getByText(/CREATE/i).closest('.card-body');
+    const createButton = screen.getByRole('button', { name: /create event/i });
     await userEvent.click(createButton);
 
     expect(dispatch).not.toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
-  });
-
-  it('shows wallet status when no wallet is connected', () => {
-    renderWithProviders(<EventsPage />);
-    expect(screen.getByText(/CREATE/i)).toBeInTheDocument();
   });
 
   it('separates my events from other events for a connected organizer', async () => {
@@ -91,6 +95,32 @@ describe('EventsPage', () => {
     await waitFor(() => {
       expect(getAllEvents).toHaveBeenCalled();
     });
+    await waitFor(() => {
+      expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('hides sibling cards when one is expanded, and restores them on collapse', async () => {
+    renderWithProviders(<EventsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
+    });
+
+    const firstCard = screen.getAllByText(/Event aaaaaaaa/i)[0].closest('.card');
+    await userEvent.click(firstCard);
+
+    // The click-to-expand is deliberately delayed (text fades out before the resize starts), so
+    // the sibling leaves the DOM asynchronously too.
+    await waitFor(() => {
+      expect(screen.queryByText(/Event cccccccc/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
+
+    await userEvent.click(screen.getByRole('button', { name: /collapse event details/i }));
+
     await waitFor(() => {
       expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);

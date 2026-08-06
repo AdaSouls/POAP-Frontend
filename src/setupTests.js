@@ -8,6 +8,15 @@ import '@testing-library/jest-dom';
 // Global test setup & mocks
 // ----------------------------
 
+// jsdom doesn't implement the Clipboard API — needed by anything using navigator.clipboard.writeText
+// (e.g. the "copy share link" / "copy tx hash" buttons in viewPoap.jsx, poapManagement.jsx).
+if (!navigator.clipboard) {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText: jest.fn() },
+    writable: true,
+  });
+}
+
 // Mock Cardano-related Lucid imports to avoid loading browser modules in tests
 jest.mock('./jsx/contexts/drawer/useCardano', () => {
   return function useCardanoMock() {
@@ -48,6 +57,22 @@ jest.mock('./utils/util', () => {
         utils: {},
       })),
     },
+  };
+});
+
+// Mock react-apexcharts globally — it renders to canvas/SVG via browser APIs jsdom doesn't
+// implement (ResizeObserver etc.), which crashes the real component in tests. Tests that care
+// about chart data can assert on these props instead.
+jest.mock('react-apexcharts', () => {
+  return function MockChart({ type, series, options }) {
+    return (
+      <div
+        data-testid="apex-chart"
+        data-chart-type={type}
+        data-series={JSON.stringify(series)}
+        data-labels={JSON.stringify(options?.labels || options?.xaxis?.categories || [])}
+      />
+    );
   };
 });
 

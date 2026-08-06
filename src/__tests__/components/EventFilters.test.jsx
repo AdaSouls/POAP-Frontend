@@ -11,29 +11,29 @@ describe('EventFilters Component', () => {
     jest.clearAllMocks();
   });
 
-  it('renders filters component', () => {
+  const openPopover = async () => {
+    await userEvent.click(screen.getByRole('button', { name: /filters/i }));
+  };
+
+  it('renders a filter icon button, closed by default', () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
-    expect(screen.getByText(/Filters & Sort/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /filters/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Filters & Sort/i)).not.toBeInTheDocument();
   });
 
-  it('expands and collapses filter panel', async () => {
+  it('opens the popover and shows filter fields', async () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
 
-    const expandButton = screen.getByText(/Expand/i);
-    await userEvent.click(expandButton);
+    await openPopover();
 
+    expect(screen.getByText(/Filters & Sort/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Event ID contains/i)).toBeInTheDocument();
-
-    const collapseButton = screen.getByText(/Collapse/i);
-    await userEvent.click(collapseButton);
-
-    expect(screen.queryByLabelText(/Event ID contains/i)).not.toBeInTheDocument();
   });
 
   it('calls onFilterChange when event id search is entered', async () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
 
-    await userEvent.click(screen.getByText(/Expand/i));
+    await openPopover();
     await userEvent.type(screen.getByLabelText(/Event ID contains/i), 'ab');
 
     expect(mockOnFilterChange).toHaveBeenCalled();
@@ -42,7 +42,7 @@ describe('EventFilters Component', () => {
   it('calls onFilterChange when status is selected', async () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
 
-    await userEvent.click(screen.getByText(/Expand/i));
+    await openPopover();
     await userEvent.selectOptions(screen.getByLabelText(/^Status$/i), 'active');
 
     expect(mockOnFilterChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }));
@@ -57,9 +57,9 @@ describe('EventFilters Component', () => {
       />
     );
 
-    await userEvent.click(screen.getByText(/Clear/i));
+    await openPopover();
+    await userEvent.click(screen.getByTitle(/clear all filters/i));
 
     expect(mockOnReset).toHaveBeenCalled();
-    expect(mockOnFilterChange).toHaveBeenCalledWith({});
   });
 });

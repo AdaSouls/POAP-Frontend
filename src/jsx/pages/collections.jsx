@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChevronLeft, Check, X } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { getAll, getAllInvited, sign } from "../../services/collection.service";
@@ -100,8 +101,8 @@ const Collections = () => {
                     <div className="d-flex justify-content-between m-3">
                         <div className="inner-header-back">
                             <Link to="/souls" className="simple-link">
-                                <i className="icofont-rounded-left"></i>   
-                            </Link>                            
+                                <ChevronLeft size={16} />
+                            </Link>
                         </div>
                         <div className="inner-header-title">
                             <h4>
@@ -133,8 +134,8 @@ const Collections = () => {
               <div className="d-flex justify-content-between m-3">
                 <div className="align-content-center mt-4">                    
                   <span className="verified">
-                    {wallet && <i className="icofont-check-alt"></i>}
-                    {!wallet && <i className="icofont-close-line"></i>}
+                    {wallet && <Check size={14} />}
+                    {!wallet && <X size={14} />}
                   </span>     
                 </div>
                 <div className="align-content-center mt-4">

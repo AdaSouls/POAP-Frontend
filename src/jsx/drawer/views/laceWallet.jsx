@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X, Check } from "lucide-react";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -9,6 +10,7 @@ export default function LaceWallet() {
   const { midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
   const [localError, setLocalError] = useState(null);
+  const [walletSelected, setWalletSelected] = useState(false);
 
   const closeDrawer = () => {
     dispatch({
@@ -39,23 +41,35 @@ export default function LaceWallet() {
   const errorToShow = localError ?? midnight?.error;
 
   return (
-    <div className="d-flex flex-column w-100 h-100 p-3">
+    <div className="d-flex flex-column w-100 drawer-modal-inner">
       <div className="drawer-header">
-        <div className="d-flex justify-content-start">
-          <button
-            className="btn btn-close align-content-center px-1 mt-2 position-absolute"
-            onClick={closeDrawer}
-            aria-label="close"
-          ></button>
-          <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold">
-            Connect Wallet
-          </h4>
-        </div>
+        <button
+          className="btn wallet-modal-close"
+          onClick={closeDrawer}
+          aria-label="close"
+        >
+          <X size={15} />
+        </button>
+        <h4 className="text-center w-100 m-0 font-weight-semibold">
+          Connect Wallet
+        </h4>
       </div>
       <div className="drawer-body">
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div className={"card card-button" + (isConnected ? " connected" : "")}>
-            <div className="card-body top-area d-flex">
+          <div
+            className={
+              "card card-button" +
+              (isConnected ? " connected" : "") +
+              (walletSelected ? " selected" : "")
+            }
+            role="button"
+            tabIndex={0}
+            onClick={() => setWalletSelected((prev) => !prev)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") setWalletSelected((prev) => !prev);
+            }}
+          >
+            <div className="card-body top-area d-flex align-items-center">
               <div className="d-flex align-items-center">
                 <div className="media-body">
                   <h4 className="mb-0">Lace</h4>
@@ -69,7 +83,7 @@ export default function LaceWallet() {
                   {isConnected && (
                     <>
                       <span className="verified">
-                        <i className="icofont-check-alt"></i>
+                        <Check size={14} />
                       </span>
                       Connected — {midnight.provider.address.slice(0, 10)}…
                     </>

@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import { Check } from 'lucide-react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { wallets } from '../../../utils/wallets';
 
@@ -71,7 +72,7 @@ export default function CardanoWallet() {
                         <div className="card-body d-flex justify-content-between">
                           <div className="align-content-center wallet-status">
                             <span className="verified">
-                              <i className="icofont-check-alt"></i>
+                              <Check size={14} />
                             </span>
                             { cardano.wallet && ( w.icon === cardano.wallet.icon && "Connected" )}
                           </div>

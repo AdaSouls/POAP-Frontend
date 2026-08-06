@@ -1,15 +1,15 @@
-import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import { useNavigate } from "react-router-dom";
 import poapNormal from "../../images/svg/poap-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 
+// Detail viewing for POAP tokens now lives entirely on /poap-management's card grid (see
+// poapCard.jsx's in-place expansion) — this legacy table just routes there instead of opening its
+// own detail view.
 const PoapToken = ({ poap, index }) => {
-  const dispatch = useDrawerDispatch();
+  const navigate = useNavigate();
 
   const viewPoap = () => {
-    dispatch({
-      type: "VIEW_POAP_TOKEN",
-      payload: poap,
-    });
+    navigate("/poap-management");
   };
 
   return (

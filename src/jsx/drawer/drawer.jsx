@@ -1,5 +1,6 @@
-import React from 'react';
-import { useDrawer } from '../contexts/drawer/drawer.provider.jsx';
+import React, { useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useDrawer, useDrawerDispatch } from '../contexts/drawer/drawer.provider.jsx';
 import CardanoWallet from './views/cardanoWallet.jsx';
 import LaceWallet from './views/laceWallet.jsx';
 import CreateSoul from './views/createSoul.jsx';
@@ -8,13 +9,13 @@ import CreateEvent from './views/createEvent.jsx';
 import CreateSoulToken from './views/createSoulToken.jsx';
 import CheckCollection from './views/checkCollection.jsx';
 import ViewToken from './views/viewToken.jsx';
-import ViewEvent from './views/viewEvent.jsx';
 import CreateIssuer from './views/createIssuer.jsx';
-import ViewPoap from './views/viewPoap.jsx';
+import MintPoap from './views/mintPoap.jsx';
 
 export const Drawer = () => {
 
   const state = useDrawer();
+  const dispatch = useDrawerDispatch();
 
   const drawerComponent = (state) => {
 
@@ -53,21 +54,86 @@ export const Drawer = () => {
       return <ViewToken />;
     }
 
-    if (state?.viewEvent === true) {
-      return <ViewEvent />;
+    if (state?.createMint === true) {
+      return <MintPoap />;
     }
 
-    if (state?.viewPoapToken === true) {
-      return <ViewPoap />;
-    }
+  };
 
-  };  
+  // Key names an active flag rather than any content from the view itself, so AnimatePresence
+  // treats switching between views as a transition, but re-renders of the same view (e.g. a
+  // token prop changing) don't replay the animation.
+  const activeViewKey = [
+    'showCardanoWallet', 'showMidnightWallet', 'createSoul', 'createSoulToken', 'createPoap',
+    'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint',
+  ].find((flag) => state?.[flag] === true) || 'none';
+
+  // CLOSE_DRAWER flips every view flag to false in the same dispatch as `open: false` (see the
+  // reducer), so activeViewKey goes straight to 'none' the instant a close starts — before the
+  // fade-out transition has even begun. Deriving the outer chrome (lateral vs. modal, solid vs.
+  // glass, slide vs. fade) straight from that live key would snap it back to the lateral drawer's
+  // geometry for a frame while it's still animating away. Track the last real view in a ref
+  // (mutated during render, not an effect, so there's no extra render/lag) and keep using it for
+  // the chrome once we're closing — activeViewKey itself still drives AnimatePresence's key so the
+  // exit animation actually fires.
+  const lastViewKeyRef = useRef(activeViewKey);
+  if (activeViewKey !== 'none') {
+    lastViewKeyRef.current = activeViewKey;
+  }
+  const isOpen = state?.open === true;
+  const chromeViewKey = isOpen ? activeViewKey : lastViewKeyRef.current;
+
+  // Views that end in a signed Midnight (or Cardano) transaction get the solid/trust treatment;
+  // pure browsing/info views (viewToken) stay glass. The two Cardano-native views
+  // sharing this same drawer container (showCardanoWallet, createSoul*) default to solid too —
+  // they're also wallet/creation flows, and their content isn't being redesigned here.
+  // showMidnightWallet is excluded here — it now gets its own centered-modal glass treatment
+  // below instead of the solid lateral one.
+  const SOLID_VIEWS = [
+    'showCardanoWallet', 'createSoul', 'createSoulToken',
+    'createPoap', 'createEvent', 'createIssuer', 'createMint',
+  ];
+  const drawerTone = SOLID_VIEWS.includes(chromeViewKey) ? 'drawer-solid' : 'drawer-glass';
+
+  // The Midnight wallet-connect popup is the one view that opts out of the shared lateral
+  // drawer-cart layout in favor of a centered modal (see .drawer-modal in
+  // theme-dark-glass.css) — every other view keeps sliding in from the side.
+  const isWalletModal = chromeViewKey === 'showMidnightWallet';
+  const drawerLayout = isWalletModal ? 'drawer-modal' : 'drawer-cart';
+
+  const closeDrawer = () => dispatch({ type: 'CLOSE_DRAWER' });
+
+  // The modal's own fade is handled by the outer .drawer-modal's CSS opacity transition (driven
+  // by the .open class) — the wallet-modal content itself stays fully opaque here so there's only
+  // ever one opacity animation running, not two independently-timed fades (this framer-motion one
+  // plus the CSS one) stacking and visibly flickering against each other. Every other view still
+  // gets its own x-slide fade since those don't have an outer CSS fade to double up with.
+  const contentMotion = isWalletModal
+    ? { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 1 } }
+    : { initial: { opacity: 0, x: 16 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 16 } };
 
   return (
-    
-    <React.Fragment>  
-      <div className={`drawer drawer-cart ${state?.open === true ? 'open' : ''}`}>
-        {drawerComponent(state)}
+
+    <React.Fragment>
+      {/* Gated on live isOpen, not the sticky chrome-view ref used below — that ref stays
+          'showMidnightWallet' forever after the modal's first open (on purpose, so the closing
+          .drawer doesn't snap back to the lateral layout mid-fade-out), so gating this on it
+          instead would leave a full-viewport transparent click-catcher mounted forever after the
+          first close, silently blocking every click on the rest of the app until a hard refresh. */}
+      {isOpen && isWalletModal && (
+        <div className="drawer-modal-overlay" onClick={closeDrawer} aria-hidden="true"></div>
+      )}
+      <div className={`drawer ${drawerLayout} ${drawerTone} ${isOpen ? 'open' : ''}`}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeViewKey}
+            className={isWalletModal ? 'drawer-modal-motion' : undefined}
+            {...contentMotion}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
+          >
+            {drawerComponent(state)}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </React.Fragment>
 

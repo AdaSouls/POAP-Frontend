@@ -25,7 +25,6 @@
 /* @import url(../vendor/perfect-scrollbar/perfect-scrollbar.css);
 @import url(../vendor/basic-table/basictable.css); */
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
-@import url("../icons/icofont/icofont.min.css");
 @import url("../icons/cryptocoins/css/cryptocoins.css");
 @import url("../icons/cryptocoins/css/cryptocoins-colors.css");
 
@@ -12755,6 +12754,14 @@ strong {
 
 .dark-theme .qr-img {
   background: #fff;
+}
+
+/* .drawer is custom to this app (added after forking the Qash template), so the template's own
+   dark-theme rules never covered it — without this it stays on the light-mode drawer background
+   while its text (h4, etc.) picks up .dark-theme's white ink, making headers like "Connect Wallet"
+   nearly invisible. Reuses the same dark surface already used for .card/.modal-content. */
+.dark-theme .drawer {
+  background-color: #152a8d;
 }
 
 .dark-theme .chart-stat {

@@ -1,23 +1,21 @@
+import { useNavigate } from "react-router-dom";
 import eventNormal from "../../images/svg/event-normal.svg";
 import circleArrow from "../../icons/svg/circle-arrow.svg";
 import mintTokenButton from "../../icons/svg/mint-token-button.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
-import {
-  useDrawerDispatch,
-  useDrawer,
-} from "../contexts/drawer/drawer.provider";
+import { useDrawer } from "../contexts/drawer/drawer.provider";
 
+// Detail viewing for events now lives entirely on /events' card grid (see eventCard.jsx's
+// in-place expansion) — this legacy table just routes there instead of opening its own detail
+// view.
 const PoapEvent = ({ event, index, mintable, owned }) => {
-  const dispatch = useDrawerDispatch();
+  const navigate = useNavigate();
   const {
     midnight: { provider },
   } = useDrawer();
 
   const viewEvent = () => {
-    dispatch({
-      type: "VIEW_EVENT",
-      payload: { event, mintable },
-    });
+    navigate("/events");
   };
 
   // const isExpired = () => {

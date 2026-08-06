@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Check, X } from "lucide-react";
 import { getClaimableTokens, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import walletStatus from "../../images/collections/wallet-status.png";
@@ -83,9 +84,9 @@ const SoulboundClaim = () => {
                       <div className="d-flex justify-content-between m-3">
                             <div className="align-content-center mt-4">                    
                             <span className="verified">
-                                { wallet && <i className="icofont-check-alt"></i> }
-                                { !wallet && <i className="icofont-close-line"></i> }
-                            </span>     
+                                { wallet && <Check size={14} /> }
+                                { !wallet && <X size={14} /> }
+                            </span>
                             </div>
                         <div className="align-content-center mt-4">
                             { !wallet && <button className="btn btn-white btn-small" onClick={showCardanoWallet}>Connect</button> }
@@ -189,14 +190,14 @@ const SoulboundClaim = () => {
                               <div className="card-body d-flex justify-content-between">
                                 <div className="d-flex justify-content-start">
                                   <div className="align-content-center token-status mr-1">
-                                    { t.burnTx ? (                                        
-                                      <span className="not-verified">
-                                        <i className="icofont-close-line" title="Burned"></i>
+                                    { t.burnTx ? (
+                                      <span className="not-verified" title="Burned">
+                                        <X size={14} />
                                       </span>
                                     ) :(
-                                      <span className="verified">
-                                        <i className="icofont-check-alt" title="Active"></i>
-                                      </span>                                        
+                                      <span className="verified" title="Active">
+                                        <Check size={14} />
+                                      </span>
                                     )}
                                   </div>
                                   <div className="align-content-center token-status">

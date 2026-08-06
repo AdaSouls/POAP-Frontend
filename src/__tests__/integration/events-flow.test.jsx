@@ -34,7 +34,7 @@ describe('Events Flow Integration', () => {
     await waitFor(() => expect(getAllEvents).toHaveBeenCalled());
     await waitFor(() => expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0));
 
-    const createButton = screen.getByText(/CREATE/i).closest('.card-body');
+    const createButton = screen.getByRole('button', { name: /create event/i });
     await userEvent.click(createButton);
 
     expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { Plus } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
@@ -8,6 +9,7 @@ import EventFilters from "../components/EventFilters";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
 import { getAllEvents } from "../../midnight/indexer.service";
+import { getEventStatus } from "../../utils/poapHelpers";
 
 const REFRESH_INTERVAL_MS = 5000;
 
@@ -21,12 +23,7 @@ function applyFilters(events, filters) {
     result = result.filter((e) => e.issuerPk.toLowerCase().includes(filters.issuerSearch.toLowerCase()));
   }
   if (filters.status) {
-    result = result.filter((e) => {
-      const isExpired = e.expiration > 0 && e.expiration * 1000 <= Date.now();
-      const isFull = e.maxSupply > 0 && e.minted >= e.maxSupply;
-      const status = !e.isActive ? "inactive" : isExpired ? "expired" : isFull ? "full" : "active";
-      return status === filters.status;
-    });
+    result = result.filter((e) => getEventStatus(e) === filters.status);
   }
   if (filters.maxSupplyMin !== undefined) {
     result = result.filter((e) => e.maxSupply >= filters.maxSupplyMin);
@@ -50,6 +47,7 @@ const EventsPage = () => {
   const [loading, setLoading] = useState(true);
   const [allEvents, setAllEvents] = useState([]);
   const [filters, setFilters] = useState({});
+  const [expandedId, setExpandedId] = useState(null);
   const { midnight: { provider } } = useDrawer();
   const { isAdmin, isIssuer } = useUserRoles();
   const dispatch = useDrawerDispatch();
@@ -95,70 +93,52 @@ const EventsPage = () => {
     [filteredEvents, myEvents]
   );
 
+  const orderedEvents = useMemo(() => [...myEvents, ...otherEvents], [myEvents, otherEvents]);
+
+  // If the expanded event drops out of the (polled/filtered) list, don't leave the grid stuck
+  // showing zero cards — fall back to the full grid instead.
+  useEffect(() => {
+    if (expandedId && !orderedEvents.some((e) => e.eventId === expandedId)) {
+      setExpandedId(null);
+    }
+  }, [orderedEvents, expandedId]);
+
+  const visibleEvents = expandedId
+    ? orderedEvents.filter((e) => e.eventId === expandedId)
+    : orderedEvents;
+
   return (
     <Layout activeMenu={3}>
       <>
-        <div className="row">
-          <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
-            <div className="card inner-header">
-              <div className="d-flex justify-content-between m-3">
-                <div className="inner-header-back">
-                  <Link to="/create" className="simple-link">
-                    <i className="icofont-rounded-left"></i>
-                  </Link>
-                </div>
-                <div className="inner-header-title">
-                  <h4>Events</h4>
-                </div>
-                <div className="inner-header-buttons">
-                  <span className="badge bg-primary">
-                    {filteredEvents.length} {filteredEvents.length === 1 ? "Event" : "Events"}
-                  </span>
-                </div>
-              </div>
+        <div className="inner-header">
+          <div className="inner-header-row">
+            <div className="inner-header-row-left">
+              <h4>Events</h4>
+            </div>
+            <div className="inner-header-row-right">
+              <span className="badge bg-primary">
+                {filteredEvents.length} {filteredEvents.length === 1 ? "Event" : "Events"}
+              </span>
+              <button
+                className={`inner-header-action-btn${!provider ? " is-outline" : ""}`}
+                onClick={!provider ? showMidnightWallet : createEvent}
+                disabled={provider && !canCreateEvent}
+                title={!provider ? "Connect your wallet to create an event" : canCreateEvent ? "Create a new event" : "Organizer access required"}
+              >
+                <span className="inner-header-action-btn-inner">
+                  <Plus size={14} /> Create Event
+                </span>
+              </button>
+              <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
             </div>
           </div>
         </div>
 
         <div className="row">
-          <div className="col-12">
-            <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
-          </div>
-        </div>
-
-        <div className="row">
-          <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12">
-            <div className="card card-create bg-event card-classic">
-              <div className="card-body card-classic-max-height" onClick={createEvent}>
-                <h4>CREATE <span> EVENT</span></h4>
-                <div className={(canCreateEvent ? "plus-button" : "axis-button") + " align-content-center"}>
-                  <div></div><div></div>
-                </div>
-              </div>
-              <div className="d-flex justify-content-between m-3">
-                <div className="align-content-center mt-4">
-                  <span className="verified">
-                    {canCreateEvent ? <i className="icofont-check-alt"></i> : <i className="icofont-close-line"></i>}
-                  </span>
-                </div>
-                <div className="align-content-center mt-4">
-                  {!provider && (
-                    <button className="btn btn-white btn-small" onClick={showMidnightWallet}>
-                      Connect
-                    </button>
-                  )}
-                  {provider && !canCreateEvent && (
-                    <small className="text-muted">Organizer access required</small>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
           {loading ? (
-            <div className="col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6">
-              <div className="card card-event card-classic">
-                <div className="card-body card-classic-max-height d-flex justify-content-center">
+            <div className="col-xxl-6 col-lg-6 col-md-12">
+              <div className="card card-event card-classic card-outline-only">
+                <div className="card-outline-only-body d-flex justify-content-center">
                   <div className="loading-event-card">
                     <img src={loadingGif} width="35" height="35" alt="" />
                   </div>
@@ -166,17 +146,20 @@ const EventsPage = () => {
               </div>
             </div>
           ) : filteredEvents.length > 0 ? (
-            <>
-              {myEvents.map((event) => (
-                <EventCard key={`my-${event.eventId}`} event={event} />
+            <AnimatePresence mode="popLayout">
+              {visibleEvents.map((event) => (
+                <EventCard
+                  key={event.eventId}
+                  event={event}
+                  isExpanded={event.eventId === expandedId}
+                  onExpand={() => setExpandedId(event.eventId)}
+                  onCollapse={() => setExpandedId(null)}
+                />
               ))}
-              {otherEvents.map((event) => (
-                <EventCard key={event.eventId} event={event} />
-              ))}
-            </>
+            </AnimatePresence>
           ) : (
-            <div className="col-xxl-3 col-xl-4 col-lg-6 col-md-6">
-              <div className="card card-event card-classic">
+            <div className="col-xxl-6 col-lg-6 col-md-12">
+              <div className="card card-event card-classic card-outline-only">
                 <div className="wallet-non-connected">
                   <img className="mt-6" src={walletStatus} width="150" height="140" alt="" />
                 </div>

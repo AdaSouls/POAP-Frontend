@@ -16,6 +16,8 @@ import EventsPage from "./pages/events";
 import PoapManagement from "./pages/poapManagement";
 import Overview from "./pages/overview";
 import Create from "./pages/create";
+import OrganizerDashboard from "./pages/organizerDashboard";
+import SharedCollection from "./pages/sharedCollection";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -51,6 +53,8 @@ const Router = () => {
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/poap-management" element={<PoapManagement />} />
+          <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          <Route path="/share/:pkHex" element={<SharedCollection />} />
           <Route path="/create" element={<Create />} />
           <Route path="/souls" element={<Souls />} />
           <Route path="/Settings-profile" element={<SettingsProfile />} />

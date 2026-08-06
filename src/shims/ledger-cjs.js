@@ -6,7 +6,11 @@
 // exports are themselves statically analyzable by webpack for downstream ESM imports.
 // Generated from ledger.d.ts's exported class/function/const/enum declarations.
 
-const real = require("@midnight-ntwrk/ledger");
+// See the full explanation in src/shims/onchain-runtime-cjs.js: a bare or subpath require of
+// "@midnight-ntwrk/ledger" either self-redirects via craco.config.js's exact-match alias or 404s
+// against the package's restrictive "exports" map. A literal relative-path string sidesteps both —
+// webpack resolves it statically at build time straight to the file.
+const real = require("../../node_modules/@midnight-ntwrk/ledger/ledger.cjs");
 
 exports.ContractCall = real.ContractCall;
 exports.ContractCallPrototype = real.ContractCallPrototype;
