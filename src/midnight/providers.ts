@@ -1,52 +1,29 @@
-import {
-  type BalancedTransaction,
-  type UnbalancedTransaction,
-  createBalancedTx,
-} from '@midnight-ntwrk/midnight-js-types';
-import { Transaction as LedgerTransaction, type CoinInfo as LedgerCoinInfo, type TransactionId } from '@midnight-ntwrk/ledger';
-import type { CoinInfo as ZswapCoinInfo, Transaction as ZswapTransactionType } from '@midnight-ntwrk/zswap';
-import { getNetworkId, toZswapNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import type { UnboundTransaction } from '@midnight-ntwrk/midnight-js-types';
+import { Cause } from 'effect';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { FetchZkConfigProvider } from '@midnight-ntwrk/midnight-js-fetch-zk-config-provider';
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
-import type { DAppConnectorAPI, DAppConnectorWalletAPI, ServiceUriConfig } from '@midnight-ntwrk/dapp-connector-api';
-import semver from 'semver';
+import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
+import { Transaction, type FinalizedTransaction, type TransactionId } from '@midnight-ntwrk/ledger-v8';
 import { createPoapPrivateState, createWitnesses, type PoapPrivateState } from './witnesses';
-import type { ImpureCircuits } from './contract/managed/poap/contract/index.cjs';
-
-// @midnight-ntwrk/zswap only ships a wasm-bindgen CJS build (no "module"/ESM entry) that
-// reassigns `module.exports` as a WASM import placeholder before defining its exports — this
-// breaks webpack's static CommonJS named-export analysis (even `import * as` gets treated as
-// "default export only"). require() bypasses that analysis entirely.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const zswap: typeof import('@midnight-ntwrk/zswap') = require('@midnight-ntwrk/zswap');
-const ZswapTransaction: typeof ZswapTransactionType = zswap.Transaction;
+import type { ImpureCircuits } from './contract/managed/poap/contract/index.js';
 
 export type PoapCircuitId = keyof ImpureCircuits<unknown>;
 
 export const POAP_PRIVATE_STATE_KEY = 'poapPrivateState';
 export const POAP_ZK_CONFIG_BASE_PATH = '/midnight/poap';
-const COMPATIBLE_CONNECTOR_API_VERSION = '1.x';
+// Local devnet only — see docs/environment.md in ../POAP-Midnight and deploy.ts's envConfig.
+const NETWORK_ID = 'undeployed';
 const WALLET_POLL_INTERVAL_MS = 100;
 const WALLET_DISCOVERY_TIMEOUT_MS = 5_000;
 const WALLET_ENABLE_TIMEOUT_MS = 30_000;
-
-// `window.midnight` itself is already declared by @midnight-ntwrk/dapp-connector-api's own
-// ambient types (dist/globals.d.ts) as `{ [key: string]: DAppConnectorAPI }` — do not redeclare it
-// here, a second incompatible `declare global` for the same property is a compile error.
 
 export class LaceNotFoundError extends Error {
   constructor() {
     super('Could not find the Midnight Lace wallet. Is the extension installed?');
     this.name = 'LaceNotFoundError';
-  }
-}
-
-export class LaceVersionMismatchError extends Error {
-  constructor(actual: string) {
-    super(`Incompatible Midnight Lace wallet version. Require '${COMPATIBLE_CONNECTOR_API_VERSION}', got '${actual}'.`);
-    this.name = 'LaceVersionMismatchError';
   }
 }
 
@@ -57,103 +34,172 @@ export class LaceNotAuthorizedError extends Error {
   }
 }
 
-async function waitForConnectorApi(): Promise<DAppConnectorAPI> {
+// Lace registers itself under a freshly generated UUID key on `window.midnight` (CAIP-372-style
+// multi-wallet discovery), not a fixed `mnLace` key — so we scan every entry's shape rather than
+// reading one hardcoded property. See @midnight-ntwrk/dapp-connector-api's InitialAPI type and the
+// official reference dapp's src/hooks/useWalletDetection.ts (github.com/midnightntwrk/midnight-wallet-dapp).
+function findInitialAPIs(): InitialAPI[] {
+  const midnight = window.midnight;
+  if (!midnight) return [];
+  return Object.values(midnight).filter(
+    (candidate): candidate is InitialAPI =>
+      Boolean(candidate) &&
+      typeof candidate === 'object' &&
+      typeof (candidate as InitialAPI).name === 'string' &&
+      typeof (candidate as InitialAPI).apiVersion === 'string' &&
+      typeof (candidate as InitialAPI).connect === 'function',
+  );
+}
+
+async function waitForLaceApi(): Promise<InitialAPI> {
   const started = Date.now();
   while (Date.now() - started < WALLET_DISCOVERY_TIMEOUT_MS) {
-    const api = window.midnight?.mnLace;
-    if (api) return api;
+    const lace = findInitialAPIs().find((api) => api.rdns === 'io.lace.wallet');
+    if (lace) return lace;
     await new Promise((resolve) => setTimeout(resolve, WALLET_POLL_INTERVAL_MS));
   }
   throw new LaceNotFoundError();
 }
 
 export type WalletConnection = {
-  wallet: DAppConnectorWalletAPI;
-  uris: ServiceUriConfig;
-  coinPublicKey: string;
+  connectedApi: ConnectedAPI;
+  shieldedAddress: { shieldedAddress: string; shieldedCoinPublicKey: string; shieldedEncryptionPublicKey: string };
 };
 
 export async function connectToLace(): Promise<WalletConnection> {
-  const connectorApi = await waitForConnectorApi();
+  // midnight-js-contracts reads this global on every circuit call (createUnprovenCallTx etc.) —
+  // must be set before any wallet/contract operation, not just before connecting.
+  setNetworkId(NETWORK_ID);
+  const api = await waitForLaceApi();
 
-  if (!semver.satisfies(connectorApi.apiVersion, COMPATIBLE_CONNECTOR_API_VERSION)) {
-    throw new LaceVersionMismatchError(connectorApi.apiVersion);
-  }
-
-  let wallet: DAppConnectorWalletAPI;
+  let connectedApi: ConnectedAPI;
   try {
-    const enablePromise = connectorApi.enable();
+    const connectPromise = api.connect(NETWORK_ID);
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('timed out waiting for wallet authorization')), WALLET_ENABLE_TIMEOUT_MS),
     );
-    wallet = await Promise.race([enablePromise, timeout]);
+    connectedApi = await Promise.race([connectPromise, timeout]);
   } catch (error) {
     throw new LaceNotAuthorizedError();
   }
 
-  const uris = await connectorApi.serviceUriConfig();
-  const walletState = await wallet.state();
-
-  return { wallet, uris, coinPublicKey: walletState.coinPublicKey };
+  const shieldedAddress = await connectedApi.getShieldedAddresses();
+  return { connectedApi, shieldedAddress };
 }
 
-// ── Ledger <-> Zswap transaction/coin bridging ────────────────────────────────
+// ── Transaction bridging ────────────────────────────────────────────────────
 //
-// midnight-js-types' UnbalancedTransaction/BalancedTransaction (used by the generic providers,
-// and by the compiled contract's circuit calls) wrap @midnight-ntwrk/ledger's Transaction.
-// The Lace wallet's DAppConnectorWalletAPI (from @midnight-ntwrk/dapp-connector-api, whose own
-// registry-declared dependency is zswap ^0.3.8 but which resolves zswap ^3.0.2 transitively via
-// @midnight-ntwrk/wallet-api in this install) operates on @midnight-ntwrk/zswap's Transaction/
-// CoinInfo instead. These are different generations of the same wire format; both expose
-// serialize()/deserialize() so we round-trip through bytes to bridge them. CoinInfo has an
-// identical structural shape ({ type: string, nonce: string, value: bigint }) in both packages,
-// so it's safe to pass through directly without conversion.
-//
-// NOT YET VERIFIED AGAINST A LIVE NODE — confirm this round-trip actually produces a transaction
-// the node accepts once the devnet is reachable (Phase 2 verification).
+// The wallet's ConnectedAPI works with hex-encoded serialized transactions, not the ledger's own
+// Transaction objects — bridge by serializing/deserializing on each side. Mirrors the official
+// reference dapp's src/lib/walletAdapter.ts (dapp-connector-api@4.0.1 + ledger-v8@8.1.0, the exact
+// generation our installed packages and the user's Lace both report).
 
-function currentZswapNetworkId() {
-  const id = getNetworkId();
-  if (!id) {
-    throw new Error('Midnight network id not set — call setNetworkId() during app startup before connecting a wallet.');
+function uint8ArrayToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// compact-js's Effect-based internals wrap failures as FiberFailure, whose `.message` is always
+// empty and whose real content lives in an opaque `effect` Cause object — plain console.error/
+// JSON.stringify shows neither. Cause.pretty renders the actual nested error/defect.
+function logFiberFailure(label: string, error: unknown): void {
+  console.error(`[${label}] raw error:`, error);
+  const cause = (error as { cause?: unknown })?.cause;
+  if (cause && typeof cause === 'object' && '_id' in cause && (cause as { _id: unknown })._id === 'Cause') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.error(`[${label}] Cause.pretty:`, Cause.pretty(cause as any));
+    const failure = (cause as { failure?: unknown }).failure;
+    console.error(`[${label}] cause.failure (raw):`, failure);
+    if (failure && typeof failure === 'object') {
+      console.error(`[${label}] cause.failure keys:`, Object.keys(failure as object));
+      console.error(
+        `[${label}] cause.failure JSON:`,
+        JSON.stringify(failure, Object.getOwnPropertyNames(failure)),
+      );
+    }
   }
-  return toZswapNetworkId(id);
 }
 
-function ledgerToZswapTx(tx: LedgerTransaction): ZswapTransaction {
-  return ZswapTransaction.deserialize(tx.serialize(), currentZswapNetworkId());
-}
-
-function zswapToLedgerTx(tx: ZswapTransaction): LedgerTransaction {
-  return LedgerTransaction.deserialize(tx.serialize(currentZswapNetworkId()));
+function hexToUint8Array(hex: string): Uint8Array {
+  const matches = hex.match(/.{1,2}/g);
+  return new Uint8Array((matches ?? []).map((byte) => parseInt(byte, 16)));
 }
 
 export async function buildProviders(connection: WalletConnection) {
-  const { wallet, uris } = connection;
+  const { connectedApi, shieldedAddress } = connection;
+
+  const zkConfigProvider = new FetchZkConfigProvider<PoapCircuitId>(
+    `${window.location.origin}${POAP_ZK_CONFIG_BASE_PATH}`,
+    fetch.bind(window),
+  );
+
+  const config = await connectedApi.getConfiguration();
+
+  const rawPrivateStateProvider = levelPrivateStateProvider<{ [POAP_PRIVATE_STATE_KEY]: PoapPrivateState }>({
+    // Local dev only: private state is encrypted at rest and now requires a password. There's no
+    // real secret to protect beyond what's already in this browser profile's private state, so a
+    // fixed password is fine here — do not reuse this pattern for anything storing real value.
+    // Must satisfy midnight-js-utils' validatePassword policy: 16+ chars, at least 3 of
+    // {upper, lower, digit, special}, no 4+ repeated/sequential chars.
+    privateStoragePasswordProvider: () => 'AdaSouls-Local-Dev-2026!',
+    accountId: shieldedAddress.shieldedAddress,
+  });
+  const rawPublicDataProvider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri);
 
   return {
-    privateStateProvider: levelPrivateStateProvider<{ [POAP_PRIVATE_STATE_KEY]: PoapPrivateState }>({
-      privateStateStoreName: 'adasouls-poap-private-state',
-    }),
-    zkConfigProvider: new FetchZkConfigProvider<PoapCircuitId>(
-      `${window.location.origin}${POAP_ZK_CONFIG_BASE_PATH}`,
-      fetch.bind(window),
-    ),
-    proofProvider: httpClientProofProvider(uris.proverServerUri),
-    publicDataProvider: indexerPublicDataProvider(uris.indexerUri, uris.indexerWsUri),
+    privateStateProvider: {
+      ...rawPrivateStateProvider,
+      async set(id: typeof POAP_PRIVATE_STATE_KEY, state: PoapPrivateState) {
+        try {
+          return await rawPrivateStateProvider.set(id, state);
+        } catch (error) {
+          logFiberFailure('privateStateProvider.set', error);
+          throw error;
+        }
+      },
+    },
+    zkConfigProvider,
+    proofProvider: httpClientProofProvider(config.proverServerUri!, zkConfigProvider),
+    publicDataProvider: {
+      ...rawPublicDataProvider,
+      async watchForTxData(...args: Parameters<typeof rawPublicDataProvider.watchForTxData>) {
+        try {
+          return await rawPublicDataProvider.watchForTxData(...args);
+        } catch (error) {
+          logFiberFailure('publicDataProvider.watchForTxData', error);
+          throw error;
+        }
+      },
+    },
     walletProvider: {
-      coinPublicKey: connection.coinPublicKey,
-      async balanceTx(tx: UnbalancedTransaction, newCoins: LedgerCoinInfo[]): Promise<BalancedTransaction> {
-        const provenZswapTx = await wallet.balanceAndProveTransaction(
-          ledgerToZswapTx(tx.tx),
-          newCoins as unknown as ZswapCoinInfo[],
-        );
-        return createBalancedTx(zswapToLedgerTx(provenZswapTx));
+      getCoinPublicKey: () => shieldedAddress.shieldedCoinPublicKey,
+      getEncryptionPublicKey: () => shieldedAddress.shieldedEncryptionPublicKey,
+      async balanceTx(tx: UnboundTransaction): Promise<FinalizedTransaction> {
+        const serializedStr = uint8ArrayToHex(tx.serialize());
+        let result: { tx: string };
+        try {
+          result = await connectedApi.balanceUnsealedTransaction(serializedStr);
+        } catch (error) {
+          logFiberFailure('walletProvider.balanceTx', error);
+          throw error;
+        }
+        const resultBytes = hexToUint8Array(result.tx);
+        return Transaction.deserialize('signature', 'proof', 'binding', resultBytes) as FinalizedTransaction;
       },
     },
     midnightProvider: {
-      submitTx(tx: BalancedTransaction): Promise<TransactionId> {
-        return wallet.submitTransaction(ledgerToZswapTx(tx.tx) as unknown as Parameters<typeof wallet.submitTransaction>[0]);
+      async submitTx(tx: FinalizedTransaction): Promise<TransactionId> {
+        const serializedStr = uint8ArrayToHex(tx.serialize());
+        // submitTransaction returns void in this API generation — the wallet no longer hands back
+        // a transaction id, so we derive it locally from the transaction we already have.
+        try {
+          await connectedApi.submitTransaction(serializedStr);
+        } catch (error) {
+          logFiberFailure('midnightProvider.submitTx', error);
+          throw error;
+        }
+        return tx.identifiers()[0];
       },
     },
   };

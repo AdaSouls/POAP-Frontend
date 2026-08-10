@@ -1,112 +1,263 @@
+import React, { useRef } from "react";
 import { Link } from "react-router-dom";
-import { Check, X } from "lucide-react";
-import bannerWelcome from "../../images/banner/banner-welcome.jpg";
-import adaSolusLogoBanner from "../../images/banner/adasouls-logo-banner.png";
-import Layout from "../layout/layout";
-import { Slide } from "react-slideshow-image";
-import "react-slideshow-image/dist/styles.css";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
-  useDrawer
-} from "../contexts/drawer/drawer.provider";
+  Ticket,
+  Headphones,
+  Video,
+  Users,
+  GraduationCap,
+  Star,
+  FileText,
+  PlusCircle,
+  Award,
+  ChevronDown,
+} from "lucide-react";
+import Layout from "../layout/layout";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 
-const indicators = (index) => <div className="indicator">{index + 1}</div>;
+const USE_CASES = [
+  {
+    icon: Ticket,
+    role: "organizer",
+    title: "Event Tickets & Access",
+    description:
+      "Issue verifiable entry passes for conferences, meetups, or ticketed events. Attendees " +
+      "claim their pass straight to their wallet, and organizers can push-mint directly to " +
+      "someone who hasn't claimed yet — no separate ticketing platform required.",
+  },
+  {
+    icon: Headphones,
+    role: "subscriber",
+    title: "Podcast Subscriptions",
+    description:
+      "Prove a listener is a paying subscriber without exposing who they are. Creators gate " +
+      "premium episodes or early access behind a claimable token, and the relationship stays " +
+      "private by default — visible only to whoever chooses to share it.",
+  },
+  {
+    icon: Video,
+    role: "organizer",
+    title: "Live Streams & Social Content",
+    description:
+      "Gate access to a live stream, a private Discord, or a closed social feed behind a " +
+      "claimable token. One token can represent standing access, not just a single-use badge, " +
+      "so it keeps working for every future stream the same way.",
+  },
+  {
+    icon: Users,
+    role: "subscriber",
+    title: "Private Meetings & Calls",
+    description:
+      "Grant entry to a members-only call, a closed strategy session, or a one-on-one booking. " +
+      "The proof travels with the wallet itself, not a shared link that anyone could forward.",
+  },
+  {
+    icon: GraduationCap,
+    role: "organizer",
+    title: "Diplomas & Certificates",
+    description:
+      "Represent a course, workshop, or certification as a claimable, provable credential. " +
+      "It's verifiable on-chain without publishing anyone's name or academic record for the " +
+      "world to see.",
+  },
+  {
+    icon: Star,
+    role: "subscriber",
+    title: "Celebrity & Athlete Subscriptions",
+    description:
+      "Let a public figure's fan club, membership tier, or paid community be provably held — " +
+      "without turning every fan's identity into public data. The figure controls who's a " +
+      "member; members control what they reveal.",
+  },
+  {
+    icon: FileText,
+    role: "organizer",
+    title: "Document Delivery",
+    description:
+      "An early path for issuing proofs tied to real documents — an ID, a birth certificate, " +
+      "any record where the fact of possession matters more than broadcasting the contents. " +
+      "Still early, but the same private-by-default model applies.",
+  },
+];
+
+const REVEAL_VIEWPORT = { once: true, amount: 0.4 };
+
+// Scroll-linked, not a one-time reveal: each row tracks its own scroll progress across the span
+// from "just entering the viewport from below" (0) to "just leaving above" (1), and derives
+// icon/text x-offset + opacity directly from that value — peaking (centered, fully opaque) only
+// while the row sits near the vertical middle of the screen, and receding back out toward
+// whichever margin each side already leans on as it scrolls away from center in either
+// direction. A per-row component (not inline in the .map) because useScroll/useTransform need
+// their own ref + hook instance per row, which a loop body can't provide.
+const UseCaseRow = ({ icon: Icon, role, title, description, iconLeft }) => {
+  const rowRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: rowRef,
+    offset: ["start end", "end start"],
+  });
+
+  // Both position and opacity now hold flat through a small dwell zone around center
+  // (0.42–0.58) instead of hitting their target at the single instant progress=0.5 and
+  // immediately reversing — the row arrives a little before dead-center and doesn't start
+  // leaving until a little after, so it actually sits still in "reading position" for a beat
+  // instead of just passing through it.
+  const iconX = useTransform(
+    scrollYProgress,
+    [0, 0.42, 0.58, 1],
+    iconLeft ? [-520, 0, 0, -520] : [520, 0, 0, 520]
+  );
+  const textX = useTransform(
+    scrollYProgress,
+    [0, 0.42, 0.58, 1],
+    iconLeft ? [520, 0, 0, 520] : [-520, 0, 0, -520]
+  );
+  // Flat 0 while genuinely far (0 to 0.3, and 0.7 to 1) instead of a straight-line ramp across
+  // the whole [0, 1] span — a linear ramp meant the row was already partly visible (e.g. ~20%
+  // opacity) well before it was anywhere near center, which read as "still visible while far
+  // away". Ramps fully in/out across the same 0.3–0.42 / 0.58–0.7 windows the position above
+  // uses, so fade and slide finish together, then holds at full opacity through the same
+  // 0.42–0.58 dwell zone.
+  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.42, 0.58, 0.7, 1], [0, 0, 1, 1, 0, 0]);
+
+  return (
+    <div
+      ref={rowRef}
+      className={`row align-items-start justify-content-center usecase-row role-${role}`}
+    >
+      <motion.div
+        className="col-md-4 usecase-icon-col"
+        style={{ order: iconLeft ? 1 : 2, x: iconX, opacity }}
+      >
+        <div className="usecase-icon-wrap role-hero-icon">
+          <Icon size={48} />
+        </div>
+      </motion.div>
+      <motion.div
+        className="col-md-4 usecase-text-col"
+        style={{ order: iconLeft ? 2 : 1, x: textX, opacity }}
+      >
+        <div className="usecase-text-inner" style={{ textAlign: iconLeft ? "left" : "right" }}>
+          <h3 className="usecase-title">{title}</h3>
+          <p className="text-muted usecase-desc">{description}</p>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 const Dashboard = () => {
-  const {
-    midnight: { provider },
-  } = useDrawer();
-  const images = [bannerWelcome, bannerWelcome];
+  const { midnight: { provider } } = useDrawer();
+  const dispatch = useDrawerDispatch();
+
+  const showMidnightWallet = () => {
+    dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
+  };
 
   return (
     <Layout activeMenu={1}>
-      <div className="row">
-        {/* USER STATE CARD */}
-        <div className="col-xxl-3 col-xl-4 col-lg-4">
-          <div className="card welcome-profile card-classic">
-            <div className="card-body card-classic-max-height">
-              <h4>
-                Welcome to<br></br>
-                <span>AdaSouls</span>
-              </h4>
-              <br></br>
-              <p>
-                We are a multichain platform. Connect your Cardano wallet to
-                interact with SOUL and your Lace wallet to interact with
-                POAP on Midnight.
-              </p>
-              <ul>
-                {/* <li>
-                  {wallet ? (
-                    <span className="verified">
-                      <i className="icofont-check-alt"></i>
-                    </span>
-                  ) : (
-                    <span className="not-verified">
-                      <i className="icofont-close-line"></i>
-                    </span>
-                  )}
-                  Cardano Wallet
-                   <Link to={"#"}> 
-                  </Link> 
-                </li> */}
-                <li>
-                  {provider ? (
-                    <span className="verified">
-                      <Check size={14} />
-                    </span>
-                  ) : (
-                    <span className="not-verified">
-                      <X size={14} />
-                    </span>
-                  )}
-                  Lace Wallet
-                </li>
-              </ul>
-            </div>
-            <div className="m-3">
-              <Link
-                className="btn btn-gradient btn-block btn-small mt-1"
-                to={"/wallet"}
-              >
-                Wallets
-              </Link>
-            </div>
-          </div>
-        </div>
-        {/* BANNER CARD */}
-        <div className="col-xxl-9 col-xl-8 col-lg-8">
-          <div className="card card-classic">
-            <div className="card-banner">
-              <Slide indicators={indicators} scale={1.4}>
-                <div className="each-slide-effect">
-                  <div style={{ backgroundImage: `url(${images[0]})` }}>
-                    <span>
-                      <img src={adaSolusLogoBanner} alt="" ></img>
-                      <p>
-                        <strong>AdaSouls</strong> is the first open platform to
-                        create <strong>Soulbound Tokens</strong> and{" "}
-                        <strong>POAPs</strong> in <strong>Cardano</strong>
-                      </p>
-                    </span>
-                  </div>
-                </div>
-                <div className="each-slide-effect">
-                  <div style={{ backgroundImage: `url(${images[1]})` }}>
-                    <span>
-                      <img src={adaSolusLogoBanner} alt="" ></img>
-                      <p>
-                        <strong>AdaSouls</strong> is the first open platform to
-                        create <strong>Soulbound Tokens</strong> and{" "}
-                        <strong>POAPs</strong> in <strong>Cardano</strong>
-                      </p>
-                    </span>
-                  </div>
-                </div>
-              </Slide>
-            </div>
-          </div>
-        </div>
+      <div className="index-hero-section">
+        <motion.div
+          className="index-hero"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <span className="role-eyebrow index-hero-eyebrow">Privacy-preserving proof, on Midnight</span>
+          <h1 className="role-hero-title index-hero-title">
+            One token. Endless ways to prove it.
+          </h1>
+          <p className="text-muted role-hero-desc index-hero-desc">
+            AdaSouls issues privacy-preserving POAPs on the Midnight network — a single Compact
+            contract that can represent far more than event badges, while attendance and
+            ownership history stay in each wallet's own private state.
+          </p>
+          <button type="button" className="btn btn-dual-cta" onClick={showMidnightWallet}>
+            {provider ? "Wallet Connected" : "Connect Wallet"}
+          </button>
+        </motion.div>
+
+        <motion.div
+          className="index-scroll-hint"
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <ChevronDown size={28} />
+        </motion.div>
       </div>
+
+      <motion.div
+        className="index-section-header"
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={REVEAL_VIEWPORT}
+        transition={{ duration: 0.4 }}
+      >
+        <h4 className="mb-1">What you can build with AdaSouls</h4>
+        <p className="text-muted small mb-0">
+          The same underlying token can stand in for a lot more than a conference badge.
+        </p>
+      </motion.div>
+
+      <div className="index-usecase-list">
+        {USE_CASES.map((useCase, i) => (
+          <UseCaseRow key={useCase.title} {...useCase} iconLeft={i % 2 === 0} />
+        ))}
+      </div>
+
+      <motion.div
+        className="index-section-header index-section-header-compact"
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={REVEAL_VIEWPORT}
+        transition={{ duration: 0.4 }}
+      >
+        <h4 className="mb-1">Choose your role</h4>
+        <p className="text-muted small mb-0">
+          Every account can be either — pick what fits what you're doing right now.
+        </p>
+      </motion.div>
+
+      <motion.div
+        className="row index-role-row"
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={REVEAL_VIEWPORT}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
+        <div className="col-md-6 mb-3 role-organizer">
+          <div className="index-role-plain">
+            <PlusCircle size={88} className="index-role-plain-icon" />
+            <div>
+              <h5 className="mb-1">Organizer</h5>
+              <p className="text-muted small text-center index-role-card-desc">
+                Create events, issue POAPs, and manage attendance.
+              </p>
+            </div>
+            <Link to="/organizer" className="btn btn-role-cta">
+              Learn more
+            </Link>
+          </div>
+        </div>
+        <div className="col-md-6 mb-3 role-subscriber">
+          <div className="index-role-plain">
+            <Award size={88} className="index-role-plain-icon" />
+            <div>
+              <h5 className="mb-1">Subscriber</h5>
+              <p className="text-muted small text-center index-role-card-desc">
+                Discover events, claim POAPs, and build your collection.
+              </p>
+            </div>
+            <Link to="/subscriber" className="btn btn-role-cta">
+              Learn more
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+
+      <footer className="index-footer">
+        <p className="text-muted small mb-0">© 2026 AdaSouls — built on Midnight.</p>
+      </footer>
     </Layout>
   );
 };

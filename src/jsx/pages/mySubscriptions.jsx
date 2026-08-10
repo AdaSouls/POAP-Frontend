@@ -12,10 +12,11 @@ import { filterVisibleEvents } from "../../utils/poapHelpers";
 
 const REFRESH_INTERVAL_MS = 5000;
 
-// "My POAPs" reads from this browser's private state (one SPOAP token per issuer, with its own
-// attendance list) — see src/midnight/witnesses.ts. This is deliberately NOT sourced from the
-// public indexer: attendance history is private witness state and isn't indexed on-chain at all.
-const PoapManagement = () => {
+// "My Subscriptions" reads from this browser's private state (one SPOAP token per issuer, with
+// its own attendance list) — see src/midnight/witnesses.ts. This is deliberately NOT sourced from
+// the public indexer: attendance history is private witness state and isn't indexed on-chain at
+// all.
+const MySubscriptions = () => {
   const [loading, setLoading] = useState(true);
   const [myPoaps, setMyPoaps] = useState([]);
   const [shareCopied, setShareCopied] = useState(false);
@@ -87,11 +88,11 @@ const PoapManagement = () => {
 
   return (
     <Layout activeMenu={3}>
-      <>
+      <div className="role-subscriber">
         <div className="inner-header">
           <div className="inner-header-row">
             <div className="inner-header-row-left">
-              <h4>My POAPs</h4>
+              <h4>My Subscriptions</h4>
             </div>
             <div className="inner-header-row-right">
               {provider && myPoaps.length > 0 && (
@@ -165,9 +166,9 @@ const PoapManagement = () => {
             </>
           )}
         </div>
-      </>
+      </div>
     </Layout>
   );
 };
 
-export default PoapManagement;
+export default MySubscriptions;

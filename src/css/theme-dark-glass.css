@@ -116,7 +116,7 @@ body {
 /* ── Applied to existing selectors (no JSX changes needed for these) ────────────── */
 
 /* Base card shell used by every POAP/event/dashboard card — grids of these render many at
-   once (events.jsx, poapManagement.jsx), so the lighter blur tier keeps compositing cost down
+   once (myEvents.jsx, mySubscriptions.jsx), so the lighter blur tier keeps compositing cost down
    while still actually defocusing whatever scrolls behind a card. */
 .card {
   background: var(--glass-bg);
@@ -156,12 +156,128 @@ body {
   padding: 16px 18px;
 }
 
-/* wallet.jsx's internal top-area/bottom-area divider. `.border-top` is a Bootstrap utility
-   (style.css) hardcoded to #f1f1f1 !important — a bright line meant for a white card, standing
-   out sharply against every dark card here. Overridden to the same --glass-border every card's
-   own outline uses, scoped to .card-wallet so the shared .border-top utility (still used as-is by
-   the out-of-scope Cardano-native pages) isn't touched. */
-.card-wallet .bottom-area.border-top {
+/* POAP/event/pending cards (poapCard.jsx, eventCard.jsx, myPendingApprovals.jsx's own inline
+   card): thumbnail moved from a small circle to a large square-rounded panel spanning almost
+   the card's full height. Uniform 18px on all four sides (overriding the 16px/18px top-bottom/
+   left-right split above) is what makes the thumb's left gap equal its top/bottom gap — the
+   left value doubles as the top/bottom value, per explicit request, rather than two different
+   numbers that happen to look close. */
+.card-outline-only-body.card-media-body {
+  padding: 18px;
+}
+
+.card-media-row {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+
+/* Square, not circular, radius matches .card-outline-only's own 16px so the thumb reads as "cut
+   from the same sheet" as the card itself, not a separate shape floating on top. Sized by
+   align-items:stretch against the content column's natural height (title + badges + list +
+   button) via aspect-ratio:1 — however tall that column ends up, the thumb matches, occupying
+   nearly the entire card. A background + centered icon (not object-fit:cover on the bare image)
+   because these are small line-art SVGs, not photos — stretching one edge-to-edge would crop the
+   glyph instead of just filling space around it. */
+.card-media-thumb-wrap {
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.card-media-thumb-icon {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+}
+
+.card-media-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Expanded detail view's own thumbnail spot — same square-not-circle treatment as the collapsed
+   tile above, just at the original small top-of-card size instead of the full-height one. */
+.card-media-thumb-small-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-media-thumb-small-wrap img {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
+}
+
+/* Hover on POAP/event/pending cards: original small upward y-translate
+   (`whileHover={{ y: -2 }}` in poapCard.jsx/eventCard.jsx; a plain CSS transform via
+   .card-hover-lift in myPendingApprovals.jsx's own inline card, which has no framer-motion
+   element to hang whileHover on), paired with a "stacked card" reveal instead of a glow.
+   .card-hover-peek is a REAL SIBLING of the card (both children of .card-hover-group — a plain,
+   padding-free wrapper div placed INSIDE the outer Bootstrap grid-column motion.div, deliberately
+   not the grid column itself, since that column carries its own gutter padding and inset:0 against
+   its padding box would size the peek larger than the card actually renders), same exact size as
+   the card (inset: 0, no offset) and never moves — only the card does. At rest the two exactly
+   coincide, so the card completely covers it; once the card lifts 2px, a 2px strip of the peek's
+   own bottom edge is uncovered. Fully transparent background (no fill) is what makes this safe
+   against .card-outline-only's own translucent glass surface — earlier attempts with an actual
+   color fill bled through the card's near-transparent background across the whole overlap, not
+   just the reveal strip; a transparent block has nothing to bleed. Only its bottom border + an
+   inward glow from that same edge are visible at all, and only in the sliver the lifted card no
+   longer covers. */
+.card-hover-group {
+  position: relative;
+}
+
+.card-hover-peek {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: transparent;
+  border-bottom: 2px solid var(--role-accent, var(--glass-border));
+  box-shadow: inset 0 -14px 18px -14px var(--role-accent-soft, rgba(155, 168, 171, 0.35));
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.card-hover-group:hover .card-hover-peek {
+  opacity: 1;
+}
+
+.card-hover-lift {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.15s ease-in-out;
+}
+
+.card-hover-group:hover .card-hover-lift {
+  transform: translateY(-2px);
+}
+
+/* wallet.jsx's and laceWallet.jsx's internal top-area/bottom-area divider. `.border-top` is a
+   Bootstrap utility (style.css) hardcoded to #f1f1f1 !important — a bright line meant for a white
+   card, standing out sharply against every dark card here. Overridden to the same --glass-border
+   every card's own outline uses, scoped to .card-wallet/.card-button so the shared .border-top
+   utility (still used as-is by the out-of-scope Cardano-native pages) isn't touched. */
+.card-wallet .bottom-area.border-top,
+.card-button .bottom-area.border-top {
   border-top-color: var(--glass-border) !important;
 }
 
@@ -350,17 +466,10 @@ h1, h2, h3, h4, h5, h6,
     inset 0 -2px 3px 0 rgba(139, 0, 0, 0.6);
 }
 
-/* Stat bar (event/POAP counts in page headers) — was a plain small Bootstrap badge pill.
-   .inner-header-row-right is the current inner-nav markup (events.jsx/poapManagement.jsx/
-   organizerDashboard.jsx); .inner-header-buttons is kept alongside it as a legacy alias so this
-   doesn't silently stop matching again if a page's markup drifts. */
-.inner-header-row-right .badge.bg-primary,
-.inner-header-buttons .badge.bg-primary {
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-violet-2)) !important;
-  font-size: 14px;
-  padding: 8px 16px;
+/* All badges (page-header counters, card status/attribute badges — Active/Expired, Soulbound,
+   Verified, Burned, Declared, "Pending your claim", etc.) are full pill shape site-wide. */
+.badge {
   border-radius: 999px;
-  box-shadow: 0 0 16px rgba(74, 92, 106, 0.35);
 }
 
 /* "How it works" numbered steps (overview.jsx) */
@@ -557,9 +666,10 @@ h1, h2, h3, h4, h5, h6,
   color: var(--text-on-glass);
   border-radius: 50%;
   background-color: transparent;
-  /* var(--glass-border) (rgba(124,106,173,0.25)) all but disappeared at this small a size — a
-     plain, brighter neutral reads clearly instead. */
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  /* var(--glass-border) (rgba(74,92,106,0.4)) all but disappeared at this small a size — a
+     brighter tone from the same slate palette (--palette-5) reads clearly instead, without
+     falling back to plain white like the old design did. */
+  border: 1px solid rgba(155, 168, 171, 0.5);
   /* Both purely inset (no outer/drop shadow on this button at all) — light from above, shadow
      from below, bigger and more opaque than a first pass so they're actually visible at 32px
      instead of near-invisible hairlines. */
@@ -654,6 +764,74 @@ h1, h2, h3, h4, h5, h6,
   background: transparent;
 }
 
+/* SweetAlert2 popups (sweetAlerts.jsx) — same liquid-glass surface as the wallet-connect popup
+   above (.drawer.drawer-modal): same border-radius, background, blur, border, and bevel/outer
+   shadow. sweetalert2 injects its own default (white, square-cornered) runtime styles, so every
+   visual property needs an explicit override here rather than relying on inheritance — applied
+   via the `customClass: { popup: "swal2-glass-popup" }` option each Swal.fire() call passes.
+   Compound selector (.swal2-glass-popup.swal2-popup) so it wins on specificity over swal2's own
+   same-weight .swal2-popup rule regardless of stylesheet load order. */
+.swal2-glass-popup.swal2-popup {
+  border-radius: 20px;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  color: var(--text-on-glass);
+  /* swal2's own default padding is uneven by design (0 on the popup itself, then each of
+     .swal2-icon/.swal2-title/.swal2-html-container carries its own bespoke margin) — which is
+     how the bottom edge ended up with almost no breathing room below the text. Taking over the
+     box model completely: one equal padding on all four sides here, and each child's own
+     margin/padding zeroed out below so this is the only source of spacing. `!important` because
+     swal2 also stamps every non-toast popup with a second class, `.swal2-modal` — its own
+     `.swal2-popup.swal2-modal` padding rule ties our `.swal2-glass-popup.swal2-popup` on
+     specificity (two classes each), and its <style> tag is injected into the document later
+     (at runtime, on first use) than our bundled stylesheet, so it was winning the tiebreak and
+     silently overriding padding: 32px back down to swal2's own near-zero default. */
+  padding: 44px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Clips the timer progress bar (flush at the very bottom edge, spanning full width) to the
+     popup's own 20px corner radius — swal2's own bar-container radius doesn't match ours. */
+  overflow: hidden;
+}
+
+.swal2-glass-popup .swal2-icon {
+  margin: 0 auto 16px !important;
+}
+
+.swal2-glass-popup .swal2-title {
+  color: var(--text-on-glass);
+  font-size: 1.15rem;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: center;
+}
+
+.swal2-glass-popup .swal2-html-container {
+  color: var(--text-on-glass);
+  font-size: 0.8rem;
+  width: 100%;
+  margin: 12px 0 0 !important;
+  padding: 0 !important;
+  text-align: center;
+}
+
+.swal2-glass-popup .swal2-html-container a {
+  color: var(--palette-6);
+}
+
+.swal2-glass-popup .swal2-timer-progress-bar {
+  background: var(--palette-5);
+}
+
+
 /* ── Shared chrome: horizontal header, no sidebar ────────────────────────────────
    Replaces the old vertical sidebar entirely (see header.jsx/layout.jsx) — structure now
    matches the poap.xyz reference: one horizontal bar (logo, nav links, single CTA), full-width
@@ -725,26 +903,21 @@ h1, h2, h3, h4, h5, h6,
   position: relative;
 }
 
-/* Two-layer button, invisible at rest — the outer `<button>` is a frame (~4px of padding, more
-   generous rounding) and the inner `<span>` carries its own fill, inset from the frame's edge.
-   Neither shows a background at rest:
-     - hover:  outer background only.
-     - pressed/open (aria-expanded=true): outer + inner both visible, inner a bit lighter than
-       outer.
-     - route-active (.active): outer + inner both visible (like pressed) plus a real border —
-       border-width doesn't change between states (transparent by default) so nothing shifts.
+/* Single-layer button — the outer `<button>` is a plain, invisible hit-target/flex wrapper (no
+   background or border of its own); the inner `<span>` carries all the visible state: fill,
+   border, and text color. (Previously both layers painted their own background, which doubled up
+   into a visible nested-pill look on hover/expanded — consolidated down to one visual layer.)
    `outline: none` on :focus/:active — otherwise the browser's default focus ring shows as a
    border-like line around the button after a click, which isn't wanted here. */
 .header-nav-dropdown-toggle {
   display: flex;
   align-items: center;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   color: var(--text-on-glass-muted);
   padding: 4px;
   border-radius: 999px;
   cursor: pointer;
-  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
 
 .header-nav-dropdown-toggle:focus,
@@ -756,20 +929,16 @@ h1, h2, h3, h4, h5, h6,
   display: flex;
   align-items: center;
   background: transparent;
+  border: 1px solid transparent;
   font-size: 14px;
   font-weight: 500;
   padding: 7px 16px;
   border-radius: 999px;
-  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out;
 }
 
-/* Slate-tinted (accent-violet's rgb, 74/92/106) instead of flat white-on-dark — reads as
-   "the same color, just lighter" between outer and inner instead of a disconnected gray. */
-.header-nav-dropdown-toggle:hover {
-  background: rgba(74, 92, 106, 0.22);
-}
-
-.header-nav-dropdown-toggle[aria-expanded="true"] {
+/* Slate-tinted (accent-violet's rgb, 74/92/106) instead of flat white-on-dark. */
+.header-nav-dropdown-toggle:hover .header-nav-dropdown-toggle-inner {
   background: rgba(74, 92, 106, 0.22);
 }
 
@@ -778,16 +947,30 @@ h1, h2, h3, h4, h5, h6,
   color: var(--text-on-glass);
 }
 
-/* Active (current page) is border-only — no fill on either layer, so the border alone carries
-   the "you are here" signal instead of competing with hover/pressed's background treatment. */
-.header-nav-dropdown-toggle.active {
-  background: transparent;
-  border-color: rgba(155, 168, 171, 0.3);
-}
-
+/* Active (current page) is border-only — no fill, so the border alone carries the "you are
+   here" signal instead of competing with hover/pressed's background treatment. */
 .header-nav-dropdown-toggle.active .header-nav-dropdown-toggle-inner {
   background: transparent;
+  border-color: rgba(155, 168, 171, 0.3);
   color: var(--text-on-glass);
+}
+
+/* Role-tinted nav: --role-accent cascades down from .header-nav's role-organizer/
+   role-subscriber class (set from the currently selected site role, see useSiteRole/header.jsx).
+   The role toggle chip (RoleDropdown's button) always shows a soft fill of that color, since it
+   *is* the current role. The secondary links (My Events / My Subscriptions / My Pending
+   Approvals) pick up the color on hover text and on the active (current page) border only. */
+.header-nav-dropdown-toggle.header-nav-role-toggle .header-nav-dropdown-toggle-inner {
+  background: var(--role-accent-soft);
+  border-color: transparent;
+}
+
+.header-nav-dropdown-toggle.header-nav-role-link:hover .header-nav-dropdown-toggle-inner {
+  color: var(--role-accent);
+}
+
+.header-nav-dropdown-toggle.header-nav-role-link.active .header-nav-dropdown-toggle-inner {
+  border-color: var(--role-accent);
 }
 
 /* position:fixed + top/left set inline from the toggle button's own getBoundingClientRect() —
@@ -799,7 +982,7 @@ h1, h2, h3, h4, h5, h6,
   min-width: 300px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
   padding: 8px;
   background: var(--glass-bg-light);
   backdrop-filter: blur(var(--glass-blur));
@@ -811,19 +994,29 @@ h1, h2, h3, h4, h5, h6,
 }
 
 /* Icon + title + smaller description per row — same pattern as the poap.xyz reference's own
-   nav dropdowns (icon box, bold title, muted description underneath), in our palette. */
+   nav dropdowns (icon box, bold title, muted description underneath), in our palette. Rendered
+   as a <button> (role picker sets state, doesn't navigate) rather than the <a> this was
+   originally written for, hence the button-reset properties. */
 .header-nav-dropdown-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: left;
   text-decoration: none;
   padding: 10px 12px;
   border-radius: 10px;
-  transition: background-color 0.15s ease-in-out;
+  cursor: pointer;
+  transition: border-color 0.15s ease-in-out;
 }
 
+/* Hover reads as an outline instead of a dark fill — the border color is the same slate used in
+   the ".active" (selected) item's own background gradient, so hover visually echoes "this is the
+   selectable state of the same accent", not an unrelated darkening. */
 .header-nav-dropdown-item:hover {
-  background: var(--glass-bg-hover);
+  border-color: rgba(155, 168, 171, 0.5);
 }
 
 .header-nav-dropdown-item.active {
@@ -854,28 +1047,27 @@ h1, h2, h3, h4, h5, h6,
   margin-top: 2px;
 }
 
-/* Same two-layer frame+fill pattern as the nav dropdown toggles (outer padding/rounding, inner
-   span carries the actual fill) instead of a single flat full-pill Bootstrap button. */
+/* Single-layer button — same consolidation as the nav dropdown toggles above: the outer
+   `<button>` is an invisible flex/hit-target wrapper (no background/border of its own), the
+   inner `<span>` carries the fill, border, and (for the wallet icon variant) status glow. The
+   border is visible at rest, not just conjured on hover — hover/focus/active just make it more
+   opaque, so nothing "appears from nothing". */
 .header-cta {
   display: flex;
   align-items: center;
   white-space: nowrap;
   margin-left: auto;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid transparent;
+  background: transparent;
+  border: none;
   padding: 4px;
   border-radius: 999px;
   text-decoration: none;
   cursor: pointer;
 }
 
-/* Same border treatment as the nav dropdown toggles' active state — replaces the browser's
-   default focus ring (which otherwise shows as a bright white outline on click) with the same
-   subtle violet used there, instead of leaving it unstyled. */
 .header-cta:focus,
 .header-cta:active {
   outline: none;
-  border-color: rgba(155, 168, 171, 0.3);
 }
 
 .header-cta-inner {
@@ -886,12 +1078,16 @@ h1, h2, h3, h4, h5, h6,
   font-size: 14px;
   font-weight: 500;
   background: linear-gradient(90deg, var(--accent-blue), var(--accent-violet-2));
+  border: 1px solid rgba(155, 168, 171, 0.35);
   color: var(--text-on-solid);
-  transition: filter 0.15s ease-in-out;
+  transition: filter 0.15s ease-in-out, border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-.header-cta:hover .header-cta-inner {
+.header-cta:hover .header-cta-inner,
+.header-cta:focus .header-cta-inner,
+.header-cta:active .header-cta-inner {
   filter: brightness(1.12);
+  border-color: rgba(155, 168, 171, 0.7);
 }
 
 /* Already-connected state ("Wallet" link) — same frame, a softer tinted fill instead of the
@@ -899,6 +1095,42 @@ h1, h2, h3, h4, h5, h6,
 .header-cta-connected .header-cta-inner {
   background: rgba(74, 92, 106, 0.28);
   color: var(--text-on-glass);
+}
+
+/* Icon-only wallet button — connection status reads from the button's own interior, not from
+   hover: a plain card-style border (same as .card's --glass-border) in both states, a solid fill
+   close to the site's own body tone, and a top+bottom inset glow — red while disconnected, green
+   once Lace is connected. Deliberately no outer glow (an earlier box-shadow attempt visibly
+   clipped against the header's own backdrop-filter stacking context); everything here is inset,
+   contained entirely inside the button. */
+.header-wallet-btn .header-wallet-btn-inner {
+  padding: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--solid-bg);
+  color: rgba(239, 68, 68, 0.75);
+  /* Tighter than .filter-icon-btn's own bevel (1px offset / 2px blur vs its 2px/3px) so it hugs
+     its edge even closer on this small a circle. Bottom shadow is pushed close to black (not
+     just a darker red) and at higher opacity, so it reads as an actual shadow/darkening, not
+     another glow in a different shade. */
+  box-shadow:
+    inset 0 1px 2px 0 rgba(248, 113, 113, 0.5),
+    inset 0 -1px 2px 0 rgba(40, 8, 8, 0.8);
+  transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.header-wallet-btn:hover .header-wallet-btn-inner {
+  filter: brightness(1.12);
+}
+
+/* Connected: fill lightens to the same tone as the border itself (instead of the dark solid
+   interior used while disconnected), and the glow/shadow/icon switch to the same light-above,
+   dark-below green treatment. */
+.header-wallet-btn.header-cta-connected .header-wallet-btn-inner {
+  background: var(--glass-border);
+  color: rgba(46, 204, 113, 0.75);
+  box-shadow:
+    inset 0 1px 2px 0 rgba(74, 222, 128, 0.5),
+    inset 0 -1px 2px 0 rgba(6, 24, 14, 0.8);
 }
 
 @media only screen and (max-width: 767px) {
@@ -943,7 +1175,7 @@ h1, h2, h3, h4, h5, h6,
   margin: 8px 4px 0;
   /* Matches the tallest row-right control's real rendered height — .inner-header-action-btn,
      measured at 45.5px (not the 36px .filter-icon-btn circle, which is shorter) — so pages with
-     no action button (wallet.jsx, organizerDashboard.jsx without canView) still get a row this
+     no action button (organizerDashboard.jsx without canView) still get a row this
      tall. Without this, align-items:center centers the title within a shorter box and it sits
      visibly higher than on every other page's title bar. Verified via computed
      getBoundingClientRect(), not guessed — re-measure if .inner-header-action-btn's own padding
@@ -1159,4 +1391,352 @@ h1, h2, h3, h4, h5, h6,
   box-shadow: none;
   border-bottom: 1px solid var(--glass-border);
   padding-bottom: 12px;
+}
+
+/* ── Role accent colors ───────────────────────────────────────────────────────
+   Deliberate, scoped exception to the monochrome palette above: each role gets its own accent
+   color (--role-accent), applied wherever a `.role-organizer`/`.role-subscriber` class is
+   present — the two info pages (organizerInfo.jsx/subscriberInfo.jsx) and the header nav
+   (header.jsx, see further down) both use it. Not tied to `.role-info-page` specifically, so it
+   cascades to any wrapper that carries the class. */
+.role-organizer {
+  --role-accent: #b24bf3;
+  --role-accent-soft: rgba(178, 75, 243, 0.18);
+  --role-accent-glow: rgba(178, 75, 243, 0.45);
+  --role-accent-50: rgba(178, 75, 243, 0.5);
+}
+
+.role-subscriber {
+  --role-accent: #3ecf8e;
+  --role-accent-soft: rgba(62, 207, 142, 0.18);
+  --role-accent-glow: rgba(62, 207, 142, 0.45);
+  --role-accent-50: rgba(62, 207, 142, 0.5);
+}
+
+/* Count badges in inner-header rows ("5 Events", "0 Pending") — no fill, just a role-tinted
+   outline at 50% opacity so it reads as a quiet counter, not a call-to-action. */
+.badge-count-outline {
+  background: transparent;
+  border: 1px solid var(--role-accent-50, var(--glass-border));
+  color: var(--role-accent, var(--text-on-glass));
+}
+
+.role-hero {
+  padding: 72px 0 40px;
+}
+
+.role-eyebrow {
+  display: block;
+  color: var(--role-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.role-hero-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.role-hero-desc {
+  font-size: 1rem;
+  margin-bottom: 24px;
+  max-width: 46ch;
+}
+
+.role-hero-cta-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.role-hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 42%, var(--role-accent-soft), transparent 70%),
+    var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.role-hero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--role-accent), var(--palette-3));
+  color: var(--text-on-solid);
+  box-shadow: 0 0 40px var(--role-accent-soft);
+}
+
+.role-feature-row {
+  margin-top: 64px;
+  row-gap: 32px;
+}
+
+.role-feature-card {
+  text-align: center;
+  padding: 0 24px;
+}
+
+.role-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--role-accent-soft);
+  color: var(--role-accent);
+  border: 1px solid var(--role-accent);
+  margin-bottom: 18px;
+}
+
+.btn-role-cta {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-on-solid);
+  background: linear-gradient(90deg, var(--role-accent), var(--palette-3));
+  border: 1px solid var(--role-accent);
+}
+
+.btn-role-cta:hover {
+  color: var(--text-on-solid);
+  filter: brightness(1.12);
+  border-color: var(--role-accent);
+}
+
+.btn-role-cta-outline {
+  background: transparent;
+  color: var(--role-accent);
+}
+
+.btn-role-cta-outline:hover {
+  background: var(--role-accent-soft);
+  color: var(--text-on-glass);
+}
+
+/* Fills the first screen (viewport height minus the fixed 68px header — see .content-body's own
+   padding-top, kept in sync with it) and vertically centers the hero inside it, with the scroll
+   hint pinned near the bottom of that same space. This is also what pushes "What you can build"
+   (the next section) below the fold on load — nothing after the hero is visible until the user
+   scrolls, by construction, regardless of exact hero content height or viewport size. */
+.index-hero-section {
+  min-height: calc(100vh - 68px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.index-scroll-hint {
+  margin-top: 40px;
+  color: var(--text-on-glass-muted);
+  display: flex;
+}
+
+/* No box — no border, no background, no blur — per explicit feedback: just the text, sitting
+   directly on the page background. Flex/padding here is purely for layout (centering + spacing
+   from the button), not a surface. */
+.index-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 32px;
+}
+
+/* Overrides .role-eyebrow's var(--role-accent) text color (undefined here, no role ancestor)
+   with a gradient clipped to the text itself, so the one-line label reads as "both colors" too. */
+.index-hero-eyebrow {
+  background: linear-gradient(90deg, #b24bf3, #3ecf8e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Same reasoning as .index-hero-eyebrow: .btn-role-cta's gradient/border both read
+   var(--role-accent), which is undefined without a role wrapper — this hero button gets its
+   own literal two-color gradient instead of relying on that variable. */
+.btn-dual-cta {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-on-solid);
+  background: linear-gradient(90deg, #b24bf3, #3ecf8e);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.btn-dual-cta:hover {
+  color: var(--text-on-solid);
+  filter: brightness(1.12);
+}
+
+.index-section-header {
+  margin: 96px 0 40px;
+  text-align: center;
+}
+
+.index-section-header h4 {
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* "Choose your role" header only — the 20px title-to-subtitle gap above reads right for "What
+   you can build" (a longer, more separated intro) but was too much padding for this shorter,
+   more tightly-paired title+subtitle right before the role cards. */
+.index-section-header-compact h4 {
+  margin-bottom: 8px;
+}
+
+.index-section-header p {
+  font-size: 1rem;
+  max-width: 52ch;
+  margin: 0 auto;
+}
+
+/* Alternating icon/text rows (index.jsx's use-case list, rendered by the UseCaseRow component) —
+   icon and text swap sides every row (JSX sets `order` inline per row). Position isn't a one-time
+   reveal: each row's x-offset/opacity is scroll-linked via useScroll/useTransform, peaking
+   (centered, fully opaque) only while the row is near the vertical middle of the screen and
+   receding back out toward whichever margin each side leans on as it scrolls away from center in
+   either direction — see UseCaseRow in index.jsx, not a CSS/viewport-triggered animation. Equal
+   4/4 columns (not the full 6/6 — narrower on purpose) plus justify-content-center on the row
+   pulls icon and text in as a compact, centered pair instead of spanning edge-to-edge with a big
+   gap between them. Top-aligned (align-items-start on the row, not center) so every title starts
+   on the same line as the icon next to it instead of both being vertically centered against the
+   row's tallest column. */
+.index-usecase-list {
+  margin-top: 16px;
+  margin-bottom: 96px;
+}
+
+/* No dividing line between rows (removed per feedback — read as a hard rule the design didn't
+   need) — just generous vertical padding to keep rows visually separate. */
+.usecase-row {
+  padding: 160px 0;
+}
+
+.usecase-icon-col {
+  display: flex;
+  justify-content: center;
+}
+
+/* .role-hero-icon is already the "big gradient circle" treatment (organizerInfo.jsx/
+   subscriberInfo.jsx) — reused as-is for size/shape, just with a stronger glow
+   (--role-accent-glow instead of that class's own default --role-accent-soft) since this is
+   meant to read as a clear exterior "destello", not the subtler hero-icon glow it was designed
+   for elsewhere. */
+.usecase-icon-wrap.role-hero-icon {
+  box-shadow: 0 0 56px var(--role-accent-glow);
+}
+
+/* align-items:center centers .usecase-text-inner (below) as a single box in the column.
+   `text-align` is set inline on that wrapper, per row in index.jsx (left when the icon is on
+   the left, right when it's on the right). */
+.usecase-text-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Title and description used to be centered as two SEPARATE blocks, each shrink-to-fit its own
+   content width — same text-align direction on both, but different actual widths (a short title
+   vs. a long-wrapping paragraph) meant each one centered around a different box, so their
+   text didn't actually start from the same vertical line despite matching text-align. Wrapping
+   both in one shared box with a single max-width fixes that: title and description now share
+   the exact same left/right edge, because they're both full-width inside the same parent rather
+   than independently-centered blocks of different sizes. */
+.usecase-text-inner {
+  max-width: 42ch;
+}
+
+/* margin-top:0 resets the browser's default <h3> top margin — without it, the title sat visibly
+   lower than the icon next to it despite both columns being top-aligned (align-items-start on
+   the row): the columns' own top edges matched, but the heading's built-in margin pushed its
+   actual text down from there. */
+.usecase-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.usecase-desc {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+/* Below the row's own flex breakpoint, force the icon to always render first regardless of
+   which side it was assigned for the desktop zigzag — alternating top/bottom order on a single
+   stacked mobile column reads as random, not intentional. */
+@media only screen and (max-width: 767px) {
+  .usecase-icon-col {
+    order: 1 !important;
+    margin-bottom: 20px;
+  }
+
+  .usecase-text-col {
+    order: 2 !important;
+  }
+
+  /* Overrides the inline text-align (left/right, leaning toward the icon) set per row in
+     index.jsx on .usecase-text-inner — on a single stacked mobile column there's no "opposite
+     side" left to lean toward, so center like everything else instead. */
+  .usecase-text-inner {
+    text-align: center !important;
+    max-width: none;
+  }
+}
+
+.index-role-row {
+  margin-top: 112px;
+  margin-bottom: 48px;
+}
+
+/* No card/box, no icon-circle background — just the icon itself, colored by role
+   (--role-accent, from the .role-organizer/.role-subscriber wrapper each column carries) and
+   sized up, per explicit feedback to drop the container entirely for these two. `gap` spaces the
+   three groups (icon / title+description block / button) generously apart, while the title and
+   description stay close together as their own pair via their own small margin, not this gap. */
+.index-role-plain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  gap: 28px;
+}
+
+/* filter: drop-shadow (not box-shadow, which only draws around the rectangular bounding box) so
+   the glow actually follows the icon's own outline — this is a bare lucide-react <svg> now, no
+   circular backing div to hang a box-shadow glow on. */
+.index-role-plain-icon {
+  color: var(--role-accent);
+  filter: drop-shadow(0 0 28px var(--role-accent-glow));
+}
+
+.index-role-card-desc {
+  max-width: 32ch;
+}
+
+/* Simple page-bottom footer, index.jsx only — the top margin here is also what gives the page
+   extra breathing room after the role section, not a separate spacing rule. */
+.index-footer {
+  margin-top: 120px;
+  padding: 24px 0 48px;
+  border-top: 1px solid var(--glass-border);
+  text-align: center;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
-import { screen } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import Overview from '../../jsx/pages/overview';
-import { mockDrawerContext, renderWithProviders } from '../../testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 
 describe('Overview Page', () => {
   it('renders overview page title', () => {
@@ -30,8 +30,15 @@ describe('Overview Page', () => {
 
   it('renders links to the main pages', () => {
     renderWithProviders(<Overview />);
-    expect(screen.getByRole('link', { name: /Go to Events/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Go to My POAPs/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Go to Wallet/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Go to My Events/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Go to My Subscriptions/i })).toBeInTheDocument();
+  });
+
+  it('opens the wallet connect popup instead of linking to a wallet page', () => {
+    mockDrawerDispatch.mockClear();
+    renderWithProviders(<Overview />);
+    const connectButton = screen.getByRole('button', { name: /Connect Wallet/i });
+    fireEvent.click(connectButton);
+    expect(mockDrawerDispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });
   });
 });

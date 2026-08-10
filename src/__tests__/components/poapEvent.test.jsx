@@ -14,7 +14,7 @@ describe('PoapEvent Component', () => {
     expiration: 0,
   };
 
-  it('navigates to /events when the arrow button is clicked', async () => {
+  it('navigates to /my-events when the arrow button is clicked', async () => {
     render(
       <MockDrawerProvider value={mockDrawerContext}>
         <MemoryRouter initialEntries={['/search']}>
@@ -23,7 +23,7 @@ describe('PoapEvent Component', () => {
               path="/search"
               element={<table><tbody><PoapEvent event={event} index={0} mintable owned={false} /></tbody></table>}
             />
-            <Route path="/events" element={<div>Events Page</div>} />
+            <Route path="/my-events" element={<div>My Events Page</div>} />
           </Routes>
         </MemoryRouter>
       </MockDrawerProvider>
@@ -31,6 +31,6 @@ describe('PoapEvent Component', () => {
 
     await userEvent.click(screen.getByRole('button'));
 
-    expect(screen.getByText(/events page/i)).toBeInTheDocument();
+    expect(screen.getByText(/my events page/i)).toBeInTheDocument();
   });
 });

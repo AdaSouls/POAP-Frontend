@@ -1,16 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import Layout from "../layout/layout";
-import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 
 const pages = [
-  { title: "Events", description: "Browse and create POAP events", path: "/events" },
-  { title: "My POAPs", description: "Claim POAPs and view your token collection", path: "/poap-management" },
-  { title: "Wallet", description: "Connect your Lace wallet", path: "/wallet" },
+  { title: "My Events", description: "Browse and create POAP events", path: "/my-events" },
+  { title: "My Subscriptions", description: "Claim POAPs and view your token collection", path: "/my-subscriptions" },
 ];
 
 const Overview = () => {
   const { midnight: { provider } } = useDrawer();
+  const dispatch = useDrawerDispatch();
+
+  const showMidnightWallet = () => {
+    dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
+  };
 
   return (
     <Layout activeMenu={1}>
@@ -30,8 +34,11 @@ const Overview = () => {
                   <strong>Wallet Connected:</strong> {provider.address}
                 </div>
               ) : (
-                <div className="alert alert-warning">
-                  Connect your Lace wallet from the Wallet page to get started.
+                <div className="alert alert-warning d-flex justify-content-between align-items-center">
+                  <span>Connect your Lace wallet to get started.</span>
+                  <button type="button" className="btn btn-gradient btn-sm" onClick={showMidnightWallet}>
+                    Connect Wallet
+                  </button>
                 </div>
               )}
             </div>

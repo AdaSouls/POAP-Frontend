@@ -4,7 +4,6 @@ import Dashboard from "./pages/index";
 import Souls from "./pages/souls";
 import SettingsProfile from "./pages/settings-profile";
 import Search from "./pages/search";
-import Wallet from "./pages/wallet";
 import { Drawer } from "./drawer/drawer";
 import Collection from "./pages/collection-details";
 import SoulboundClaim from "./pages/soulbound-claim";
@@ -12,12 +11,14 @@ import Collections from "./pages/collections";
 import { useDrawerDispatch } from "./contexts/drawer/drawer.provider";
 import ClaimMint from "./pages/claim-mint";
 import { getAllEvents } from "../midnight/indexer.service";
-import EventsPage from "./pages/events";
-import PoapManagement from "./pages/poapManagement";
+import MyEvents from "./pages/myEvents";
+import MySubscriptions from "./pages/mySubscriptions";
+import MyPendingApprovals from "./pages/myPendingApprovals";
 import Overview from "./pages/overview";
-import Create from "./pages/create";
 import OrganizerDashboard from "./pages/organizerDashboard";
 import SharedCollection from "./pages/sharedCollection";
+import OrganizerInfo from "./pages/organizerInfo";
+import SubscriberInfo from "./pages/subscriberInfo";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -50,12 +51,15 @@ const Router = () => {
           <Route path="/" exact element={<Dashboard />} />
           <Route path="/overview" element={<Overview />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/wallet" element={<Wallet />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/poap-management" element={<PoapManagement />} />
+          <Route path="/my-events" element={<MyEvents />} />
+          <Route path="/my-subscriptions" element={<MySubscriptions />} />
+          <Route path="/my-pending-approvals" element={<MyPendingApprovals />} />
+          <Route path="/organizer" element={<OrganizerInfo />} />
+          <Route path="/subscriber" element={<SubscriberInfo />} />
+          {/* No nav link points here anymore — deliberately shelved rather than deleted, for a
+              possible future organizer-analytics view. Reachable only by typing the URL directly. */}
           <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
           <Route path="/share/:pkHex" element={<SharedCollection />} />
-          <Route path="/create" element={<Create />} />
           <Route path="/souls" element={<Souls />} />
           <Route path="/Settings-profile" element={<SettingsProfile />} />
           <Route path="/soulbounds-claim" element={<SoulboundClaim />} />

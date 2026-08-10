@@ -89,7 +89,7 @@ export default function CreatePoap() {
 
       succesfullBlockchainCreation("POAP Claimed Successfully", `Transaction: ${txHash}`, "");
       closeDrawer();
-      navigate("/poap-management");
+      navigate("/my-subscriptions");
     } catch (error) {
       console.error("Error claiming POAP:", error);
       errorFunction("Error", error.message || "Failed to claim POAP. Please try again.", "");

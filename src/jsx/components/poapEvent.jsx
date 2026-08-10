@@ -5,7 +5,7 @@ import mintTokenButton from "../../icons/svg/mint-token-button.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 
-// Detail viewing for events now lives entirely on /events' card grid (see eventCard.jsx's
+// Detail viewing for events now lives entirely on /my-events' card grid (see eventCard.jsx's
 // in-place expansion) — this legacy table just routes there instead of opening its own detail
 // view.
 const PoapEvent = ({ event, index, mintable, owned }) => {
@@ -15,7 +15,7 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
   } = useDrawer();
 
   const viewEvent = () => {
-    navigate("/events");
+    navigate("/my-events");
   };
 
   // const isExpired = () => {

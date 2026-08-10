@@ -11,7 +11,7 @@ const truncateHex = (hex) => {
 };
 
 // Public, walletless destination for a "share my collection" link (see viewPoap.jsx /
-// poapManagement.jsx, and docs/collection-sharing-design.md). Deliberately not wrapped in
+// mySubscriptions.jsx, and docs/collection-sharing-design.md). Deliberately not wrapped in
 // <Layout> — a visitor here has no wallet and no reason to see the authenticated app chrome.
 //
 // Two data sources, kept visually distinct per the design doc's hard requirement:

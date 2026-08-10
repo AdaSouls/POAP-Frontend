@@ -112,7 +112,7 @@ const OrganizerDashboard = () => {
 
   return (
     <Layout activeMenu={6}>
-      <>
+      <div className="role-organizer">
         <div className="inner-header">
           <div className="inner-header-row">
             <div className="inner-header-row-left">
@@ -120,7 +120,7 @@ const OrganizerDashboard = () => {
             </div>
             <div className="inner-header-row-right">
               {canView && (
-                <span className="badge bg-primary">
+                <span className="badge badge-count-outline">
                   {myEvents.length} {myEvents.length === 1 ? "Event" : "Events"}
                 </span>
               )}
@@ -210,7 +210,7 @@ const OrganizerDashboard = () => {
             )}
           </>
         )}
-      </>
+      </div>
     </Layout>
   );
 };

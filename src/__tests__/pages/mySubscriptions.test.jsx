@@ -1,7 +1,7 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PoapManagement from '../../jsx/pages/poapManagement';
+import MySubscriptions from '../../jsx/pages/mySubscriptions';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 
 function connectedDrawerValue(getState) {
@@ -17,7 +17,7 @@ function connectedDrawerValue(getState) {
   };
 }
 
-describe('PoapManagement Page', () => {
+describe('MySubscriptions page', () => {
   const mockTokens = {
     ['bb'.repeat(32)]: {
       tokenId: 1n,
@@ -33,19 +33,19 @@ describe('PoapManagement Page', () => {
     },
   };
 
-  it('renders POAP Management header', () => {
-    renderWithProviders(<PoapManagement />);
-    expect(screen.getByText(/My POAPs/i)).toBeInTheDocument();
+  it('renders My Subscriptions header', () => {
+    renderWithProviders(<MySubscriptions />);
+    expect(screen.getByText(/My Subscriptions/i)).toBeInTheDocument();
   });
 
   it('shows the claim-poap button in an outline state when no wallet is connected', () => {
-    renderWithProviders(<PoapManagement />);
+    renderWithProviders(<MySubscriptions />);
     expect(screen.getByRole('button', { name: /claim poap/i })).toHaveClass('is-outline');
   });
 
   it('dispatches SHOW_MIDNIGHT_WALLET when the outline claim-poap button is clicked without a wallet', async () => {
     const dispatch = jest.fn();
-    renderWithProviders(<PoapManagement />, { drawerDispatch: dispatch });
+    renderWithProviders(<MySubscriptions />, { drawerDispatch: dispatch });
 
     await userEvent.click(screen.getByRole('button', { name: /claim poap/i }));
 
@@ -54,7 +54,7 @@ describe('PoapManagement Page', () => {
 
   it('loads and displays tokens from private state when wallet is connected', async () => {
     const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: mockTokens } });
-    renderWithProviders(<PoapManagement />, { drawerValue: connectedDrawerValue(getState) });
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
 
     await waitFor(() => {
       expect(getState).toHaveBeenCalled();
@@ -68,7 +68,7 @@ describe('PoapManagement Page', () => {
     const dispatch = jest.fn();
     const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
 
-    renderWithProviders(<PoapManagement />, {
+    renderWithProviders(<MySubscriptions />, {
       drawerValue: connectedDrawerValue(getState),
       drawerDispatch: dispatch,
     });
@@ -81,7 +81,7 @@ describe('PoapManagement Page', () => {
 
   it('shows empty state when no POAPs are found', async () => {
     const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
-    renderWithProviders(<PoapManagement />, { drawerValue: connectedDrawerValue(getState) });
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
 
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('PoapManagement Page', () => {
 
   it('does not show a share button when there are no POAPs', async () => {
     const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
-    renderWithProviders(<PoapManagement />, { drawerValue: connectedDrawerValue(getState) });
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
 
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('PoapManagement Page', () => {
     navigator.clipboard.writeText.mockClear();
     const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: mockTokens } });
     const drawerValue = connectedDrawerValue(getState);
-    renderWithProviders(<PoapManagement />, { drawerValue });
+    renderWithProviders(<MySubscriptions />, { drawerValue });
 
     await waitFor(() => {
       expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('PoapManagement Page', () => {
 
   it('hides sibling cards when one is expanded, and restores them on collapse', async () => {
     const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: twoMockTokens } });
-    renderWithProviders(<PoapManagement />, { drawerValue: connectedDrawerValue(getState) });
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
 
     await waitFor(() => {
       expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();

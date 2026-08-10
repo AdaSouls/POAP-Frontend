@@ -5,10 +5,24 @@
 // adding those and doesn't export them, so the destructure silently gives `undefined` and
 // `new undefined(...)` throws "is not a constructor". Browsers already have native
 // TextDecoder/TextEncoder globals — just forward those instead of polyfilling them.
-const real = require("util/");
+// Requires the package's main file directly (not the bare "util"/"util/" specifiers) — both of
+// those are aliased to this very shim in craco.config.js, so requiring them here would recurse.
+const real = require("util/util.js");
+
+// The `assert` polyfill (a transitive dependency of the new-generation
+// midnight-js-indexer-public-data-provider, via @subsquid packages) expects
+// `util.inspect.custom` to be a real Symbol, matching Node's own
+// `util.inspect.custom` (an alias for `Symbol.for('nodejs.util.inspect.custom')`) — the
+// browserify `util/` polyfill's `inspect` function doesn't define it, so anything reading it
+// (or using it as a computed class member key) crashes at module-eval time with
+// "Cannot read properties of undefined (reading 'custom')".
+const inspect = Object.assign(real.inspect, {
+  custom: real.inspect.custom || Symbol.for("nodejs.util.inspect.custom"),
+});
 
 module.exports = {
   ...real,
+  inspect,
   TextDecoder: typeof TextDecoder !== "undefined" ? TextDecoder : real.TextDecoder,
   TextEncoder: typeof TextEncoder !== "undefined" ? TextEncoder : real.TextEncoder,
 };

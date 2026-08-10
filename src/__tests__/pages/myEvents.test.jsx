@@ -1,13 +1,13 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import EventsPage from '../../jsx/pages/events';
+import EventsPage from '../../jsx/pages/myEvents';
 import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
-import { getAllEvents, getEvent } from '../../midnight/indexer.service';
+import { getAllEvents, getEvent, getTokensByEvent } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
 
-describe('EventsPage', () => {
+describe('MyEvents page', () => {
   const mockEvents = [
     { eventId: 'aa'.repeat(32), issuerPk: 'bb'.repeat(32), maxSupply: 100, minted: 1, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 1 },
     { eventId: 'cc'.repeat(32), issuerPk: 'dd'.repeat(32), maxSupply: 0, minted: 2, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 2 },
@@ -17,6 +17,7 @@ describe('EventsPage', () => {
     jest.clearAllMocks();
     getAllEvents.mockResolvedValue(mockEvents);
     getEvent.mockResolvedValue({ ...mockEvents[0], liveTokens: 3 });
+    getTokensByEvent.mockResolvedValue([]);
   });
 
   it('renders events page header', () => {

@@ -1,13 +1,13 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import EventsPage from '../../jsx/pages/events';
+import EventsPage from '../../jsx/pages/myEvents';
 import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
 import { getAllEvents } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
 
-describe('Events Flow Integration', () => {
+describe('My Events Flow Integration', () => {
   const mockEvents = [
     { eventId: 'aa'.repeat(32), issuerPk: 'bb'.repeat(32), maxSupply: 100, minted: 50, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 1 },
     { eventId: 'cc'.repeat(32), issuerPk: 'dd'.repeat(32), maxSupply: 200, minted: 100, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 2 },

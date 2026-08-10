@@ -9,12 +9,23 @@ import '@testing-library/jest-dom';
 // ----------------------------
 
 // jsdom doesn't implement the Clipboard API — needed by anything using navigator.clipboard.writeText
-// (e.g. the "copy share link" / "copy tx hash" buttons in viewPoap.jsx, poapManagement.jsx).
+// (e.g. the "copy share link" / "copy tx hash" buttons in viewPoap.jsx, mySubscriptions.jsx).
 if (!navigator.clipboard) {
   Object.defineProperty(navigator, 'clipboard', {
     value: { writeText: jest.fn() },
     writable: true,
   });
+}
+
+// jsdom doesn't implement IntersectionObserver — needed by framer-motion's `whileInView` prop
+// (scroll-reveal animations, e.g. index.jsx's use-case rows). A no-op stub is enough: tests query
+// rendered DOM content, not the animated visual state, so it never needs to actually fire.
+if (!window.IntersectionObserver) {
+  window.IntersectionObserver = class IntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
 }
 
 // Mock Cardano-related Lucid imports to avoid loading browser modules in tests

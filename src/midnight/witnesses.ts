@@ -1,5 +1,6 @@
 import type { WitnessContext } from '@midnight-ntwrk/compact-runtime';
-import type { Ledger, Witnesses } from './contract/managed/poap/contract/index.cjs';
+import { persistentHash } from '@midnight-ntwrk/compact-runtime';
+import type { Ledger, Witnesses } from './contract/managed/poap/contract/index.js';
 
 // ── Private State ─────────────────────────────────────────────────────────────
 // Ported from poap-midnight/contracts/src/witnesses.ts. The only behavioral
@@ -31,6 +32,28 @@ export function createPoapPrivateState(secretKey: Uint8Array): PoapPrivateState 
   return { secretKey, tokens: {} };
 }
 
+// ── Caller identity ─────────────────────────────────────────────────────────
+//
+// The contract's `caller_pk()` circuit (poap.compact) is internal-only — not `export`ed, so it
+// can't be called as its own transaction. It computes:
+//   derive_pk(sk) = persistentHash<Vector<2, Bytes<32>>>([pad(32, "adasouls:pk:v1:"), sk])
+// We replicate that here so the client can derive its own identity locally, without a round trip.
+// `pad` isn't exposed by compact-runtime, so we implement the zero-pad ourselves — verified
+// empirically against a real claimOrUpdate's resulting `tokenOwner` entry, not just by inspection.
+const CALLER_PK_DOMAIN = 'adasouls:pk:v1:';
+
+function pad32(text: string): Uint8Array {
+  const bytes = new TextEncoder().encode(text);
+  if (bytes.length > 32) throw new Error(`pad32: "${text}" is longer than 32 bytes`);
+  const padded = new Uint8Array(32);
+  padded.set(bytes);
+  return padded;
+}
+
+export function deriveCallerPk(secretKey: Uint8Array): Uint8Array {
+  return persistentHash(pad32(CALLER_PK_DOMAIN), secretKey);
+}
+
 // ── Witness Factory ───────────────────────────────────────────────────────────
 
 export function createWitnesses(): Witnesses<PoapPrivateState> {
@@ -56,7 +79,7 @@ export function createWitnesses(): Witnesses<PoapPrivateState> {
       issuerId: Uint8Array,
       eventId: Uint8Array,
       isSoulbound: boolean,
-    ): [PoapPrivateState, void] {
+    ): [PoapPrivateState, []] {
       const newState: PoapPrivateState = {
         ...context.privateState,
         tokens: {
@@ -67,7 +90,7 @@ export function createWitnesses(): Witnesses<PoapPrivateState> {
           },
         },
       };
-      return [newState, undefined];
+      return [newState, []];
     },
 
     store_attendance(
@@ -75,10 +98,10 @@ export function createWitnesses(): Witnesses<PoapPrivateState> {
       _tokenId: bigint,
       issuerId: Uint8Array,
       eventId: Uint8Array,
-    ): [PoapPrivateState, void] {
+    ): [PoapPrivateState, []] {
       const key = issuerKey(issuerId);
       const existing = context.privateState.tokens[key];
-      if (existing === undefined) return [context.privateState, undefined];
+      if (existing === undefined) return [context.privateState, []];
       const newState: PoapPrivateState = {
         ...context.privateState,
         tokens: {
@@ -92,7 +115,7 @@ export function createWitnesses(): Witnesses<PoapPrivateState> {
           },
         },
       };
-      return [newState, undefined];
+      return [newState, []];
     },
 
     has_attended(

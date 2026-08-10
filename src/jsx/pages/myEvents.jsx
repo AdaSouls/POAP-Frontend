@@ -43,7 +43,7 @@ function applyFilters(events, filters) {
   return result;
 }
 
-const EventsPage = () => {
+const MyEvents = () => {
   const [loading, setLoading] = useState(true);
   const [allEvents, setAllEvents] = useState([]);
   const [filters, setFilters] = useState({});
@@ -83,41 +83,36 @@ const EventsPage = () => {
 
   const filteredEvents = useMemo(() => applyFilters(allEvents, filters), [allEvents, filters]);
 
-  const myEvents = useMemo(() => {
+  // "My Events" is the organizer's own event list — event discovery across everyone else's
+  // events already lives on /search, so this stays a strict filter rather than "mine first".
+  const ownEvents = useMemo(() => {
     if (!provider) return [];
     return filteredEvents.filter((e) => e.issuerPk === provider.address);
   }, [filteredEvents, provider]);
 
-  const otherEvents = useMemo(
-    () => filteredEvents.filter((e) => !myEvents.some((mine) => mine.eventId === e.eventId)),
-    [filteredEvents, myEvents]
-  );
-
-  const orderedEvents = useMemo(() => [...myEvents, ...otherEvents], [myEvents, otherEvents]);
-
   // If the expanded event drops out of the (polled/filtered) list, don't leave the grid stuck
   // showing zero cards — fall back to the full grid instead.
   useEffect(() => {
-    if (expandedId && !orderedEvents.some((e) => e.eventId === expandedId)) {
+    if (expandedId && !ownEvents.some((e) => e.eventId === expandedId)) {
       setExpandedId(null);
     }
-  }, [orderedEvents, expandedId]);
+  }, [ownEvents, expandedId]);
 
   const visibleEvents = expandedId
-    ? orderedEvents.filter((e) => e.eventId === expandedId)
-    : orderedEvents;
+    ? ownEvents.filter((e) => e.eventId === expandedId)
+    : ownEvents;
 
   return (
     <Layout activeMenu={3}>
-      <>
+      <div className="role-organizer">
         <div className="inner-header">
           <div className="inner-header-row">
             <div className="inner-header-row-left">
-              <h4>Events</h4>
+              <h4>My Events</h4>
             </div>
             <div className="inner-header-row-right">
-              <span className="badge bg-primary">
-                {filteredEvents.length} {filteredEvents.length === 1 ? "Event" : "Events"}
+              <span className="badge badge-count-outline">
+                {ownEvents.length} {ownEvents.length === 1 ? "Event" : "Events"}
               </span>
               <button
                 className={`inner-header-action-btn${!provider ? " is-outline" : ""}`}
@@ -145,7 +140,7 @@ const EventsPage = () => {
                 </div>
               </div>
             </div>
-          ) : filteredEvents.length > 0 ? (
+          ) : ownEvents.length > 0 ? (
             <AnimatePresence mode="popLayout">
               {visibleEvents.map((event) => (
                 <EventCard
@@ -167,9 +162,9 @@ const EventsPage = () => {
             </div>
           )}
         </div>
-      </>
+      </div>
     </Layout>
   );
 };
 
-export default EventsPage;
+export default MyEvents;

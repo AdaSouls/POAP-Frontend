@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventCard from '../../jsx/components/eventCard';
 import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
-import { getEvent } from '../../midnight/indexer.service';
+import { getEvent, getTokensByEvent } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
 
@@ -22,6 +22,7 @@ describe('EventCard Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     getEvent.mockResolvedValue({ ...mockEvent, liveTokens: 7 });
+    getTokensByEvent.mockResolvedValue([]);
   });
 
   it('renders a truncated event id', () => {
@@ -85,9 +86,22 @@ describe('EventCard Component', () => {
       expect(screen.getByText(/live tokens/i)).toBeInTheDocument();
     });
 
-    it('notes that individual holders cannot be listed', () => {
+    it('shows an empty state when no tokens have been minted for this event', async () => {
       renderWithProviders(<EventCard event={mockEvent} isExpanded />);
-      expect(screen.getByText(/by-event lookup the backend doesn't expose/i)).toBeInTheDocument();
+      await waitFor(() => expect(getTokensByEvent).toHaveBeenCalledWith(mockEvent.eventId));
+      expect(await screen.findByText(/no poaps minted for this event yet/i)).toBeInTheDocument();
+    });
+
+    it('fetches and lists the holders for this event', async () => {
+      getTokensByEvent.mockResolvedValue([
+        { tokenId: 1, ownerPk: 'cc'.repeat(32), isBurned: false },
+        { tokenId: 2, ownerPk: 'dd'.repeat(32), isBurned: true },
+      ]);
+      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+
+      expect(await screen.findByText(/#1/)).toBeInTheDocument();
+      expect(screen.getByText(/#2/)).toBeInTheDocument();
+      expect(screen.getByText(/burned/i)).toBeInTheDocument();
     });
 
     it('calls onCollapse when the close button is clicked', async () => {

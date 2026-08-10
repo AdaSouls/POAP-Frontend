@@ -26,10 +26,10 @@ const truncateHex = (hex) => {
 // instance either way (parent keeps it mounted, keyed by issuerPkHex, across expand/collapse), so
 // framer-motion's `layout` prop can FLIP-animate the resize instead of needing a shared-element
 // layoutId transition between two different components. Local state below (visibility,
-// shareCopied) therefore survives the 5s poll in poapManagement.jsx and the expand/collapse
+// shareCopied) therefore survives the 5s poll in mySubscriptions.jsx and the expand/collapse
 // toggle itself, since neither remounts this component.
 //
-// forwardRef is required here, not stylistic: poapManagement.jsx renders this as a direct child of
+// forwardRef is required here, not stylistic: mySubscriptions.jsx renders this as a direct child of
 // AnimatePresence with mode="popLayout", which clones its direct children to attach a ref for
 // measuring/detaching exiting elements from layout flow. A plain function component can't receive
 // that ref — framer-motion silently can't measure it (console warning, and popLayout degrades to
@@ -116,7 +116,18 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ layout: { duration: 0.3, ease: "easeInOut" }, duration: 0.2, ease: "easeInOut" }}
     >
-      <motion.div
+      {/* .card-hover-group is a plain wrapper with no padding of its own, specifically so
+          .card-hover-peek's inset:0 matches the card's own bounds exactly — putting position:
+          relative directly on the outer Bootstrap column (which has its own gutter padding,
+          e.g. ~15px each side) made the peek fill that column's full padding box instead, wider
+          than the card actually rendered inside it. Static sibling, not a child of the card that
+          moves — the whole point is that this does NOT lift with the card on hover, so the card
+          sliding up 2px reveals a sliver of it underneath instead of both moving together (which
+          was the bug with an earlier ::after-on-the-card-itself version: nothing ever moved
+          relative to anything else). */}
+      <div className="card-hover-group">
+        {!isExpanded && <div className="card-hover-peek" />}
+        <motion.div
         layout
         className={`card card-poap card-classic card-outline-only${isExpanded ? " card-detail-expanded" : ""}`}
         // borderRadius/boxShadow are set here as well as in .card-outline-only's CSS
@@ -133,6 +144,8 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
           borderRadius: 16,
           border: "none",
           boxShadow: "inset 0 0 0 1px var(--glass-border)",
+          position: "relative",
+          zIndex: 1,
         }}
         whileHover={!isExpanded ? { y: -2 } : undefined}
         whileTap={!isExpanded ? { scale: 0.99 } : undefined}
@@ -140,7 +153,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
         onClick={!isExpanded ? handleExpand : undefined}
         onLayoutAnimationComplete={() => setShowText(true)}
       >
-        <div className="card-body card-outline-only-body">
+        <div className="card-body card-outline-only-body card-media-body">
           {isExpanded && (
             <button
               type="button"
@@ -152,72 +165,86 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
             </button>
           )}
 
-          <div className="d-flex justify-content-start align-items-center mb-2">
-            {/* layout here isn't decorative — without it this element inherits the ancestor
-                motion.divs' non-uniform width/height scale transform during the expand/collapse
-                FLIP animation (col-6 -> col-12 changes width a lot more than height), which ovals
-                the circle. `layout` makes framer-motion track this element's own box and apply the
-                inverse correction so it stays round throughout. */}
-            <motion.img
-              layout
-              className="mr-3 rounded-circle"
-              src={poapNormal}
-              width="48"
-              height="48"
-              alt=""
-              style={{ border: "2px solid rgba(255,255,255,0.3)", flexShrink: 0 }}
-            />
-            <div className="poap-info flex-grow-1" style={textStyle}>
-              <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
-                POAP #{String(poap.tokenId)}
-              </h4>
-              <div className="d-flex align-items-center">
-                {poap.isSoulbound && (
-                  <span
-                    className="badge bg-info mr-2"
-                    style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
-                    title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
+          {!isExpanded ? (
+            // Collapsed grid tile: the thumbnail moves from a small top-of-card circle to a
+            // large square-rounded panel on the left, spanning almost the card's full height
+            // (.card-media-row/.card-media-thumb-wrap in theme-dark-glass.css) — sized by
+            // align-items:stretch against however tall the content column naturally is.
+            <div className="d-flex align-items-stretch card-media-row">
+              <motion.div layout className="card-media-thumb-wrap" style={textStyle}>
+                <img className="card-media-thumb-icon" src={poapNormal} alt="" />
+              </motion.div>
+              <div className="card-media-content" style={textStyle}>
+                <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
+                  POAP #{String(poap.tokenId)}
+                </h4>
+                <div className="d-flex align-items-center mb-2">
+                  {poap.isSoulbound && (
+                    <span
+                      className="badge bg-info mr-2"
+                      style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
+                      title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
+                    >
+                      Soulbound
+                    </span>
+                  )}
+                  <span className="text-muted small">{eventCount} event{eventCount === 1 ? "" : "s"} attended</span>
+                </div>
+
+                <ul className="list-unstyled mb-2" style={{ fontSize: "12px" }}>
+                  <li className="d-flex align-items-center mb-1">
+                    <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
+                    <span className="text-muted small">
+                      Issuer: <span className="text-white">{truncateHex(poap.issuerPkHex)}</span>
+                    </span>
+                  </li>
+                  {poap.attendedEventIds?.slice(0, 2).map((eventId) => (
+                    <li key={eventId} className="d-flex align-items-center mb-1">
+                      <Calendar size={13} className="mr-2" style={{ width: "18px" }} />
+                      <span className="text-muted small">{truncateHex(eventId)}</span>
+                    </li>
+                  ))}
+                  {eventCount > 2 && (
+                    <li className="text-muted small">…and {eventCount - 2} more</li>
+                  )}
+                </ul>
+
+                <div className="d-flex justify-content-end mt-auto">
+                  <button
+                    type="button"
+                    className="btn btn-white btn-small"
+                    style={{ fontSize: "11px", padding: "3px 10px" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExpand();
+                    }}
                   >
-                    Soulbound
-                  </span>
-                )}
-                <span className="text-muted small">{eventCount} event{eventCount === 1 ? "" : "s"} attended</span>
+                    View Details
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-
-          {!isExpanded && (
-            <div style={textStyle}>
-              <ul className="list-unstyled mb-2" style={{ fontSize: "12px" }}>
-                <li className="d-flex align-items-center mb-1">
-                  <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
-                  <span className="text-muted small">
-                    Issuer: <span className="text-white">{truncateHex(poap.issuerPkHex)}</span>
-                  </span>
-                </li>
-                {poap.attendedEventIds?.slice(0, 2).map((eventId) => (
-                  <li key={eventId} className="d-flex align-items-center mb-1">
-                    <Calendar size={13} className="mr-2" style={{ width: "18px" }} />
-                    <span className="text-muted small">{truncateHex(eventId)}</span>
-                  </li>
-                ))}
-                {eventCount > 2 && (
-                  <li className="text-muted small">…and {eventCount - 2} more</li>
-                )}
-              </ul>
-
-              <div className="d-flex justify-content-end">
-                <button
-                  type="button"
-                  className="btn btn-white btn-small"
-                  style={{ fontSize: "11px", padding: "3px 10px" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleExpand();
-                  }}
-                >
-                  View Details
-                </button>
+          ) : (
+            <div className="d-flex justify-content-start align-items-center mb-2">
+              <motion.div layout className="card-media-thumb-small-wrap mr-3" style={textStyle}>
+                <img src={poapNormal} alt="" />
+              </motion.div>
+              <div className="poap-info flex-grow-1" style={textStyle}>
+                <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
+                  POAP #{String(poap.tokenId)}
+                </h4>
+                <div className="d-flex align-items-center">
+                  {poap.isSoulbound && (
+                    <span
+                      className="badge bg-info mr-2"
+                      style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
+                      title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
+                    >
+                      Soulbound
+                    </span>
+                  )}
+                  <span className="text-muted small">{eventCount} event{eventCount === 1 ? "" : "s"} attended</span>
+                </div>
               </div>
             </div>
           )}
@@ -309,7 +336,8 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
             </div>
           )}
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </motion.div>
   );
 });

@@ -1,31 +1,42 @@
 import React from 'react';
-import { screen } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import Dashboard from '../../jsx/pages/index';
-import { mockDrawerContext, renderWithProviders } from '../../testUtils';
+import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
 
 describe('Dashboard Page', () => {
-  it('renders welcome message', () => {
+  it('renders the hero headline', () => {
     renderWithProviders(<Dashboard />);
-    expect(screen.getByText(/Welcome to/i)).toBeInTheDocument();
-    const adaSoulsElements = screen.getAllByText(/AdaSouls/i);
-    expect(adaSoulsElements.length).toBeGreaterThan(0);
+    expect(screen.getByText(/One token\. Endless ways to prove it\./i)).toBeInTheDocument();
   });
 
-  it('renders wallet connection status', () => {
+  it('renders all seven use-case cards', () => {
     renderWithProviders(<Dashboard />);
-    const walletListItem = screen.getByRole('listitem');
-    expect(walletListItem).toHaveTextContent(/Lace Wallet/i);
+    expect(screen.getByText('Event Tickets & Access')).toBeInTheDocument();
+    expect(screen.getByText('Podcast Subscriptions')).toBeInTheDocument();
+    expect(screen.getByText('Live Streams & Social Content')).toBeInTheDocument();
+    expect(screen.getByText('Private Meetings & Calls')).toBeInTheDocument();
+    expect(screen.getByText('Diplomas & Certificates')).toBeInTheDocument();
+    expect(screen.getByText('Celebrity & Athlete Subscriptions')).toBeInTheDocument();
+    expect(screen.getByText('Document Delivery')).toBeInTheDocument();
   });
 
-  it('shows disconnected state when no wallet is connected', () => {
+  it('links out to both role pages', () => {
     renderWithProviders(<Dashboard />);
-    const walletListItem = screen.getByRole('listitem');
-    expect(walletListItem).toHaveTextContent(/Lace Wallet/i);
-    const notVerifiedIcon = walletListItem.querySelector('.not-verified');
-    expect(notVerifiedIcon).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Organizer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Subscriber' })).toBeInTheDocument();
+    const learnMoreLinks = screen.getAllByRole('link', { name: /learn more/i });
+    expect(learnMoreLinks.map((link) => link.getAttribute('href')).sort()).toEqual([
+      '/organizer',
+      '/subscriber',
+    ]);
   });
 
-  it('shows connected state when wallet is connected', () => {
+  it('shows "Connect Wallet" when no wallet is connected', () => {
+    renderWithProviders(<Dashboard />);
+    expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument();
+  });
+
+  it('shows "Wallet Connected" when a wallet is connected', () => {
     const drawerValue = {
       ...mockDrawerContext,
       midnight: {
@@ -34,15 +45,14 @@ describe('Dashboard Page', () => {
       },
     };
     renderWithProviders(<Dashboard />, { drawerValue });
-    const walletListItem = screen.getByRole('listitem');
-    expect(walletListItem).toHaveTextContent(/Lace Wallet/i);
-    const verifiedIcon = walletListItem.querySelector('.verified');
-    expect(verifiedIcon).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /wallet connected/i })).toBeInTheDocument();
   });
 
-  it('renders link to wallet page', () => {
+  it('opens the wallet connect popup instead of navigating to a page', () => {
+    mockDrawerDispatch.mockClear();
     renderWithProviders(<Dashboard />);
-    const walletLink = screen.getByRole('link', { name: /Wallets/i });
-    expect(walletLink).toHaveAttribute('href', '/wallet');
+    const walletButton = screen.getByRole('button', { name: /connect wallet/i });
+    fireEvent.click(walletButton);
+    expect(mockDrawerDispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });
   });
 });

@@ -49,7 +49,7 @@ export function DrawerProvider({ children }) {
   // changes when something dispatches UPDATE_MIDNIGHT_WALLET. laceWallet.jsx's manual "Connect
   // Lace" flow already does this itself, but useMidnight's own mock-mode auto-connect effect
   // (see useMidnight.js) only updates its own local state, with no dispatch access — without this
-  // mirror, that update would never reach useDrawer() consumers (header.jsx, poapManagement.jsx,
+  // mirror, that update would never reach useDrawer() consumers (header.jsx, mySubscriptions.jsx,
   // etc.), which would keep reading the stale `provider: null` from the initial render forever.
   useEffect(() => {
     dispatch({ type: 'UPDATE_MIDNIGHT_WALLET', payload: midnightState.provider });

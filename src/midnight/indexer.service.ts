@@ -66,6 +66,16 @@ export async function getTokensByOwner(ownerPkHex: string): Promise<IndexedToken
   return getJson<IndexedToken[]>(`/api/tokens/owner/${ownerPkHex}`);
 }
 
+// Tokens whose *first* claim was this event (matches the event's `minted` count — repeat
+// claims from returning wallets update private ZK state only and aren't indexed here).
+export async function getTokensByEvent(
+  eventIdHex: string,
+  options?: { includeBurned?: boolean }
+): Promise<IndexedToken[]> {
+  const query = options?.includeBurned === false ? "?includeBurned=false" : "";
+  return getJson<IndexedToken[]>(`/api/events/${eventIdHex}/tokens${query}`);
+}
+
 export async function getToken(tokenId: number | bigint): Promise<IndexedToken> {
   return getJson<IndexedToken>(`/api/tokens/${tokenId}`);
 }

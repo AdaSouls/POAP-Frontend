@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import FilterPopover from "./FilterPopover";
 
 // Filtering is entirely client-side — the Midnight indexer's GET /api/events has no server-side
-// filter params (see src/midnight/indexer.service.ts), so events.jsx fetches everything once and
+// filter params (see src/midnight/indexer.service.ts), so myEvents.jsx fetches everything once and
 // applies these filters/sort itself. Only fields the on-chain ledger actually has (event id,
 // organizer pk, supply, expiration, active flag) are filterable.
 // Rendered as the single-column content of a FilterPopover (icon button + portal popover, same

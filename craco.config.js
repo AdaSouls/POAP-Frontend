@@ -20,6 +20,9 @@ module.exports = {
       webpackConfig.resolve.fallback = {
         buffer: require.resolve("buffer/"),
         stream: false,
+        // Needed by @subsquid/scale-codec, a transitive dependency of the new-generation
+        // midnight-js-indexer-public-data-provider.
+        assert: require.resolve("assert/"),
         // Needed by object-inspect (a compact-runtime dependency) now that its .cjs files are
         // actually parsed as JS instead of falling through to the asset/resource rule (see the
         // cjsExtensionRegExp exclusion above) — that previously masked this requirement entirely.
@@ -33,26 +36,25 @@ module.exports = {
         // has a default export, which breaks @midnight-ntwrk/midnight-js-indexer-public-data-provider's
         // `import * as ws from 'isomorphic-ws'; ws.WebSocket` usage.
         "isomorphic-ws": path.resolve(__dirname, "src/shims/isomorphic-ws-browser-shim.js"),
-        // @midnight-ntwrk/zswap is a wasm-bindgen CJS-only build whose `module.exports`
-        // reassignment pattern breaks webpack's static named-export analysis for any ESM
-        // `import { X } from 'zswap'` — including inside midnight-js-network-id's own ESM build
-        // (dist/index.esm.js, which webpack picks via the "module" field by default). Its CJS
-        // build (dist/index.js) requires zswap via plain require() + a runtime interop helper,
-        // which sidesteps the static analysis entirely, so force webpack to use that build.
-        // Trailing `$` = exact match only, so the shim's own subpath require() below isn't
-        // recursively redirected back onto itself by webpack's default prefix-matching aliases.
-        "@midnight-ntwrk/midnight-js-network-id$": path.resolve(
-          __dirname,
-          "src/shims/midnight-js-network-id-cjs.js"
-        ),
-        "@midnight-ntwrk/ledger$": path.resolve(__dirname, "src/shims/ledger-cjs.js"),
-        "@midnight-ntwrk/onchain-runtime$": path.resolve(__dirname, "src/shims/onchain-runtime-cjs.js"),
+        // NOTE: the old midnight-js-network-id$ / ledger$ / onchain-runtime$ aliases (forcing
+        // those packages to a CJS build) existed only because @midnight-ntwrk/zswap was a
+        // wasm-bindgen CJS-only build that broke webpack's static ESM export analysis for anything
+        // re-exporting it — removed along with zswap in the dapp-connector-api v4.x migration
+        // (Lace bridges via hex tx strings now, no zswap Transaction type needed). The
+        // new-generation packages (midnight-js-network-id@4.1.1, ledger-v8@8.1.0, etc.) ship
+        // proper dual ESM/CJS builds via their own package.json "exports" map, so webpack resolves
+        // them natively without a shim.
         // `resolve.fallback` (above) is only consulted when normal resolution FAILS — since
         // `npm install util` put a real package at node_modules/util, plain `require('util')`
         // resolves there directly and fallback never even gets checked. `resolve.alias` applies
         // unconditionally, so route it to our shim (adds TextDecoder/TextEncoder — see its
         // comment) the same way the other Midnight package shims above are forced.
         util$: path.resolve(__dirname, "src/shims/util-browser-shim.js"),
+        // The `assert` polyfill explicitly requires 'util/' (trailing slash, not just 'util') to
+        // sidestep bundler core-module shimming — needs its own exact-match alias to reach our
+        // patched shim (see that file's comment re: util.inspect.custom) instead of the raw
+        // browserify util/ package.
+        "util/$": path.resolve(__dirname, "src/shims/util-browser-shim.js"),
       };
       webpackConfig.module.rules.forEach((rule) => {
         (rule.oneOf || []).forEach((oneOf) => {

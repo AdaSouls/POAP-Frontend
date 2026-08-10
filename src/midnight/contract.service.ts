@@ -1,12 +1,9 @@
-import { encodeCoinPublicKey } from '@midnight-ntwrk/compact-runtime';
-import type { ContractAddress } from '@midnight-ntwrk/ledger';
-import { findDeployedContract, withZswapWitnesses, type StateWithZswap } from '@midnight-ntwrk/midnight-js-contracts';
+import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
+import type { ContractAddress } from '@midnight-ntwrk/ledger-v8';
+import { findDeployedContract, type FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
 import { combineLatest, firstValueFrom, from, map, type Observable } from 'rxjs';
-// Named ESM imports from this compiled CJS module don't reliably resolve under webpack's static
-// export analysis (`exports.Contract = Contract` isn't always picked up) — import the module
-// namespace instead and destructure at runtime.
-import * as PoapContractModule from './contract/managed/poap/contract/index.cjs';
-import type { Ledger } from './contract/managed/poap/contract/index.cjs';
+import { Contract, ledger as ledgerOf } from './contract/managed/poap/contract/index.js';
+import type { Ledger } from './contract/managed/poap/contract/index.js';
 import {
   POAP_PRIVATE_STATE_KEY,
   buildProviders,
@@ -14,9 +11,7 @@ import {
   createWitnesses,
   getOrCreatePrivateState,
 } from './providers';
-import type { PoapPrivateState, TokenRecord } from './witnesses';
-
-const { Contract, ledger: ledgerOf } = PoapContractModule;
+import { deriveCallerPk, type PoapPrivateState, type TokenRecord } from './witnesses';
 
 export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
 
@@ -25,39 +20,40 @@ export type PoapState = {
   privateState: PoapPrivateState;
 };
 
-function createPoapContract(coinPublicKey: string) {
-  const zswapWitnesses = withZswapWitnesses(createWitnesses())(encodeCoinPublicKey(coinPublicKey));
-  return new Contract<StateWithZswap<PoapPrivateState>>(zswapWitnesses);
-}
+const compiledPoapContract = CompiledContract.make<Contract<PoapPrivateState>>('PoapContract', Contract).pipe(
+  CompiledContract.withWitnesses(createWitnesses()),
+);
 
-// Mirrors the verified `BBoardAPI` pattern from the Midnight `bboard` reference example:
-// findDeployedContract(providers, contractAddress, contractInstance, { privateStateKey, initialPrivateState }),
-// then call circuits via `deployedContract.contractCircuitsInterface.<circuit>(...)`.
+// Mirrors the pattern verified against a live devnet in ../POAP-Midnight/scripts/deploy.ts:
+// CompiledContract.make(tag, ctor).pipe(withWitnesses(...)), then findDeployedContract(providers,
+// options), then call circuits via `foundContract.callTx.<circuit>(...)`.
 export class PoapContractService {
   private constructor(
-    private readonly deployedContract: Awaited<ReturnType<typeof findDeployedContract>>,
+    private readonly deployedContract: FoundContract<Contract<PoapPrivateState>>,
     private readonly providers: PoapProviders,
+    private readonly privateState: PoapPrivateState,
     readonly contractAddress: ContractAddress,
   ) {}
 
   static async connect(contractAddress: ContractAddress): Promise<PoapContractService> {
     const connection = await connectToLace();
     const providers = await buildProviders(connection);
+    // Required before any private-state get/set — scopes storage to this contract address
+    // (namespace isolation between different contracts sharing the same browser profile).
+    providers.privateStateProvider.setContractAddress(contractAddress);
     const { privateState, isNew } = await getOrCreatePrivateState(providers);
 
     // findDeployedContract's initialPrivateState must only be passed the first time (it requires
     // there be NO pre-existing private state at this key); on subsequent connects it loads the
     // existing state from the provider itself, so we omit it.
-    const deployedContract = await findDeployedContract(
-      providers,
+    const deployedContract = await findDeployedContract(providers, {
+      compiledContract: compiledPoapContract,
       contractAddress,
-      createPoapContract(connection.coinPublicKey),
-      isNew
-        ? { privateStateKey: POAP_PRIVATE_STATE_KEY, initialPrivateState: privateState }
-        : { privateStateKey: POAP_PRIVATE_STATE_KEY },
-    );
+      privateStateId: POAP_PRIVATE_STATE_KEY,
+      ...(isNew ? { initialPrivateState: privateState } : {}),
+    });
 
-    return new PoapContractService(deployedContract, providers, contractAddress);
+    return new PoapContractService(deployedContract, providers, privateState, contractAddress);
   }
 
   /** Reactive stream combining public ledger state with this browser's private token state. */
@@ -75,49 +71,47 @@ export class PoapContractService {
     return firstValueFrom(this.state$);
   }
 
-  // NOTE: unlike claimOrUpdate/createEvent/etc. (Void circuits returning {txHash, blockHeight}),
-  // getCallerPk returns a real value (Uint8Array). The exact shape of a value-returning circuit
-  // call's resolved object isn't verified yet from the bboard reference (which only exercises
-  // Void circuits) — confirm the `result` field name at runtime in Phase 3 before relying on this.
-  async getCallerPk(): Promise<Uint8Array> {
-    const callResult = await this.deployedContract.contractCircuitsInterface.getCallerPk();
-    return (callResult as unknown as { result: Uint8Array }).result;
+  // The contract's caller_pk() circuit is internal-only (not exported), so it can't be called as
+  // its own transaction — this is a local, synchronous replication of that same derivation. See
+  // deriveCallerPk's own comment in witnesses.ts for the verification story.
+  getCallerPkHex(): string {
+    return Buffer.from(deriveCallerPk(this.privateState.secretKey)).toString('hex');
   }
 
   async claimOrUpdate(eventId: Uint8Array, isSoulbound: boolean) {
-    return this.deployedContract.contractCircuitsInterface.claimOrUpdate(eventId, isSoulbound);
+    return this.deployedContract.callTx.claimOrUpdate(eventId, isSoulbound);
   }
 
   async createEvent(eventId: Uint8Array, maxSupply: bigint, expiration: bigint, isPublicMint: boolean) {
-    return this.deployedContract.contractCircuitsInterface.createEvent(eventId, maxSupply, expiration, isPublicMint);
+    return this.deployedContract.callTx.createEvent(eventId, maxSupply, expiration, isPublicMint);
   }
 
   async deactivateEvent(eventId: Uint8Array) {
-    return this.deployedContract.contractCircuitsInterface.deactivateEvent(eventId);
+    return this.deployedContract.callTx.deactivateEvent(eventId);
   }
 
   async mintTo(eventId: Uint8Array, recipientPk: Uint8Array) {
-    return this.deployedContract.contractCircuitsInterface.mintTo(eventId, recipientPk);
+    return this.deployedContract.callTx.mintTo(eventId, recipientPk);
   }
 
   async burn(tokenId: bigint) {
-    return this.deployedContract.contractCircuitsInterface.burn(tokenId);
+    return this.deployedContract.callTx.burn(tokenId);
   }
 
   async pause() {
-    return this.deployedContract.contractCircuitsInterface.pause();
+    return this.deployedContract.callTx.pause();
   }
 
   async unpause() {
-    return this.deployedContract.contractCircuitsInterface.unpause();
+    return this.deployedContract.callTx.unpause();
   }
 
   async registerIssuer(issuerPk: Uint8Array) {
-    return this.deployedContract.contractCircuitsInterface.registerIssuer(issuerPk);
+    return this.deployedContract.callTx.registerIssuer(issuerPk);
   }
 
   async deactivateIssuer(issuerPk: Uint8Array) {
-    return this.deployedContract.contractCircuitsInterface.deactivateIssuer(issuerPk);
+    return this.deployedContract.callTx.deactivateIssuer(issuerPk);
   }
 }
 

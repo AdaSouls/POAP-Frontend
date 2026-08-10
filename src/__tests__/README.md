@@ -9,10 +9,8 @@ Unit tests for all pages:
 - `index.test.jsx` - Dashboard/Home page
 - `overview.test.jsx` - Overview page
 - `search.test.jsx` - Search page
-- `wallet.test.jsx` - Wallet management page
-- `events.test.jsx` - Events listing page
-- `poapManagement.test.jsx` - POAP management page
-- `create.test.jsx` - Event creation page
+- `myEvents.test.jsx` - My Events (organizer) page
+- `mySubscriptions.test.jsx` - My Subscriptions (subscriber) page
 - `settings-profile.test.jsx` - Settings profile page
 
 ### Component Tests (`components/`)
@@ -35,8 +33,8 @@ Unit tests for custom hooks and utilities:
 
 ### Integration Tests (`integration/`)
 End-to-end flow tests:
-- `events-flow.test.jsx` - Complete events page flow
-- `poap-management-flow.test.jsx` - Complete POAP management flow
+- `my-events-flow.test.jsx` - Complete My Events page flow
+- `my-subscriptions-flow.test.jsx` - Complete My Subscriptions page flow
 
 ## Test Utilities
 
@@ -66,13 +64,13 @@ npm test -- --coverage
 
 ### Run a specific test file
 ```bash
-npm test -- events.test.jsx
+npm test -- myEvents.test.jsx
 ```
 
 ## Test Coverage
 
 The test suite covers:
-- ✅ All pages (8 pages)
+- ✅ All pages (6 pages)
 - ✅ Key components (4+ components)
 - ✅ Service layer (3 services)
 - ✅ Custom hooks (2 hooks)

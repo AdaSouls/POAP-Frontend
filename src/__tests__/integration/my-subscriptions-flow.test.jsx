@@ -1,10 +1,10 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PoapManagement from '../../jsx/pages/poapManagement';
+import MySubscriptions from '../../jsx/pages/mySubscriptions';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 
-describe('POAP Management Flow Integration', () => {
+describe('My Subscriptions Flow Integration', () => {
   function connectedDrawerValue(getState) {
     return {
       ...mockDrawerContext,
@@ -29,7 +29,7 @@ describe('POAP Management Flow Integration', () => {
       },
     });
 
-    renderWithProviders(<PoapManagement />, {
+    renderWithProviders(<MySubscriptions />, {
       drawerValue: connectedDrawerValue(getState),
       drawerDispatch: dispatch,
     });
@@ -46,7 +46,7 @@ describe('POAP Management Flow Integration', () => {
   it('handles an empty token list', async () => {
     const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
 
-    renderWithProviders(<PoapManagement />, { drawerValue: connectedDrawerValue(getState) });
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
 
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();

@@ -14,7 +14,7 @@ export const checkEventsMintedByAddress = (events, myTokens) => {
 };
 
 // Single source of truth for event status, previously duplicated between eventCard.jsx and
-// events.jsx's applyFilters.
+// myEvents.jsx's applyFilters.
 export function getEventStatus(event) {
   const isExpired = Boolean(event.expiration && event.expiration > 0 && event.expiration * 1000 <= Date.now());
   const isFull = Boolean(event.maxSupply && event.maxSupply > 0 && event.minted >= event.maxSupply);
@@ -24,7 +24,7 @@ export function getEventStatus(event) {
   return "active";
 }
 
-// Shared by viewPoap.jsx and poapManagement.jsx so both read share-visibility toggles the same
+// Shared by viewPoap.jsx and mySubscriptions.jsx so both read share-visibility toggles the same
 // way instead of each re-implementing the filter. `isVisible` is typically
 // src/midnight/collection-share.ts's getEventVisibility, injected rather than imported directly
 // so this file stays free of any blockchain-specific dependency (see the file-level comment).
