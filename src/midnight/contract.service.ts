@@ -11,7 +11,7 @@ import {
   createWitnesses,
   getOrCreatePrivateState,
 } from './providers';
-import { deriveCallerPk, type PoapPrivateState, type TokenRecord } from './witnesses';
+import type { PoapPrivateState, TokenRecord } from './witnesses';
 
 export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
 
@@ -71,11 +71,12 @@ export class PoapContractService {
     return firstValueFrom(this.state$);
   }
 
-  // The contract's caller_pk() circuit is internal-only (not exported), so it can't be called as
-  // its own transaction — this is a local, synchronous replication of that same derivation. See
-  // deriveCallerPk's own comment in witnesses.ts for the verification story.
-  getCallerPkHex(): string {
-    return Buffer.from(deriveCallerPk(this.privateState.secretKey)).toString('hex');
+  // getCallerPk is an exported circuit (confirmed against poap.compact directly, 2026-08-11) —
+  // call it rather than re-deriving the pk client-side, so this can't drift if the contract's
+  // domain separator ever changes.
+  async getCallerPkHex(): Promise<string> {
+    const { private: callResult } = await this.deployedContract.callTx.getCallerPk();
+    return Buffer.from(callResult.result).toString('hex');
   }
 
   async claimOrUpdate(eventId: Uint8Array, isSoulbound: boolean) {

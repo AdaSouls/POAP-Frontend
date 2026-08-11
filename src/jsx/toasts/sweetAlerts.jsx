@@ -30,19 +30,6 @@ const successTitle = (text) => (
   </div>
 );
 
-export const connectedToWalletFunction = (address) => {
-  MySwal.fire({
-    ...GLASS_ALERT_OPTIONS,
-    title: successTitle("Connected to wallet"),
-    text: `Connected to: \n${address}`,
-    didOpen: () => {
-      let child = MySwal.getContainer().querySelector(".swal2-title");
-      let parent = child.parentElement;
-      parent.classList.add("p-2");
-    },
-  })
-};
-
 export const succesfullBlockchainCreation = (title, message, link) => {
   MySwal.fire({
     ...GLASS_ALERT_OPTIONS,

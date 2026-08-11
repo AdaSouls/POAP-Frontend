@@ -116,15 +116,13 @@ const OrganizerDashboard = () => {
         <div className="inner-header">
           <div className="inner-header-row">
             <div className="inner-header-row-left">
-              <h4>Organizer Dashboard</h4>
-            </div>
-            <div className="inner-header-row-right">
               {canView && (
                 <span className="badge badge-count-outline">
                   {myEvents.length} {myEvents.length === 1 ? "Event" : "Events"}
                 </span>
               )}
             </div>
+            <div className="inner-header-row-right" />
           </div>
         </div>
 

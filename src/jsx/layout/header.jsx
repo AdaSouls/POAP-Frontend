@@ -5,6 +5,7 @@ import { Wallet, ChevronUp, ChevronDown, Award, PlusCircle } from "lucide-react"
 import logo from "../../images/logo.png";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
+import Tooltip from "../components/Tooltip";
 
 // Horizontal top nav, matching the structure of the poap.xyz reference (logo + nav + a single
 // CTA, all in one bar, full-width content below), not just its color scheme.
@@ -173,17 +174,18 @@ const Header = () => {
             ))}
           </nav>
 
-          <button
-            type="button"
-            className={`header-cta header-wallet-btn${midnight.provider ? " header-cta-connected" : ""}`}
-            onClick={showMidnightWallet}
-            aria-label={midnight.provider ? "Wallet connected" : "Connect wallet"}
-            title={midnight.provider ? "Wallet connected" : "Connect wallet"}
-          >
-            <span className="header-cta-inner header-wallet-btn-inner">
-              <Wallet size={18} />
-            </span>
-          </button>
+          <Tooltip label={midnight.provider ? "Wallet connected" : "Connect wallet"}>
+            <button
+              type="button"
+              className={`header-cta header-wallet-btn${midnight.provider ? " header-cta-connected" : ""}`}
+              onClick={showMidnightWallet}
+              aria-label={midnight.provider ? "Wallet connected" : "Connect wallet"}
+            >
+              <span className="header-cta-inner header-wallet-btn-inner">
+                <Wallet size={18} />
+              </span>
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

@@ -26,7 +26,7 @@ describe('MyPendingApprovals page', () => {
 
   it('shows the wallet-not-connected state when no wallet is connected', () => {
     renderWithProviders(<MyPendingApprovals />);
-    expect(screen.getByText(/my pending approvals/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 Pending/i)).toBeInTheDocument();
     expect(getTokensByOwner).not.toHaveBeenCalled();
   });
 

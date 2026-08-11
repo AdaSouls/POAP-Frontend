@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, PlusCircle } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import EventCard from "../components/eventCard";
 import EventFilters from "../components/EventFilters";
+import Tooltip from "../components/Tooltip";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
 import { getAllEvents } from "../../midnight/indexer.service";
@@ -60,8 +61,8 @@ const MyEvents = () => {
     dispatch({ type: "CREATE_EVENT" });
   };
 
-  const showMidnightWallet = () => {
-    dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
+  const requestAccess = () => {
+    dispatch({ type: "CREATE_ISSUER" });
   };
 
   const loadEvents = useCallback(async () => {
@@ -108,22 +109,37 @@ const MyEvents = () => {
         <div className="inner-header">
           <div className="inner-header-row">
             <div className="inner-header-row-left">
-              <h4>My Events</h4>
-            </div>
-            <div className="inner-header-row-right">
               <span className="badge badge-count-outline">
                 {ownEvents.length} {ownEvents.length === 1 ? "Event" : "Events"}
               </span>
-              <button
-                className={`inner-header-action-btn${!provider ? " is-outline" : ""}`}
-                onClick={!provider ? showMidnightWallet : createEvent}
-                disabled={provider && !canCreateEvent}
-                title={!provider ? "Connect your wallet to create an event" : canCreateEvent ? "Create a new event" : "Organizer access required"}
-              >
-                <span className="inner-header-action-btn-inner">
-                  <Plus size={14} /> Create Event
-                </span>
-              </button>
+            </div>
+            <div className="inner-header-row-right">
+              {canCreateEvent ? (
+                <button className="inner-header-action-btn" onClick={createEvent}>
+                  <span className="inner-header-action-btn-inner">
+                    <Plus size={14} /> Create Event
+                  </span>
+                </button>
+              ) : !provider ? (
+                // Tooltip-wrapped only here — the button is fully usable once the wallet is
+                // connected and has organizer access, so there's nothing to explain in that case.
+                <Tooltip label="Connect your wallet to create an event">
+                  <button className="inner-header-action-btn is-outline is-inert">
+                    <span className="inner-header-action-btn-inner">
+                      <Plus size={14} /> Create Event
+                    </span>
+                  </button>
+                </Tooltip>
+              ) : (
+                // Connected but no organizer access — replaces "Create Event" (which they can't
+                // use yet) with the same request-access entry point organizerInfo.jsx offers,
+                // instead of just a locked/tooltipped button explaining why.
+                <button className="inner-header-action-btn" onClick={requestAccess}>
+                  <span className="inner-header-action-btn-inner">
+                    Request organizer access
+                  </span>
+                </button>
+              )}
               <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
             </div>
           </div>
@@ -131,14 +147,12 @@ const MyEvents = () => {
 
         <div className="row">
           {loading ? (
-            <div className="col-xxl-6 col-lg-6 col-md-12">
-              <div className="card card-event card-classic card-outline-only">
-                <div className="card-outline-only-body d-flex justify-content-center">
-                  <div className="loading-event-card">
-                    <img src={loadingGif} width="35" height="35" alt="" />
-                  </div>
-                </div>
-              </div>
+            <div className="wallet-non-connected-page">
+              <img src={loadingGif} width="35" height="35" alt="Loading events" />
+            </div>
+          ) : !provider ? (
+            <div className="wallet-non-connected-page">
+              <img src={walletStatus} width="150" height="140" alt="" />
             </div>
           ) : ownEvents.length > 0 ? (
             <AnimatePresence mode="popLayout">
@@ -153,11 +167,15 @@ const MyEvents = () => {
               ))}
             </AnimatePresence>
           ) : (
-            <div className="col-xxl-6 col-lg-6 col-md-12">
-              <div className="card card-event card-classic card-outline-only">
-                <div className="wallet-non-connected">
-                  <img className="mt-6" src={walletStatus} width="150" height="140" alt="" />
+            <div className="wallet-non-connected-page">
+              <div className="text-center">
+                <div className="role-hero-icon mx-auto mb-3">
+                  <PlusCircle size={64} />
                 </div>
+                <h4>No Events Found</h4>
+                <p className="text-muted">
+                  You haven't organized any events yet. Create your first event to get started!
+                </p>
               </div>
             </div>
           )}

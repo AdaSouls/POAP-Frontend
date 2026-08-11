@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { Award } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import loadingGif from "../../images/loading.gif";
@@ -79,34 +80,22 @@ const MyPendingApprovals = () => {
         <div className="inner-header">
           <div className="inner-header-row">
             <div className="inner-header-row-left">
-              <h4>My Pending Approvals</h4>
-            </div>
-            <div className="inner-header-row-right">
               <span className="badge badge-count-outline">
                 {pending.length} Pending
               </span>
             </div>
+            <div className="inner-header-row-right" />
           </div>
         </div>
 
         <div className="row">
           {loading ? (
-            <div className="col-xxl-6 col-lg-6 col-md-12">
-              <div className="card card-poap card-classic card-outline-only">
-                <div className="card-outline-only-body d-flex justify-content-center">
-                  <div className="loading-poap-card">
-                    <img src={loadingGif} width="35" height="35" alt="Loading pending approvals" />
-                  </div>
-                </div>
-              </div>
+            <div className="wallet-non-connected-page">
+              <img src={loadingGif} width="35" height="35" alt="Loading pending approvals" />
             </div>
           ) : !provider ? (
-            <div className="col-xxl-6 col-lg-6 col-md-12">
-              <div className="card card-poap card-classic card-outline-only">
-                <div className="wallet-non-connected">
-                  <img className="mt-6" src={walletStatus} width="150" height="140" alt="" />
-                </div>
-              </div>
+            <div className="wallet-non-connected-page">
+              <img src={walletStatus} width="150" height="140" alt="" />
             </div>
           ) : pending.length > 0 ? (
             <AnimatePresence mode="popLayout">
@@ -176,16 +165,16 @@ const MyPendingApprovals = () => {
               ))}
             </AnimatePresence>
           ) : (
-            <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
-              <div className="card card-poap card-classic card-outline-only">
-                <div className="card-outline-only-body text-center py-5">
-                  <img src={poapNormal} width="100" height="100" alt="No pending approvals" className="mb-3" />
-                  <h4>No Pending Approvals</h4>
-                  <p className="text-muted">
-                    Nothing waiting for you right now — organizer push-mints will show up here until
-                    you claim them.
-                  </p>
+            <div className="wallet-non-connected-page">
+              <div className="text-center">
+                <div className="role-hero-icon mx-auto mb-3">
+                  <Award size={64} />
                 </div>
+                <h4>No Pending Approvals</h4>
+                <p className="text-muted">
+                  Nothing waiting for you right now — organizer push-mints will show up here until
+                  you claim them.
+                </p>
               </div>
             </div>
           )}

@@ -46,14 +46,24 @@ export function DrawerProvider({ children }) {
   );
 
   // useReducer only reads `initialState` once, on mount — after that, `state.midnight` only
-  // changes when something dispatches UPDATE_MIDNIGHT_WALLET. laceWallet.jsx's manual "Connect
-  // Lace" flow already does this itself, but useMidnight's own mock-mode auto-connect effect
-  // (see useMidnight.js) only updates its own local state, with no dispatch access — without this
-  // mirror, that update would never reach useDrawer() consumers (header.jsx, mySubscriptions.jsx,
-  // etc.), which would keep reading the stale `provider: null` from the initial render forever.
+  // changes when something dispatches UPDATE_MIDNIGHT_WALLET. Mirrors useMidnight()'s own live
+  // `provider` state into the reducer on every change so useDrawer() consumers (header.jsx,
+  // mySubscriptions.jsx, etc.) don't keep reading the stale `provider: null` from the initial
+  // render forever.
   useEffect(() => {
     dispatch({ type: 'UPDATE_MIDNIGHT_WALLET', payload: midnightState.provider });
   }, [midnightState.provider]);
+
+  // Same staleness problem as above, for the hook's other two fields — without this,
+  // midnight.connecting/midnight.error as read via useDrawer() (e.g. laceWallet.jsx's loading
+  // state) never reflect useMidnight()'s live values, since useReducer's initialState snapshot is
+  // the only place they were ever set.
+  useEffect(() => {
+    dispatch({
+      type: 'UPDATE_MIDNIGHT_STATUS',
+      payload: { connecting: midnightState.connecting, error: midnightState.error },
+    });
+  }, [midnightState.connecting, midnightState.error]);
 
   return (
     <DrawerContext.Provider value={state}>
@@ -81,6 +91,14 @@ function drawerReducer(state, action) {
         midnight: {
           ...state.midnight,
           provider: action.payload
+        }
+      };
+    case 'UPDATE_MIDNIGHT_STATUS':
+      return {
+        ...state,
+        midnight: {
+          ...state.midnight,
+          ...action.payload
         }
       };
     case 'UPDATE_CARDANO_WALLET':

@@ -53,7 +53,6 @@ const FilterPopover = ({ hasActiveFilters, children }) => {
         onClick={() => (open ? setOpen(false) : openPopover())}
         aria-expanded={open}
         aria-label="Filters"
-        title="Filters"
       >
         <Filter size={15} />
       </button>

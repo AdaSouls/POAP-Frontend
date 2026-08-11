@@ -592,7 +592,7 @@ h1, h2, h3, h4, h5, h6,
   box-shadow:
     inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
     inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
-    0 8px 32px rgba(0, 0, 0, 0.35);
+    0 8px 32px rgba(0, 0, 0, 0.2);
   /* translate() stays constant between closed/open — only opacity animates, no grow/shrink. */
   transform: translate(-50%, -50%);
   opacity: 0;
@@ -720,39 +720,185 @@ h1, h2, h3, h4, h5, h6,
 
 /* Wallet option row (laceWallet.jsx's "Lace / Midnight Network Wallet" card) — no fill at rest
    (not even a lighter tint), no shadow/bevel — just the same flat border as the popup itself
-   (var(--glass-border), not its own bespoke tone). backdrop-filter is reset to none too:
-   .card-button inherits .card's own blur(8px) elsewhere in the app, and leaving that on here
-   stacks a second blur pass on top of .drawer-modal-inner's already-blurred-and-darkened
-   background — two translucent blurred layers compounding read visibly darker than either alone,
-   which is why this block kept looking darker than the inner layer around it even with no
-   background-color of its own. Clickable/selectable now — see .selected below. */
+   (var(--glass-border), matching .drawer.drawer-modal's own border exactly, not a bespoke tone).
+   backdrop-filter is reset to none too: .card-button inherits .card's own blur(8px) elsewhere in
+   the app, and leaving that on here stacks a second blur pass on top of .drawer-modal-inner's
+   already-blurred-and-darkened background — two translucent blurred layers compounding read
+   visibly darker than either alone, which is why this block kept looking darker than the inner
+   layer around it even with no background-color of its own. Not interactive — Lace is the only
+   wallet option, so there's nothing to select here, just a static info row. */
 .drawer-modal-inner .card-button {
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
-  /* A dark slate (--palette-3), not var(--glass-border)'s lighter one — darker at rest and in
-     every other state below too. */
-  border: 1px solid rgba(37, 55, 69, 0.7);
+  border: 1px solid var(--glass-border);
   /* .card's global margin-bottom:30px (the qash template's own grid spacing, style.css) was
      pushing this card up off-center inside .drawer-body's centered flex — 30px more space below
      it than above, matching the 30px it was inheriting. Cancelled here since this card isn't part
      of a grid. */
   margin: 0;
-  cursor: pointer;
-  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+  /* style.css's base .card-button/.card-button.connected set height:80px/170px with no
+     transition of their own — adding it here (on the property, regardless of which rule sets the
+     target value) turns that class toggle into the "reveal" animation: the bottom-area, already
+     clipped out by the base rule's overflow:hidden at 80px, slides into view as height grows. */
+  transition: height 0.4s ease, border-color 0.3s ease;
 }
 
-.drawer-modal-inner .card-button:hover {
-  background: rgba(74, 92, 106, 0.08);
-  border-color: rgba(37, 55, 69, 0.85);
+/* style.css's base .card-button .top-area sets cursor:pointer for the qash template's original
+   selectable-card use case — not applicable here, Lace is the only wallet option and the card is
+   a static info row (see the JSX for why it's no longer role="button"). Scoped to
+   .drawer-modal-inner only, not the bare .card-button .top-area selector, so any other
+   (Cardano-native) page still relying on the original clickable-card behavior is untouched. */
+.drawer-modal-inner .card-button .top-area {
+  cursor: default;
 }
 
-/* Selected state — same slate-tinted fill/border language as the nav dropdown's own
-   pressed/active states, so "selected" reads consistently with the rest of the app. */
-.drawer-modal-inner .card-button.selected {
-  background: rgba(74, 92, 106, 0.18);
-  border-color: rgba(74, 92, 106, 0.85);
+/* Lighter border while midnight.connect() is in flight — same rgba(255,255,255,0.4) tone used
+   elsewhere in this file for a "brighter" state (e.g. line ~453/1336), not a new one-off color. */
+.drawer-modal-inner .card-button.connecting {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Final connected look — same border tone as .connecting above (rgba(255,255,255,0.4)), per
+   explicit request, not a separate brighter value. Applied from laceWallet.jsx's "success" phase
+   onward (isRevealed), synchronized with the button first saying "Connected" — not delayed until
+   it later flips to the actual Disconnect button. */
+.drawer-modal-inner .card-button.connected {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Internal top-area/bottom-area divider line — matches the card's own border color in each state
+   instead of always being var(--glass-border), per explicit request ("misma linea que su
+   borde"). Same !important as the base rule above (style.css's .border-top utility hardcodes its
+   own color at that specificity, so overriding it needs to match). */
+.drawer-modal-inner .card-button.connected .bottom-area.border-top {
+  border-top-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Event-preview card used inside the create/claim/mint modal forms (createPoap.jsx, mintPoap.jsx)
+   — replaces the old Bootstrap-default white .card there. Flat, no backdrop-filter of its own
+   (already inside the modal's own blur), just enough contrast against .drawer-modal-inner's
+   transparent body to read as a distinct block. */
+.drawer-modal-preview-card {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+}
+
+/* Two-step indicator (createPoap.jsx's only user so far — event select+preview, then confirm).
+   No existing step/wizard pattern elsewhere in the app to reuse, built fresh. Dots, not a labeled
+   progress bar — these forms are short enough that "Step 1 of 2" text would outweigh the content
+   it's describing. */
+.drawer-modal-steps {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--glass-border);
+  transition: background-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.step-dot.active {
+  background: var(--text-on-glass-muted);
+  transform: scale(1.3);
+}
+
+/* "Connected" success button — green fill expanding from the button's own center out to its
+   edges, revealing the "Connected" label already sitting on top (label needs its own stacking
+   context via position:relative + z-index so the fill, an absolutely-positioned sibling, paints
+   underneath it, not over it). clip-path circle(0% at center) -> circle(150% at center): 150%
+   (not 100%) so the circle's radius reaches every corner of the button's rect, not just its
+   nearest edge — same "farthest-corner" coverage math as a radial-gradient corner reveal. */
+/* backdrop-filter lives here, not on .wallet-connect-btn-fill below — that element animates via
+   clip-path (a growing circle), and backdrop-filter's blur samples/paints across an element's
+   whole box before any clip-path masks it, so putting it on the animated circle showed a visible
+   blurred *square* behind the circle reveal. Here, on the static button shape (fixed rounded-rect,
+   no clip-path), there's only one consistent blur surface. */
+.wallet-connect-btn {
+  position: relative;
+  overflow: hidden;
+  color: var(--text-on-solid); /* no longer inherited from .btn-gradient — this button
+                                   deliberately doesn't carry that class, see laceWallet.jsx. */
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  /* Solid (no alpha) border in each state's own color — see .wallet-connect-btn-success/
+     -disconnect below — transitions together with the fill's background-color morph. */
+  border: 1px solid transparent;
+  transition: border-color 0.4s ease;
+}
+
+.wallet-connect-btn-fill {
+  position: absolute;
+  inset: 0;
+  /* rgba, not solid — translucent fill (blur now comes from .wallet-connect-btn itself above).
+     0.35 — up from a 0.2 test value (confirmed the see-through effect was real, just needed a
+     touch less transparency), down from 0.88/0.75 before that (those hid the blur entirely). */
+  background: rgba(62, 207, 142, 0.35); /* #3ecf8e — --role-accent for role-subscriber elsewhere
+                                            in this file, the app's established green. */
+  clip-path: circle(0% at 50% 50%);
+  /* Green -> red morph (see .wallet-connect-btn-disconnect below) animates through this, instead
+     of the two states being separate elements swapped instantly. */
+  transition: background-color 0.4s ease;
+}
+
+.wallet-connect-btn-success .wallet-connect-btn-fill {
+  animation: wallet-connect-fill 0.6s ease-out forwards;
+}
+
+/* Border carries its own opacity now (0.6, not solid) specifically so hover has somewhere to go —
+   a border that's already fully solid at rest can't visibly "brighten" on hover. */
+.wallet-connect-btn-success {
+  border-color: rgba(62, 207, 142, 0.6);
+}
+
+/* "Disconnect" phase — same button/fill element as "Connected" (see laceWallet.jsx), just a
+   background-color change (transitions via .wallet-connect-btn-fill's own rule above) instead of
+   an instant swap to a differently-styled .btn-danger element. #f46a6a matches this template's
+   own --bs-danger (style.css) so it reads as the same red .btn-danger uses everywhere else, just
+   translucent. */
+.wallet-connect-btn-disconnect .wallet-connect-btn-fill {
+  background: rgba(244, 106, 106, 0.35);
+}
+
+.wallet-connect-btn-disconnect {
+  border-color: rgba(244, 106, 106, 0.6);
+}
+
+/* Only Disconnect is ever actually hoverable (Connected/"success" is disabled) — background
+   brightens via the fill child, border goes to full opacity, both against the same 0.6-opacity
+   resting border above. */
+.wallet-connect-btn-disconnect:hover {
+  border-color: #f46a6a;
+}
+
+.wallet-connect-btn-disconnect:hover .wallet-connect-btn-fill {
+  background: rgba(244, 106, 106, 0.5);
+}
+
+.wallet-connect-btn-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* Disabled buttons default to a dimmed opacity (Bootstrap's .btn:disabled) — overridden here so
+   the green fill reads at full strength instead of looking greyed-out/inactive, since this state
+   is a success confirmation, not an actually-disabled control. */
+.wallet-connect-btn-success:disabled {
+  opacity: 1;
+}
+
+@keyframes wallet-connect-fill {
+  to {
+    clip-path: circle(150% at 50% 50%);
+  }
 }
 
 /* Click-outside-to-close only — no dimming of the page behind it, per feedback (the modal's own
@@ -1201,27 +1347,42 @@ h1, h2, h3, h4, h5, h6,
 }
 
 /* The "Create Event" / "Claim POAP" / "Create POAP Event" cards moved here — one full-rounded
-   button on the right of each page's inner nav instead of a big gradient card in the grid. Same
-   two-layer frame+fill pattern as .header-cta (outer padding/rounding, inner span carries the
-   fill) so it reads as the same button language as the header's own CTA, just page-scoped. */
+   button on the right of each page's inner nav instead of a big gradient card in the grid.
+   No outer frame of its own (no background/border/padding) per explicit feedback — the visible
+   surface is entirely .inner-header-action-btn-inner below, this is just a layout wrapper. */
 .inner-header-action-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid transparent;
-  padding: 4px;
+  /* Explicit none/0, not just absent properties — <button> has its own default UA-stylesheet
+     border (e.g. Chrome's grey buttonborder outset, the "filete" that kept showing) and padding
+     (which was throwing off vertical centering in .inner-header-row — the button's own box was
+     taller/uneven vs. the inner pill it wraps). */
+  background: none;
+  border: none;
+  padding: 0;
   border-radius: 999px;
   cursor: pointer;
   text-decoration: none;
 }
 
-.inner-header-action-btn:focus,
-.inner-header-action-btn:active {
+/* outline:none has to target the button itself — that's the actually-focusable element, and the
+   browser's native focus ring renders on it regardless of what its (now background/border-less)
+   own box looks like. The accent border-color on the inner pill is the replacement focus
+   indicator. */
+.inner-header-action-btn:focus {
   outline: none;
+}
+
+.inner-header-action-btn:focus .inner-header-action-btn-inner,
+.inner-header-action-btn:active .inner-header-action-btn-inner {
   border-color: rgba(155, 168, 171, 0.3);
 }
 
+/* Same flat/translucent/blurred fill as .btn-gradient (the wallet-connect popup's "Connect Lace"
+   button) — not the blue/violet linear-gradient this used to be, which made connecting swap this
+   button to a visibly different style/language instead of just "becoming usable" per explicit
+   feedback. */
 .inner-header-action-btn-inner {
   display: flex;
   align-items: center;
@@ -1230,35 +1391,43 @@ h1, h2, h3, h4, h5, h6,
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-violet-2));
+  background: rgba(74, 92, 106, 0.35);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--palette-4);
   color: var(--text-on-solid);
   transition: filter 0.15s ease-in-out;
   white-space: nowrap;
 }
 
-.inner-header-action-btn:hover .inner-header-action-btn-inner {
+/* :not(.is-inert) — no hover reaction at all for the two "can't really act on this" states
+   below, per explicit feedback: wallet not connected, or connected without organizer access.
+   Both are informational-only now (tooltip via the button's own title attribute), not disabled
+   controls — see is-locked below for why this isn't the native :disabled pseudo-class. */
+.inner-header-action-btn:not(.is-inert):hover .inner-header-action-btn-inner {
   filter: brightness(1.12);
 }
 
 /* Outline state — wallet not connected yet. The button always shows the page's real action
    (Create Event / Claim POAP / etc.), never "Connect wallet" text; this is just the visual
-   "not usable yet" version of the same button (line only, no fill), clicking it still opens the
-   wallet-connect flow. Once connected, .is-outline is dropped and the filled/gradient version
-   above takes over. */
-.inner-header-action-btn.is-outline {
-  background: transparent;
-}
-
+   "not usable yet" version of the same button (line only, no fill). No onClick and no hover in
+   this state (see is-inert above and the JSX) — informational only, the title attribute is the
+   entire affordance. Once connected, .is-outline is dropped and the filled version above takes
+   over. */
 .inner-header-action-btn.is-outline .inner-header-action-btn-inner {
   background: transparent;
   border: 1px solid var(--glass-border);
   color: var(--text-on-glass-muted);
 }
 
-.inner-header-action-btn.is-outline:hover .inner-header-action-btn-inner {
-  filter: none;
-  border-color: var(--palette-5);
-  color: var(--text-on-glass);
+/* "Organizer access required" — connected, but canCreateEvent is false. Deliberately not the
+   native :disabled attribute/pseudo-class: disabled buttons get the browser's default
+   cursor:not-allowed, which per explicit feedback should stay a plain pointer, and disabled
+   buttons can suppress hover/title-tooltip delivery in some browsers, which would break the
+   tooltip this state depends on entirely. Same dimming :disabled used to provide, via a class
+   instead. */
+.inner-header-action-btn.is-locked .inner-header-action-btn-inner {
+  opacity: 0.6;
 }
 
 /* .btn-gradient/.btn-gradient-purple (style.css) are the template's main CTA button — teal/blue
@@ -1266,17 +1435,24 @@ h1, h2, h3, h4, h5, h6,
    missed by the earlier palette pass because they're template classes, not component-scoped
    ones. Used across most drawer forms (connect wallet, create event/issuer/poap, etc.) so fixed
    once here rather than touching every call site. Black text (style.css) swapped for
-   --text-on-solid too — unreadable against these darker slate tones. */
+   --text-on-solid too — unreadable against these darker slate tones.
+   Flat translucent + blurred fill instead of the linear-gradient, per explicit feedback — one of
+   the gradient's own two colors (--palette-4, the lighter/anchor tone, not --palette-3). 0.35 —
+   up from a 0.2 test value (confirmed the see-through effect was real, just needed a touch less
+   transparency), down from 0.88 before that (which hid the blur entirely). */
 .btn-gradient,
 .btn-gradient-purple {
   color: var(--text-on-solid);
-  background: linear-gradient(90deg, var(--palette-4), var(--palette-3));
+  background: rgba(74, 92, 106, 0.35);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--palette-4);
 }
 
 .btn-gradient:hover,
 .btn-gradient-purple:hover {
   color: var(--text-on-solid);
+  background: rgba(74, 92, 106, 0.5);
   border-color: var(--palette-5);
 }
 
@@ -1314,13 +1490,9 @@ h1, h2, h3, h4, h5, h6,
   border-color: var(--palette-3);
 }
 
-.inner-header-action-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-/* Filter icon button — full round, same light-top/dark-bottom inset bevel as the wallet popup's
-   own close button, just neutral instead of red-on-hover (this isn't a destructive action). */
+/* Filter icon button — full round, same flat/translucent/blurred fill as
+   .inner-header-action-btn-inner (the Create Event/Claim POAP button) per explicit feedback,
+   instead of its own separate bevel-shadow treatment. */
 .filter-icon-btn {
   display: flex;
   align-items: center;
@@ -1330,12 +1502,11 @@ h1, h2, h3, h4, h5, h6,
   padding: 0;
   flex-shrink: 0;
   border-radius: 50%;
-  background-color: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow:
-    inset 0 2px 3px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -2px 3px 0 rgba(0, 0, 0, 0.4);
-  color: var(--text-on-glass);
+  background: rgba(74, 92, 106, 0.35);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--palette-4);
+  color: var(--text-on-solid);
   cursor: pointer;
   transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
 }
@@ -1346,7 +1517,15 @@ h1, h2, h3, h4, h5, h6,
    own 36px, turning the circle into an oval. */
 
 .filter-icon-btn:hover {
-  background-color: rgba(74, 92, 106, 0.16);
+  background: rgba(74, 92, 106, 0.5);
+  border-color: var(--palette-5);
+}
+
+/* Same fix as .inner-header-action-btn above: no outline:none here meant the browser's native
+   focus ring rendered around the button's own 1px border after opening the popover — reading as
+   a second "filete" stacked just outside the real one, not one border changing color. */
+.filter-icon-btn:focus {
+  outline: none;
 }
 
 /* Active (at least one filter set) — same accent-tinted border the nav's own "active page"
@@ -1357,9 +1536,10 @@ h1, h2, h3, h4, h5, h6,
   color: var(--palette-6);
 }
 
-/* Filter popover — same glass surface as the wallet-connect popup (.drawer.drawer-modal): same
-   background/border/bevel box-shadow, just narrower and anchored to the filter button instead of
-   centered full-screen. Tall/narrow on purpose — filters stack in a single column, not a grid. */
+/* Filter popover — same glass surface as the wallet-connect popup (.drawer.drawer-modal), minus
+   its inset top/bottom bevel per explicit feedback ("sin luz y sombra interna") — just the outer
+   lift shadow, narrower and anchored to the filter button instead of centered full-screen.
+   Tall/narrow on purpose — filters stack in a single column, not a grid. */
 .filter-popover {
   position: fixed;
   z-index: 30;
@@ -1375,14 +1555,71 @@ h1, h2, h3, h4, h5, h6,
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  box-shadow:
-    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
-    0 8px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .filter-popover .form-label {
   margin-bottom: 4px;
+}
+
+/* .text-muted's global color (style.css, #aeaed5 !important — an old template leftover, not this
+   app's own --text-on-glass-muted system) read as mismatched/dated against this panel's dark
+   glass surface. Same specificity/weight as that rule (a class selector, both !important), so it
+   has to carry !important too to actually win. */
+.filter-popover .text-muted {
+  color: var(--text-on-glass-muted) !important;
+}
+
+/* Inputs/selects — .form-control/.form-select's own global rule (above) gives them a solid
+   --solid-bg fill, meant for the trust-critical create/claim drawers sitting on a different kind
+   of surface. Here, on the already-translucent glass panel, that solid fill read as an opaque
+   "block" per explicit feedback — no background at all, just a border, so the field reads as part
+   of the same glass surface instead of a separate card floating on it. */
+.filter-popover .form-control,
+.filter-popover .form-select {
+  background: transparent;
+  border-color: var(--glass-border);
+  color: var(--text-on-glass);
+}
+
+.filter-popover .form-control:hover,
+.filter-popover .form-select:hover {
+  background: transparent;
+  border-color: var(--glass-border);
+}
+
+.filter-popover .form-control:focus,
+.filter-popover .form-control:active,
+.filter-popover .form-select:focus,
+.filter-popover .form-select:active {
+  background: transparent;
+  border-color: var(--palette-5);
+}
+
+.filter-popover .form-control::placeholder {
+  color: var(--text-on-glass-muted);
+}
+
+/* Custom tooltip (Tooltip.jsx) — same glass-surface family as .filter-popover above, just a
+   small pill instead of a full panel: --glass-blur-sm (not the popover's full --glass-blur) since
+   this is a tiny, frequently-mounted/unmounted element, not singleton chrome. pointer-events:none
+   so hovering the tooltip itself never steals the mouseleave that would otherwise dismiss it (it
+   never needs its own interaction). position:fixed with top/bottom+left set inline by
+   Tooltip.jsx's own getBoundingClientRect() math. */
+.app-tooltip {
+  position: fixed;
+  z-index: 40;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-on-glass);
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .filter-bar {
@@ -1540,6 +1777,23 @@ h1, h2, h3, h4, h5, h6,
   justify-content: center;
 }
 
+/* Wallet-not-connected empty state (myEvents/mySubscriptions/myPendingApprovals) — same
+   viewport-minus-header centering as .index-hero-section above, but per explicit feedback no card
+   shell at all: just the image, centered on the page both horizontally and vertically, not boxed
+   into a grid column with a background/border. Also has to clear .inner-header's own block above
+   it (title row), not just the fixed 68px nav — otherwise the page ends up taller than the
+   viewport (scrollable) despite no content requiring scroll. .inner-header contributes 20px
+   margin-bottom + 12px padding-bottom + 1px border, and its .inner-header-row content contributes
+   8px margin-top + 45.5px min-height (that last figure is .inner-header-row's own
+   getBoundingClientRect()-measured value, see its comment above) = 86.5px total. */
+.wallet-non-connected-page {
+  width: 100%;
+  min-height: calc(100vh - 68px - 86.5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .index-scroll-hint {
   margin-top: 40px;
   color: var(--text-on-glass-muted);
@@ -1566,20 +1820,36 @@ h1, h2, h3, h4, h5, h6,
   color: transparent;
 }
 
-/* Same reasoning as .index-hero-eyebrow: .btn-role-cta's gradient/border both read
-   var(--role-accent), which is undefined without a role wrapper — this hero button gets its
-   own literal two-color gradient instead of relying on that variable. */
+/* Flat/translucent/blurred, same glass-button family as .btn-gradient and the wallet-connect
+   popup's own buttons — not the old two-color gradient. Disconnected uses the same neutral slate
+   as .btn-gradient; connected switches to the app's established "connected = green" language
+   (.header-wallet-btn.header-cta-connected uses the same rgba(46,204,113,...) tint on its icon). */
 .btn-dual-cta {
   display: inline-flex;
   align-items: center;
   color: var(--text-on-solid);
-  background: linear-gradient(90deg, #b24bf3, #3ecf8e);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(74, 92, 106, 0.35);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--palette-4);
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out;
 }
 
 .btn-dual-cta:hover {
   color: var(--text-on-solid);
-  filter: brightness(1.12);
+  background: rgba(74, 92, 106, 0.5);
+  border-color: var(--palette-5);
+}
+
+.btn-dual-cta.connected {
+  background: rgba(46, 204, 113, 0.16);
+  border-color: rgba(46, 204, 113, 0.5);
+  color: rgba(46, 204, 113, 0.9);
+}
+
+.btn-dual-cta.connected:hover {
+  background: rgba(46, 204, 113, 0.26);
+  border-color: rgba(46, 204, 113, 0.7);
 }
 
 .index-section-header {

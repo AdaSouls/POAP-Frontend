@@ -1,16 +1,40 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Award } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import PoapCard from "../components/poapCard";
-import poapNormal from "../../images/svg/poap-normal.svg";
+import PoapFilters from "../components/PoapFilters";
+import Tooltip from "../components/Tooltip";
 import walletStatus from "../../images/collections/wallet-status.png";
 import loadingGif from "../../images/loading.gif";
 import { getEventVisibility, encodeShareableCollection, buildShareUrl } from "../../midnight/collection-share";
 import { filterVisibleEvents } from "../../utils/poapHelpers";
 
 const REFRESH_INTERVAL_MS = 5000;
+
+function applyPoapFilters(poaps, filters) {
+  let result = [...poaps];
+
+  if (filters.issuerSearch) {
+    result = result.filter((p) => p.issuerPkHex.toLowerCase().includes(filters.issuerSearch.toLowerCase()));
+  }
+  if (filters.soulbound === "soulbound") {
+    result = result.filter((p) => p.isSoulbound);
+  } else if (filters.soulbound === "transferable") {
+    result = result.filter((p) => !p.isSoulbound);
+  }
+
+  const sortBy = filters.sortBy || "tokenId";
+  const order = filters.order || "desc";
+  result.sort((a, b) => {
+    const av = sortBy === "attendanceCount" ? a.attendedEventIds.length : Number(a.tokenId);
+    const bv = sortBy === "attendanceCount" ? b.attendedEventIds.length : Number(b.tokenId);
+    return order === "asc" ? av - bv : bv - av;
+  });
+
+  return result;
+}
 
 // "My Subscriptions" reads from this browser's private state (one SPOAP token per issuer, with
 // its own attendance list) — see src/midnight/witnesses.ts. This is deliberately NOT sourced from
@@ -21,6 +45,7 @@ const MySubscriptions = () => {
   const [myPoaps, setMyPoaps] = useState([]);
   const [shareCopied, setShareCopied] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [filters, setFilters] = useState({});
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
@@ -40,10 +65,6 @@ const MySubscriptions = () => {
 
   const createPoap = () => {
     dispatch({ type: "CREATE_POAP" });
-  };
-
-  const showMidnightWallet = () => {
-    dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
   };
 
   const loadPoaps = useCallback(async () => {
@@ -84,7 +105,8 @@ const MySubscriptions = () => {
     }
   }, [myPoaps, expandedId]);
 
-  const visiblePoaps = expandedId ? myPoaps.filter((p) => p.issuerPkHex === expandedId) : myPoaps;
+  const filteredPoaps = useMemo(() => applyPoapFilters(myPoaps, filters), [myPoaps, filters]);
+  const visiblePoaps = expandedId ? filteredPoaps.filter((p) => p.issuerPkHex === expandedId) : filteredPoaps;
 
   return (
     <Layout activeMenu={3}>
@@ -92,7 +114,14 @@ const MySubscriptions = () => {
         <div className="inner-header">
           <div className="inner-header-row">
             <div className="inner-header-row-left">
-              <h4>My Subscriptions</h4>
+              {provider && (
+                // One SPOAP token per issuer (see claimOrUpdate/issuerHolderToken in poap.compact)
+                // — this count is exactly "how many issuers you're subscribed to", matching the
+                // page's own name, not a separate/different number from the POAP count.
+                <span className="badge badge-count-outline">
+                  {filteredPoaps.length} {filteredPoaps.length === 1 ? "Subscription" : "Subscriptions"}
+                </span>
+              )}
             </div>
             <div className="inner-header-row-right">
               {provider && myPoaps.length > 0 && (
@@ -100,33 +129,36 @@ const MySubscriptions = () => {
                   {shareCopied ? "Link copied ✓" : "Share my collection"}
                 </button>
               )}
-              <button
-                className={`inner-header-action-btn${!provider ? " is-outline" : ""}`}
-                onClick={!provider ? showMidnightWallet : createPoap}
-                title={!provider ? "Connect your wallet to claim a POAP" : "Claim a POAP"}
-              >
-                <span className="inner-header-action-btn-inner">
-                  <Plus size={14} /> Claim POAP
-                </span>
-              </button>
+              {provider ? (
+                <button className="inner-header-action-btn" onClick={createPoap}>
+                  <span className="inner-header-action-btn-inner">
+                    <Plus size={14} /> Claim POAP
+                  </span>
+                </button>
+              ) : (
+                // Tooltip-wrapped only here — the button is fully usable once connected, so there's
+                // nothing to explain and no tooltip should appear in that case.
+                <Tooltip label="Connect your wallet to claim a POAP">
+                  <button className="inner-header-action-btn is-outline is-inert">
+                    <span className="inner-header-action-btn-inner">
+                      <Plus size={14} /> Claim POAP
+                    </span>
+                  </button>
+                </Tooltip>
+              )}
+              <PoapFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
             </div>
           </div>
         </div>
 
         <div className="row">
           {loading ? (
-            <div className="col-xxl-6 col-lg-6 col-md-12">
-              <div className="card card-poap card-classic card-outline-only">
-                <div className="card-outline-only-body d-flex justify-content-center">
-                  <div className="loading-poap-card">
-                    <img src={loadingGif} width="35" height="35" alt="Loading POAPs" />
-                  </div>
-                </div>
-              </div>
+            <div className="wallet-non-connected-page">
+              <img src={loadingGif} width="35" height="35" alt="Loading POAPs" />
             </div>
           ) : (
             <>
-              {provider && myPoaps.length > 0 && (
+              {provider && filteredPoaps.length > 0 && (
                 <AnimatePresence mode="popLayout">
                   {visiblePoaps.map((poap) => (
                     <PoapCard
@@ -140,27 +172,23 @@ const MySubscriptions = () => {
                 </AnimatePresence>
               )}
 
-              {provider && myPoaps.length === 0 && (
-                <div className="col-xxl-12 col-xl-12 col-lg-12 col-md-12">
-                  <div className="card card-poap card-classic card-outline-only">
-                    <div className="card-outline-only-body text-center py-5">
-                      <img src={poapNormal} width="100" height="100" alt="No POAPs" className="mb-3" />
-                      <h4>No POAPs Found</h4>
-                      <p className="text-muted">
-                        You don't have any POAPs yet. Claim your first POAP by attending an event!
-                      </p>
+              {provider && filteredPoaps.length === 0 && (
+                <div className="wallet-non-connected-page">
+                  <div className="text-center">
+                    <div className="role-hero-icon mx-auto mb-3">
+                      <Award size={64} />
                     </div>
+                    <h4>No POAPs Found</h4>
+                    <p className="text-muted">
+                      You don't have any POAPs yet. Claim your first POAP by attending an event!
+                    </p>
                   </div>
                 </div>
               )}
 
               {!provider && (
-                <div className="col-xxl-6 col-lg-6 col-md-12">
-                  <div className="card card-poap card-classic card-outline-only">
-                    <div className="wallet-non-connected">
-                      <img className="mt-6" src={walletStatus} width="150" height="140" alt="" />
-                    </div>
-                  </div>
+                <div className="wallet-non-connected-page">
+                  <img src={walletStatus} width="150" height="140" alt="" />
                 </div>
               )}
             </>

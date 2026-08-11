@@ -4,6 +4,7 @@ import {
 } from "../../contexts/drawer/drawer.provider";
 import { useState } from "react";
 import { Button } from "react-bootstrap";
+import { X } from "lucide-react";
 import { useUserRoles } from "../../contexts/user-roles/user-roles.provider";
 import {
   succesfullBlockchainCreation,
@@ -56,18 +57,18 @@ export default function CreateIssuer() {
   };
 
   return (
-    <div className="d-flex flex-column w-100 h-100 p-3">
+    <div className="d-flex flex-column w-100 drawer-modal-inner">
       <div className="drawer-header">
-        <div className="d-flex justify-content-start">
-          <button
-            className="btn btn-close align-content-center px-1 mt-2 position-absolute"
-            onClick={closeDrawer}
-            aria-label="close"
-          ></button>
-          <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold">
-            Register Issuer
-          </h4>
-        </div>
+        <button
+          className="btn wallet-modal-close"
+          onClick={closeDrawer}
+          aria-label="close"
+        >
+          <X size={15} />
+        </button>
+        <h4 className="text-center w-100 m-0 font-weight-semibold">
+          Register Issuer
+        </h4>
       </div>
       <div className="drawer-body">
         {isAdmin ? (

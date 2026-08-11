@@ -34,6 +34,23 @@ export class LaceNotAuthorizedError extends Error {
   }
 }
 
+// Lace's own connect() can succeed while the wallet is still locked (it doesn't itself prompt for
+// the password) — the "locked" failure only surfaces on the first call that actually needs wallet
+// data, like getShieldedAddresses() below. There's no dapp-connector-api method to force Lace's
+// unlock popup open from here (by design — a page forcing a wallet's popup open on demand would be
+// a phishing vector), so the best we can do is recognize this case and tell the user to unlock it
+// themselves via the extension icon, instead of surfacing Lace's raw error string.
+export class LaceLockedError extends Error {
+  constructor() {
+    super('Your Lace wallet is locked. Open the Lace extension and unlock it, then try connecting again.');
+    this.name = 'LaceLockedError';
+  }
+}
+
+function isLaceLockedError(error: unknown): boolean {
+  return error instanceof Error && /locked/i.test(error.message);
+}
+
 // Lace registers itself under a freshly generated UUID key on `window.midnight` (CAIP-372-style
 // multi-wallet discovery), not a fixed `mnLace` key — so we scan every entry's shape rather than
 // reading one hardcoded property. See @midnight-ntwrk/dapp-connector-api's InitialAPI type and the
@@ -83,7 +100,13 @@ export async function connectToLace(): Promise<WalletConnection> {
     throw new LaceNotAuthorizedError();
   }
 
-  const shieldedAddress = await connectedApi.getShieldedAddresses();
+  let shieldedAddress: WalletConnection['shieldedAddress'];
+  try {
+    shieldedAddress = await connectedApi.getShieldedAddresses();
+  } catch (error) {
+    if (isLaceLockedError(error)) throw new LaceLockedError();
+    throw error;
+  }
   return { connectedApi, shieldedAddress };
 }
 

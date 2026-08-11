@@ -31,13 +31,13 @@ describe('MyEvents page', () => {
     expect(screen.getByRole('button', { name: /create event/i })).toHaveClass('is-outline');
   });
 
-  it('dispatches SHOW_MIDNIGHT_WALLET when the outline create-event button is clicked without a wallet', async () => {
+  it('does nothing when the outline create-event button is clicked without a wallet (tooltip-only, no action)', async () => {
     const dispatch = jest.fn();
     renderWithProviders(<EventsPage />, { drawerDispatch: dispatch });
 
     await userEvent.click(screen.getByRole('button', { name: /create event/i }));
 
-    expect(dispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('loads and displays events', async () => {
@@ -70,7 +70,7 @@ describe('MyEvents page', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 
-  it('does not dispatch CREATE_EVENT for a non-organizer wallet', async () => {
+  it('replaces Create Event with a request-access button for a connected non-organizer wallet, and dispatches CREATE_ISSUER on click', async () => {
     const dispatch = jest.fn();
     const drawerValue = {
       ...mockDrawerContext,
@@ -79,9 +79,11 @@ describe('MyEvents page', () => {
 
     renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
 
-    const createButton = screen.getByRole('button', { name: /create event/i });
-    await userEvent.click(createButton);
+    expect(screen.queryByRole('button', { name: /create event/i })).not.toBeInTheDocument();
+    const requestButton = screen.getByRole('button', { name: /request organizer access/i });
+    await userEvent.click(requestButton);
 
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_ISSUER' });
     expect(dispatch).not.toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 

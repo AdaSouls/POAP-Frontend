@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
 
 const USE_CASES = [
   {
@@ -149,6 +150,7 @@ const UseCaseRow = ({ icon: Icon, role, title, description, iconLeft }) => {
 const Dashboard = () => {
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const [, setRole] = useSiteRole();
 
   const showMidnightWallet = () => {
     dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
@@ -172,7 +174,11 @@ const Dashboard = () => {
             contract that can represent far more than event badges, while attendance and
             ownership history stay in each wallet's own private state.
           </p>
-          <button type="button" className="btn btn-dual-cta" onClick={showMidnightWallet}>
+          <button
+            type="button"
+            className={`btn btn-dual-cta${provider ? " connected" : ""}`}
+            onClick={showMidnightWallet}
+          >
             {provider ? "Wallet Connected" : "Connect Wallet"}
           </button>
         </motion.div>
@@ -234,7 +240,11 @@ const Dashboard = () => {
                 Create events, issue POAPs, and manage attendance.
               </p>
             </div>
-            <Link to="/organizer" className="btn btn-role-cta">
+            <Link
+              to="/organizer"
+              className="btn btn-role-cta"
+              onClick={() => setRole(SITE_ROLES.ORGANIZER)}
+            >
               Learn more
             </Link>
           </div>
@@ -248,7 +258,11 @@ const Dashboard = () => {
                 Discover events, claim POAPs, and build your collection.
               </p>
             </div>
-            <Link to="/subscriber" className="btn btn-role-cta">
+            <Link
+              to="/subscriber"
+              className="btn btn-role-cta"
+              onClick={() => setRole(SITE_ROLES.SUBSCRIBER)}
+            >
               Learn more
             </Link>
           </div>

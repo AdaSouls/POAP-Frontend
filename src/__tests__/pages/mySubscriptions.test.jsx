@@ -33,9 +33,10 @@ describe('MySubscriptions page', () => {
     },
   };
 
-  it('renders My Subscriptions header', () => {
+  it('renders the inner nav (page title dropped — the main nav already shows the active page)', () => {
     renderWithProviders(<MySubscriptions />);
-    expect(screen.getByText(/My Subscriptions/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /claim poap/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /filters/i })).toBeInTheDocument();
   });
 
   it('shows the claim-poap button in an outline state when no wallet is connected', () => {
@@ -43,13 +44,13 @@ describe('MySubscriptions page', () => {
     expect(screen.getByRole('button', { name: /claim poap/i })).toHaveClass('is-outline');
   });
 
-  it('dispatches SHOW_MIDNIGHT_WALLET when the outline claim-poap button is clicked without a wallet', async () => {
+  it('does nothing when the outline claim-poap button is clicked without a wallet (tooltip-only, no action)', async () => {
     const dispatch = jest.fn();
     renderWithProviders(<MySubscriptions />, { drawerDispatch: dispatch });
 
     await userEvent.click(screen.getByRole('button', { name: /claim poap/i }));
 
-    expect(dispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('loads and displays tokens from private state when wallet is connected', async () => {
@@ -126,13 +127,15 @@ describe('MySubscriptions page', () => {
       expect(screen.getByText(/POAP #2/i)).toBeInTheDocument();
     });
 
+    // PoapFilters defaults to sorting by Token ID descending, so POAP #2 (tokenId 2n) renders
+    // first — the same "real default sort" convention EventFilters/myEvents.jsx already uses.
     await userEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
 
     // AnimatePresence's exit is animated, so the sibling leaves the DOM asynchronously.
     await waitFor(() => {
-      expect(screen.queryByText(/POAP #2/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/POAP #1/i)).not.toBeInTheDocument();
     });
-    expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
+    expect(screen.getByText(/POAP #2/i)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /collapse poap details/i }));
 

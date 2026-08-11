@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { getAllEvents } from '../../../midnight/indexer.service';
 import { recordLastClaimTx } from '../../../midnight/attendance-proof';
@@ -17,6 +18,10 @@ export default function CreatePoap() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSoulbound, setIsSoulbound] = useState(false);
+  // Step 1: pick the event (+ its preview card). Step 2: soulbound choice + confirm/submit — the
+  // only one of these four forms with enough content to warrant a second step (event dropdown +
+  // preview card + toggle), per the /brainstorm design discussion.
+  const [step, setStep] = useState(1);
 
   const { event, midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
@@ -98,77 +103,98 @@ export default function CreatePoap() {
     }
   };
 
+  const eventStatusLabel = (evt) =>
+    mintable ? 'Claimable' : isExpired(evt) ? 'Expired' : isFull(evt) ? 'Full' : 'Inactive';
+
   return (
-    <div className="d-flex flex-column w-100 h-100 p-3 overflow-auto">
+    <div className="d-flex flex-column w-100 drawer-modal-inner">
       <div className="drawer-header">
-        <div className="d-flex justify-content-start">
-          <button
-            className="btn btn-close align-content-center px-1 mt-2 position-absolute"
-            onClick={closeDrawer}
-            aria-label="close"
-          ></button>
-          <h4 className="align-content-center text-center w-100 m-0 py-3 font-weight-semibold">
-            Claim POAP
-          </h4>
-        </div>
+        <button
+          className="btn wallet-modal-close"
+          onClick={closeDrawer}
+          aria-label="close"
+        >
+          <X size={15} />
+        </button>
+        <h4 className="text-center w-100 m-0 font-weight-semibold">
+          Claim POAP
+        </h4>
+      </div>
+
+      <div className="drawer-modal-steps">
+        <span className={`step-dot${step === 1 ? ' active' : ''}`} />
+        <span className={`step-dot${step === 2 ? ' active' : ''}`} />
       </div>
 
       <div className="drawer-body">
-        <form name="createPoapForm" className="signin_validate row g-3" onSubmit={handleSubmit}>
-          <div className="col-12">
-            <label className="form-label mb-2" style={{ fontWeight: '600' }}>
-              Select Event
-            </label>
-            <select
-              className="form-select"
-              value={selectedEvent?.eventId || ''}
-              onChange={(e) => {
-                const evt = events.find((it) => it.eventId === e.target.value);
-                setSelectedEvent(evt || null);
-              }}
-              required
-            >
-              <option value="" disabled>Choose an event…</option>
-              {events.map((evt) => (
-                <option key={evt.eventId} value={evt.eventId}>
-                  {truncateHex(evt.eventId)} — {evt.minted}/{evt.maxSupply || '∞'} minted
-                  {isExpired(evt) ? ' (expired)' : !evt.isActive ? ' (inactive)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+        <form name="createPoapForm" className="row g-3" onSubmit={handleSubmit}>
+          {step === 1 && (
+            <>
+              <div className="col-12">
+                <label className="form-label mb-2" style={{ fontWeight: '600' }}>
+                  Select Event
+                </label>
+                <select
+                  className="form-select"
+                  value={selectedEvent?.eventId || ''}
+                  onChange={(e) => {
+                    const evt = events.find((it) => it.eventId === e.target.value);
+                    setSelectedEvent(evt || null);
+                  }}
+                  required
+                >
+                  <option value="" disabled>Choose an event…</option>
+                  {events.map((evt) => (
+                    <option key={evt.eventId} value={evt.eventId}>
+                      {truncateHex(evt.eventId)} — {evt.minted}/{evt.maxSupply || '∞'} minted
+                      {isExpired(evt) ? ' (expired)' : !evt.isActive ? ' (inactive)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {selectedEvent && (
-            <div className="col-12 mt-3">
-              <div className="card">
-                <div className="card-body p-4">
-                  <div className="d-flex align-items-center mb-3">
-                    <img className="mr-3 rounded-circle" src={eventNormal} width="48" height="48" alt="" />
-                    <div>
-                      <h5 className="mb-1" style={{ fontSize: '16px' }}>Event {truncateHex(selectedEvent.eventId)}</h5>
-                      <span className={`badge ${mintable ? 'bg-success' : 'bg-danger'}`}>
-                        {mintable ? 'Claimable' : isExpired(selectedEvent) ? 'Expired' : isFull(selectedEvent) ? 'Full' : 'Inactive'}
-                      </span>
+              {selectedEvent && (
+                <div className="col-12 mt-3">
+                  <div className="drawer-modal-preview-card">
+                    <div className="d-flex align-items-center mb-3">
+                      <img className="mr-3 rounded-circle" src={eventNormal} width="48" height="48" alt="" />
+                      <div>
+                        <h5 className="mb-1" style={{ fontSize: '16px' }}>Event {truncateHex(selectedEvent.eventId)}</h5>
+                        <span className={`badge ${mintable ? 'bg-success' : 'bg-danger'}`}>
+                          {eventStatusLabel(selectedEvent)}
+                        </span>
+                      </div>
                     </div>
+                    <ul className="list-unstyled mb-0 small">
+                      <li className="d-flex align-items-center mb-2">
+                        <img className="mr-2" src={eventOwnerIcon} width="16" height="16" alt="" />
+                        Organizer: {truncateHex(selectedEvent.issuerPk)}
+                      </li>
+                      <li className="mb-2">
+                        Supply: {selectedEvent.minted}/{selectedEvent.maxSupply || 'unlimited'}
+                      </li>
+                      <li className="mb-2">
+                        {selectedEvent.expiration > 0
+                          ? `Expires: ${new Date(selectedEvent.expiration * 1000).toLocaleDateString()}`
+                          : 'No expiry'}
+                      </li>
+                    </ul>
                   </div>
-                  <ul className="list-unstyled mb-0 small">
-                    <li className="d-flex align-items-center mb-2">
-                      <img className="mr-2" src={eventOwnerIcon} width="16" height="16" alt="" />
-                      Organizer: {truncateHex(selectedEvent.issuerPk)}
-                    </li>
-                    <li className="mb-2">
-                      Supply: {selectedEvent.minted}/{selectedEvent.maxSupply || 'unlimited'}
-                    </li>
-                    <li className="mb-2">
-                      {selectedEvent.expiration > 0
-                        ? `Expires: ${new Date(selectedEvent.expiration * 1000).toLocaleDateString()}`
-                        : 'No expiry'}
-                    </li>
-                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
+          {step === 2 && selectedEvent && (
+            <>
+              <div className="col-12">
+                <div className="drawer-modal-preview-card">
+                  <h5 className="mb-1" style={{ fontSize: '16px' }}>Event {truncateHex(selectedEvent.eventId)}</h5>
+                  <p className="small text-muted mb-0">Confirm your claim for this event.</p>
                 </div>
               </div>
 
-              <div className="form-check form-switch mt-3">
+              <div className="col-12 form-check form-switch mt-3">
                 <input
                   className="form-check-input"
                   type="checkbox"
@@ -180,20 +206,41 @@ export default function CreatePoap() {
                   Soulbound (non-transferable)
                 </label>
               </div>
-            </div>
+            </>
           )}
         </form>
       </div>
 
       <div className="drawer-footer">
-        <button
-          type="submit"
-          className="btn btn-gradient btn-block"
-          onClick={handleSubmit}
-          disabled={loading || !selectedEvent || !mintable}
-        >
-          {loading ? 'Claiming…' : 'Claim POAP'}
-        </button>
+        {step === 1 ? (
+          <button
+            type="button"
+            className="btn btn-gradient btn-block w-100"
+            onClick={() => setStep(2)}
+            disabled={!selectedEvent || !mintable}
+          >
+            Next
+          </button>
+        ) : (
+          <div className="d-flex gap-2 w-100">
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => setStep(1)}
+              disabled={loading}
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              className="btn btn-gradient flex-grow-1"
+              onClick={handleSubmit}
+              disabled={loading || !selectedEvent || !mintable}
+            >
+              {loading ? 'Claiming…' : 'Claim POAP'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
