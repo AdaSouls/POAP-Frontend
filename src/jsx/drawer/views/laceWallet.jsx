@@ -124,7 +124,9 @@ export default function LaceWallet() {
                     ? "AdaSouls is not authorized by your Lace wallet. Approve the connection request in the extension."
                     : errorToShow.name === "LaceLockedError"
                       ? "Your Lace wallet is locked. Open the Lace extension icon, unlock it with your password, then try connecting again."
-                      : errorToShow.message ?? "Something went wrong connecting to Lace."}
+                      : errorToShow.name === "ConnectTimeoutError"
+                        ? errorToShow.message
+                        : errorToShow.message ?? "Something went wrong connecting to Lace."}
             </div>
           )}
         </div>

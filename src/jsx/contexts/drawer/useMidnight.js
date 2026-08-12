@@ -3,6 +3,35 @@ import { PoapContractService } from "../../../midnight/contract.service";
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS;
 const CALLER_PK_CACHE_KEY = "adasouls:midnight:callerPkHex";
+// Generous enough to survive real ZK proving + balancing (observed ~55s for a real funding tx),
+// but bounded so the UI can't spin forever — Lace's own balanceUnsealedTransaction is known to hang
+// indefinitely (never resolve, never reject) rather than error out when DUST isn't registered/accrued.
+const CONNECT_TIMEOUT_MS = 90_000;
+
+export class ConnectTimeoutError extends Error {
+  constructor() {
+    super(
+      "Connecting timed out. This usually means your Lace wallet doesn't have DUST registered/accrued yet — delegate your NIGHT for DUST generation in Lace, wait for it to accrue, then try again."
+    );
+    this.name = "ConnectTimeoutError";
+  }
+}
+
+function withTimeout(promise, ms, onTimeout) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(onTimeout()), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
 
 // getCallerPkHex() calls the contract's exported getCallerPk circuit as its own transaction.
 // Cached across page loads so reconnecting doesn't submit a fresh tx just to re-derive the same pk.
@@ -32,8 +61,16 @@ function useMidnight() {
     setConnecting(true);
     setError(null);
     try {
-      const service = await PoapContractService.connect(CONTRACT_ADDRESS);
-      const addressHex = await resolveCallerPkHex(service);
+      const service = await withTimeout(
+        PoapContractService.connect(CONTRACT_ADDRESS),
+        CONNECT_TIMEOUT_MS,
+        () => new ConnectTimeoutError()
+      );
+      const addressHex = await withTimeout(
+        resolveCallerPkHex(service),
+        CONNECT_TIMEOUT_MS,
+        () => new ConnectTimeoutError()
+      );
 
       const newProviderState = {
         service,
