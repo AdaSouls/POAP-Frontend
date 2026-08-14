@@ -1,9 +1,11 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import MySubscriptions from '../../jsx/pages/mySubscriptions';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 
+// Subscribing now happens from an event card's own "Subscribe" action (exploreEvents.jsx /
+// myPendingApprovals.jsx dispatch CREATE_POAP with the event already selected) — this page no
+// longer has its own claim entry point, so this flow only covers loading/displaying tokens.
 describe('My Subscriptions Flow Integration', () => {
   function connectedDrawerValue(getState) {
     return {
@@ -15,8 +17,7 @@ describe('My Subscriptions Flow Integration', () => {
     };
   }
 
-  it('loads private-state tokens, displays them, and lets the wallet claim a new one', async () => {
-    const dispatch = jest.fn();
+  it('loads private-state tokens and displays them', async () => {
     const getState = jest.fn().mockResolvedValue({
       ledger: {},
       privateState: {
@@ -31,16 +32,10 @@ describe('My Subscriptions Flow Integration', () => {
 
     renderWithProviders(<MySubscriptions />, {
       drawerValue: connectedDrawerValue(getState),
-      drawerDispatch: dispatch,
     });
 
     await waitFor(() => expect(getState).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(/POAP #1/i)).toBeInTheDocument());
-
-    const createButton = screen.getByRole('button', { name: /claim poap/i });
-    await userEvent.click(createButton);
-
-    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_POAP' });
   });
 
   it('handles an empty token list', async () => {

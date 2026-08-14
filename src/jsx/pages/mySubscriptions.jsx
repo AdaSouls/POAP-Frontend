@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Plus, Award } from "lucide-react";
+import { Award } from "lucide-react";
 import Layout from "../layout/layout";
-import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
+import { useDrawer } from "../contexts/drawer/drawer.provider";
 import PoapCard from "../components/poapCard";
 import PoapFilters from "../components/PoapFilters";
-import Tooltip from "../components/Tooltip";
 import walletStatus from "../../images/collections/wallet-status.png";
 import loadingGif from "../../images/loading.gif";
 import { getEventVisibility, encodeShareableCollection, buildShareUrl } from "../../midnight/collection-share";
@@ -47,7 +46,6 @@ const MySubscriptions = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [filters, setFilters] = useState({});
   const { midnight: { provider } } = useDrawer();
-  const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
 
   const copyCollectionShareLink = () => {
@@ -61,10 +59,6 @@ const MySubscriptions = () => {
     navigator.clipboard?.writeText(buildShareUrl(provider.address, encoded));
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
-  };
-
-  const createPoap = () => {
-    dispatch({ type: "CREATE_POAP" });
   };
 
   const loadPoaps = useCallback(async () => {
@@ -128,23 +122,6 @@ const MySubscriptions = () => {
                 <button className="btn btn-white btn-small" onClick={copyCollectionShareLink}>
                   {shareCopied ? "Link copied ✓" : "Share my collection"}
                 </button>
-              )}
-              {provider ? (
-                <button className="inner-header-action-btn" onClick={createPoap}>
-                  <span className="inner-header-action-btn-inner">
-                    <Plus size={14} /> Claim POAP
-                  </span>
-                </button>
-              ) : (
-                // Tooltip-wrapped only here — the button is fully usable once connected, so there's
-                // nothing to explain and no tooltip should appear in that case.
-                <Tooltip label="Connect your wallet to claim a POAP">
-                  <button className="inner-header-action-btn is-outline is-inert">
-                    <span className="inner-header-action-btn-inner">
-                      <Plus size={14} /> Claim POAP
-                    </span>
-                  </button>
-                </Tooltip>
               )}
               <PoapFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
             </div>

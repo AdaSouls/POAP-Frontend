@@ -103,6 +103,10 @@ export const Drawer = () => {
   const isModalView = MODAL_VIEWS.includes(chromeViewKey);
   const drawerLayout = isModalView ? 'drawer-modal' : 'drawer-cart';
 
+  // createEvent's metadata step (name/description/image dropzone/crop) needs real horizontal room
+  // for a 2-column layout — every other modal view stays at the shared narrow width.
+  const isWideModalView = chromeViewKey === 'createEvent';
+
   const closeDrawer = () => dispatch({ type: 'CLOSE_DRAWER' });
 
   // The modal's own fade is handled by the outer .drawer-modal's CSS opacity transition (driven
@@ -125,7 +129,7 @@ export const Drawer = () => {
       {isOpen && isModalView && (
         <div className="drawer-modal-overlay" onClick={closeDrawer} aria-hidden="true"></div>
       )}
-      <div className={`drawer ${drawerLayout} ${drawerTone} ${isOpen ? 'open' : ''}`}>
+      <div className={`drawer ${drawerLayout} ${drawerTone} ${isWideModalView ? 'drawer-modal-wide' : ''} ${isOpen ? 'open' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeViewKey}

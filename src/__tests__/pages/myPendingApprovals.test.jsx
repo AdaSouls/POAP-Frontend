@@ -90,6 +90,9 @@ describe('MyPendingApprovals page', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /claim/i }));
 
-    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_POAP' });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'CREATE_POAP',
+      payload: { eventId: 'ee'.repeat(32), issuerPk: 'bb'.repeat(32), maxSupply: 100, minted: 1, expiration: 0, isActive: true, isPublicMint: false, createdBlock: 1 },
+    });
   });
 });

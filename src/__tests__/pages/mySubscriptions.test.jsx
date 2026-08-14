@@ -35,22 +35,7 @@ describe('MySubscriptions page', () => {
 
   it('renders the inner nav (page title dropped — the main nav already shows the active page)', () => {
     renderWithProviders(<MySubscriptions />);
-    expect(screen.getByRole('button', { name: /claim poap/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /filters/i })).toBeInTheDocument();
-  });
-
-  it('shows the claim-poap button in an outline state when no wallet is connected', () => {
-    renderWithProviders(<MySubscriptions />);
-    expect(screen.getByRole('button', { name: /claim poap/i })).toHaveClass('is-outline');
-  });
-
-  it('does nothing when the outline claim-poap button is clicked without a wallet (tooltip-only, no action)', async () => {
-    const dispatch = jest.fn();
-    renderWithProviders(<MySubscriptions />, { drawerDispatch: dispatch });
-
-    await userEvent.click(screen.getByRole('button', { name: /claim poap/i }));
-
-    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('loads and displays tokens from private state when wallet is connected', async () => {
@@ -63,21 +48,6 @@ describe('MySubscriptions page', () => {
     await waitFor(() => {
       expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
     });
-  });
-
-  it('dispatches CREATE_POAP when claim button is clicked with wallet', async () => {
-    const dispatch = jest.fn();
-    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
-
-    renderWithProviders(<MySubscriptions />, {
-      drawerValue: connectedDrawerValue(getState),
-      drawerDispatch: dispatch,
-    });
-
-    const createButton = screen.getByRole('button', { name: /claim poap/i });
-    await userEvent.click(createButton);
-
-    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_POAP' });
   });
 
   it('shows empty state when no POAPs are found', async () => {

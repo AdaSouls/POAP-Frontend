@@ -14,8 +14,11 @@ export type PoapCircuitId = keyof ImpureCircuits<unknown>;
 
 export const POAP_PRIVATE_STATE_KEY = 'poapPrivateState';
 export const POAP_ZK_CONFIG_BASE_PATH = '/midnight/poap';
-// Local devnet only — see docs/environment.md in ../POAP-Midnight and deploy.ts's envConfig.
-const NETWORK_ID = 'undeployed';
+// 'undeployed' (local devnet, default) or 'preprod' — must match both the wallet extension's own
+// configured network and REACT_APP_MIDNIGHT_CONTRACT_ADDRESS (a contract address only resolves on
+// the network it was actually deployed to). See docs/environment.md in ../POAP-Midnight and
+// deploy.ts's envConfig/TARGET_NETWORK for the backend-side counterpart of this same switch.
+const NETWORK_ID = process.env.REACT_APP_MIDNIGHT_NETWORK_ID || 'undeployed';
 const WALLET_POLL_INTERVAL_MS = 100;
 const WALLET_DISCOVERY_TIMEOUT_MS = 5_000;
 const WALLET_ENABLE_TIMEOUT_MS = 30_000;
@@ -51,8 +54,13 @@ function isLaceLockedError(error: unknown): boolean {
   return error instanceof Error && /locked/i.test(error.message);
 }
 
-// Lace registers itself under a freshly generated UUID key on `window.midnight` (CAIP-372-style
-// multi-wallet discovery), not a fixed `mnLace` key — so we scan every entry's shape rather than
+// Every Midnight-compatible wallet we've tried, by its dapp-connector-api `rdns` — used both to
+// filter window.midnight's discovery scan and to drive the wallet-connect popup's picker UI (see
+// discoverCompatibleWallets/getWalletDisplayName below and laceWallet.jsx).
+const COMPATIBLE_WALLET_RDNS = ['io.lace.wallet', 'com.midnight.1am'];
+
+// Wallets register themselves under a freshly generated UUID key on `window.midnight` (CAIP-372-style
+// multi-wallet discovery), not a fixed key — so we scan every entry's shape rather than
 // reading one hardcoded property. See @midnight-ntwrk/dapp-connector-api's InitialAPI type and the
 // official reference dapp's src/hooks/useWalletDetection.ts (github.com/midnightntwrk/midnight-wallet-dapp).
 function findInitialAPIs(): InitialAPI[] {
@@ -68,14 +76,43 @@ function findInitialAPIs(): InitialAPI[] {
   );
 }
 
-async function waitForLaceApi(): Promise<InitialAPI> {
+function scanCompatibleWallets(): InitialAPI[] {
+  return findInitialAPIs().filter((api) => COMPATIBLE_WALLET_RDNS.includes(api.rdns));
+}
+
+// Falls back to the connector's own self-reported `name` for anything not in this list, so a
+// third wallet showing up later still renders something reasonable without a frontend change.
+const WALLET_DISPLAY_NAMES: Record<string, string> = {
+  'io.lace.wallet': 'Lace',
+  'com.midnight.1am': '1am Wallet',
+};
+
+export function getWalletDisplayName(api: InitialAPI): string {
+  return WALLET_DISPLAY_NAMES[api.rdns] ?? api.name;
+}
+
+// Lets the wallet-connect popup offer a choice when more than one Midnight-compatible extension
+// is installed, instead of always silently connecting to whichever happened to be first in
+// COMPATIBLE_WALLET_RDNS (the old waitForLaceApi() behavior). Extensions inject themselves into
+// window.midnight essentially synchronously on page load, so this doesn't need the full
+// WALLET_DISCOVERY_TIMEOUT_MS in the common case: once at least one wallet has been seen, it only
+// waits a short settle window for a second one to show up before returning, falling back to the
+// full timeout only when nothing appears at all.
+const WALLET_DISCOVERY_SETTLE_MS = 300;
+
+export async function discoverCompatibleWallets(): Promise<InitialAPI[]> {
   const started = Date.now();
+  let firstFoundAt: number | null = null;
+  let found: InitialAPI[] = [];
   while (Date.now() - started < WALLET_DISCOVERY_TIMEOUT_MS) {
-    const lace = findInitialAPIs().find((api) => api.rdns === 'io.lace.wallet');
-    if (lace) return lace;
+    found = scanCompatibleWallets();
+    if (found.length > 0) {
+      if (firstFoundAt === null) firstFoundAt = Date.now();
+      if (Date.now() - firstFoundAt >= WALLET_DISCOVERY_SETTLE_MS) break;
+    }
     await new Promise((resolve) => setTimeout(resolve, WALLET_POLL_INTERVAL_MS));
   }
-  throw new LaceNotFoundError();
+  return found;
 }
 
 export type WalletConnection = {
@@ -83,27 +120,38 @@ export type WalletConnection = {
   shieldedAddress: { shieldedAddress: string; shieldedCoinPublicKey: string; shieldedEncryptionPublicKey: string };
 };
 
-export async function connectToLace(): Promise<WalletConnection> {
+// Connects to a specific wallet the user already picked (from discoverCompatibleWallets()'s
+// results) rather than auto-selecting one — see laceWallet.jsx's wallet-picker UI. The error
+// classes below predate multi-wallet support and are named after Lace, but the failure modes
+// they represent (connector rejects the authorization request, wallet is locked) are generic to
+// any dapp-connector-api-compliant wallet, so they're reused as-is for 1am too.
+export async function connectToWallet(api: InitialAPI): Promise<WalletConnection> {
   // midnight-js-contracts reads this global on every circuit call (createUnprovenCallTx etc.) —
   // must be set before any wallet/contract operation, not just before connecting.
   setNetworkId(NETWORK_ID);
-  const api = await waitForLaceApi();
+  console.log('[connectToWallet] connecting to', api.name, api.rdns);
 
   let connectedApi: ConnectedAPI;
   try {
+    console.log('[connectToWallet] calling api.connect()…');
     const connectPromise = api.connect(NETWORK_ID);
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('timed out waiting for wallet authorization')), WALLET_ENABLE_TIMEOUT_MS),
     );
     connectedApi = await Promise.race([connectPromise, timeout]);
+    console.log('[connectToWallet] api.connect() resolved');
   } catch (error) {
+    console.log('[connectToWallet] api.connect() failed:', error);
     throw new LaceNotAuthorizedError();
   }
 
   let shieldedAddress: WalletConnection['shieldedAddress'];
   try {
+    console.log('[connectToWallet] calling getShieldedAddresses()…');
     shieldedAddress = await connectedApi.getShieldedAddresses();
+    console.log('[connectToWallet] getShieldedAddresses() resolved:', shieldedAddress);
   } catch (error) {
+    console.log('[connectToWallet] getShieldedAddresses() failed:', error);
     if (isLaceLockedError(error)) throw new LaceLockedError();
     throw error;
   }
@@ -157,7 +205,9 @@ export async function buildProviders(connection: WalletConnection) {
     fetch.bind(window),
   );
 
+  console.log('[buildProviders] calling getConfiguration()…');
   const config = await connectedApi.getConfiguration();
+  console.log('[buildProviders] getConfiguration() resolved:', config);
 
   const rawPrivateStateProvider = levelPrivateStateProvider<{ [POAP_PRIVATE_STATE_KEY]: PoapPrivateState }>({
     // Local dev only: private state is encrypted at rest and now requires a password. There's no

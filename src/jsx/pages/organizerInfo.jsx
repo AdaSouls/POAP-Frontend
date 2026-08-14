@@ -2,8 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Calendar, PlusCircle, Check } from "lucide-react";
 import Layout from "../layout/layout";
-import { useDrawerDispatch } from "../contexts/drawer/drawer.provider";
-import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 
 const FEATURES = [
   {
@@ -24,18 +22,6 @@ const FEATURES = [
 ];
 
 const OrganizerInfo = () => {
-  // registerIssuer(pk) is admin-only on-chain (see createIssuer.jsx) — there's no self-service
-  // path, so the CTA here either sends an already-registered organizer/admin on to their events,
-  // or opens the "request access" flow (createIssuer.jsx's own contact-the-admin message) for
-  // everyone else. That drawer view previously had no button anywhere that actually opened it.
-  const { isAdmin, isIssuer } = useUserRoles();
-  const dispatch = useDrawerDispatch();
-  const isRegistered = isAdmin || isIssuer;
-
-  const requestAccess = () => {
-    dispatch({ type: "CREATE_ISSUER" });
-  };
-
   return (
     <Layout>
       <div className="role-info-page role-organizer">
@@ -47,15 +33,9 @@ const OrganizerInfo = () => {
               As an organizer, you publish events on Midnight and control who can claim a POAP for
               them — including push-minting directly to a wallet that hasn't claimed yet.
             </p>
-            {isRegistered ? (
-              <Link to="/my-events" className="btn btn-role-cta">
-                Go to My Events
-              </Link>
-            ) : (
-              <button type="button" className="btn btn-role-cta" onClick={requestAccess}>
-                Request organizer access
-              </button>
-            )}
+            <Link to="/my-events" className="btn btn-role-cta">
+              Go to My Events
+            </Link>
           </div>
           <div className="col-md-6">
             <div className="role-hero-visual">

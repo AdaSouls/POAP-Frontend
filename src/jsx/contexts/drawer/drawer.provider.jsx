@@ -255,7 +255,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
-        open: true
+        open: true,
+        claimEvent: action.payload
       };
     case 'CREATE_EVENT':
       return {

@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event';
 import PoapCard from '../../jsx/components/poapCard';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { getEventVisibility } from '../../midnight/collection-share';
+import { getEvent } from '../../midnight/indexer.service';
+
+jest.mock('../../midnight/indexer.service');
 
 describe('PoapCard Component', () => {
   const mockPoap = {
@@ -12,6 +15,10 @@ describe('PoapCard Component', () => {
     isSoulbound: false,
     attendedEventIds: ['bb'.repeat(32), 'cc'.repeat(32)],
   };
+
+  beforeEach(() => {
+    getEvent.mockReset().mockResolvedValue(null);
+  });
 
   it('renders the token id', () => {
     renderWithProviders(<PoapCard poap={mockPoap} />);
@@ -129,6 +136,37 @@ describe('PoapCard Component', () => {
       const disconnectedValue = { ...drawerValue, midnight: { ...drawerValue.midnight, provider: null } };
       renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue: disconnectedValue });
       expect(screen.getByText(/copy share link/i)).toBeDisabled();
+    });
+  });
+
+  describe('origin event metadata', () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('does not call getEvent when there are no attended events', () => {
+      renderWithProviders(<PoapCard poap={{ ...mockPoap, attendedEventIds: [] }} />);
+      expect(getEvent).not.toHaveBeenCalled();
+    });
+
+    it('looks up the first attended event', () => {
+      renderWithProviders(<PoapCard poap={mockPoap} />);
+      expect(getEvent).toHaveBeenCalledWith(mockPoap.attendedEventIds[0]);
+    });
+
+    it('shows a "First event" line and thumbnail once the origin event metadata resolves', async () => {
+      getEvent.mockResolvedValue({ metadataURI: 'https://example.com/meta.json' });
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ name: 'Genesis Meetup', image: 'https://example.com/img.png' }),
+      });
+
+      renderWithProviders(<PoapCard poap={mockPoap} />);
+
+      expect(await screen.findByText(/first event:/i)).toBeInTheDocument();
+      expect(screen.getByText('Genesis Meetup')).toBeInTheDocument();
     });
   });
 });

@@ -1,0 +1,17 @@
+{
+  "name": "adasouls-poap-ipfs-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local proxy that holds the Pinata secret server-side and pins event metadata (image + JSON) to IPFS on behalf of the frontend, which never sees the secret. Local-only for now — see the createEvent metadata plan for production hosting notes.",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^2.0.0"
+  }
+}

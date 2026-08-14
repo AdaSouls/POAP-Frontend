@@ -12,6 +12,7 @@ import { useDrawerDispatch } from "./contexts/drawer/drawer.provider";
 import ClaimMint from "./pages/claim-mint";
 import { getAllEvents } from "../midnight/indexer.service";
 import MyEvents from "./pages/myEvents";
+import ExploreEvents from "./pages/exploreEvents";
 import MySubscriptions from "./pages/mySubscriptions";
 import MyPendingApprovals from "./pages/myPendingApprovals";
 import Overview from "./pages/overview";
@@ -52,6 +53,7 @@ const Router = () => {
           <Route path="/overview" element={<Overview />} />
           <Route path="/search" element={<Search />} />
           <Route path="/my-events" element={<MyEvents />} />
+          <Route path="/explore-events" element={<ExploreEvents />} />
           <Route path="/my-subscriptions" element={<MySubscriptions />} />
           <Route path="/my-pending-approvals" element={<MyPendingApprovals />} />
           <Route path="/organizer" element={<OrganizerInfo />} />

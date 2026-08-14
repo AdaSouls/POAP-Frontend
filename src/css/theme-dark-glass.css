@@ -168,19 +168,20 @@ body {
 
 .card-media-row {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: 16px;
 }
 
 /* Square, not circular, radius matches .card-outline-only's own 16px so the thumb reads as "cut
-   from the same sheet" as the card itself, not a separate shape floating on top. Sized by
-   align-items:stretch against the content column's natural height (title + badges + list +
-   button) via aspect-ratio:1 — however tall that column ends up, the thumb matches, occupying
-   nearly the entire card. A background + centered icon (not object-fit:cover on the bare image)
-   because these are small line-art SVGs, not photos — stretching one edge-to-edge would crop the
-   glyph instead of just filling space around it. */
+   from the same sheet" as the card itself, not a separate shape floating on top. Fixed px size
+   (not aspect-ratio + align-items:stretch, tried first) — explicit width/height in px is the only
+   way to guarantee every card's thumb is identically sized regardless of its content column's
+   natural height (title/badge/list line-wrapping differs slightly card to card) or, now that real
+   photos can appear here, regardless of that photo's own dimensions. The photo/icon inside always
+   adapts to this fixed box (object-fit), never the other way around. */
 .card-media-thumb-wrap {
-  aspect-ratio: 1 / 1;
+  width: 140px;
+  height: 140px;
   border-radius: 16px;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
@@ -195,6 +196,22 @@ body {
   width: 55%;
   height: 55%;
   object-fit: contain;
+}
+
+/* eventCard.jsx's real-photo state (metadataURI-driven, not the SVG placeholder above) — fills
+   .card-media-thumb-wrap/.card-media-thumb-small-wrap completely (their fixed size never changes
+   based on which state is showing) and crops via cover so any source aspect ratio still reads as a
+   clean fill, not letterboxed like the small centered icon above. */
+.card-media-thumb-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Loading / no metadata image / failed load — explicitly never falls back to a stale or generic
+   placeholder image, just this icon, sized like .card-media-thumb-icon's small-glyph treatment. */
+.card-media-thumb-broken-icon {
+  color: var(--text-on-glass-muted);
 }
 
 .card-media-content {
@@ -466,6 +483,21 @@ h1, h2, h3, h4, h5, h6,
     inset 0 -2px 3px 0 rgba(139, 0, 0, 0.6);
 }
 
+/* Browser's default focus ring (style.css's global button:focus rule) shows as a white ring
+   outside the red hover border on click — suppressed here since the hover/active border+shadow
+   above already gives clear visual feedback without it. */
+.card-expand-close-btn:focus {
+  outline: none;
+}
+
+/* eventCard.jsx's expanded right column now hosts this button inline, as the last item of its own
+   small header row (mint/subscribe action, centered "POAPs" title, close button) instead of
+   floating over the whole card — poapCard.jsx keeps the plain absolutely-positioned version above,
+   this modifier only cancels the positioning when both classes are present. */
+.card-expand-close-btn.card-expand-close-btn-inline {
+  position: static;
+}
+
 /* All badges (page-header counters, card status/attribute badges — Active/Expired, Soulbound,
    Verified, Burned, Declared, "Pending your claim", etc.) are full pill shape site-wide. */
 .badge {
@@ -523,6 +555,29 @@ h1, h2, h3, h4, h5, h6,
   color: var(--text-on-solid) !important;
   border-color: var(--accent-blue);
   filter: none;
+}
+
+/* Expanded event card's Mint POAP / Subscribe action, right column — was raw Bootstrap
+   .btn-outline-secondary with no dark-mode override, so the text was effectively invisible
+   against this app's dark surfaces. Same glass fill/hover language as .btn-white, full-rounded
+   pill shape (matches this codebase's other pill elements, e.g. .badge-count-outline). */
+.btn-card-detail-action {
+  background: var(--glass-bg-hover);
+  color: var(--text-on-glass) !important;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 6px 16px;
+}
+
+.btn-card-detail-action:hover {
+  background: var(--accent-blue);
+  color: var(--text-on-solid) !important;
+  border-color: var(--accent-blue);
+  filter: none;
+}
+
+.btn-card-detail-action:disabled {
+  opacity: 0.5;
 }
 
 /* Drawer — singleton chrome, gets the real blur. drawer.jsx computes a `drawer-glass`/
@@ -608,6 +663,147 @@ h1, h2, h3, h4, h5, h6,
 .drawer.drawer-modal.open {
   opacity: 1;
   visibility: visible;
+}
+
+/* createEvent's image-crop step wants a bit more room than the default 480px for a comfortable
+   crop tool — modest bump, not a 2-column-width jump (tried 880px for a 2-column layout, reverted
+   per feedback: single column reads better here). Scoped modifier so the other create/claim
+   modals (createPoap, createIssuer, createMint, showMidnightWallet) keep their narrower width
+   unchanged. */
+.drawer.drawer-modal.drawer-modal-wide {
+  max-width: 560px;
+}
+
+/* Translucent/glass inputs for this form specifically, by explicit request — everywhere else's
+   .form-control stays the deliberate solid --solid-bg treatment (see the "trust-critical" comment
+   above the base .form-control rule). Same pattern as .filter-popover .form-control below, just
+   scoped to this modal instead. */
+.drawer-modal-wide .form-control,
+.drawer-modal-wide .form-select {
+  background: transparent;
+  border-color: var(--glass-border);
+  color: var(--text-on-glass);
+}
+
+.drawer-modal-wide .form-control:hover,
+.drawer-modal-wide .form-select:hover {
+  background: transparent;
+  border-color: var(--glass-border);
+}
+
+.drawer-modal-wide .form-control:focus,
+.drawer-modal-wide .form-control:active,
+.drawer-modal-wide .form-select:focus,
+.drawer-modal-wide .form-select:active {
+  background: transparent;
+  border-color: var(--palette-5);
+  box-shadow: 0 0 0 0.2rem rgba(155, 168, 171, 0.25) !important;
+}
+
+.drawer-modal-wide .form-control::placeholder {
+  color: var(--text-on-glass-muted);
+}
+
+/* Native number-input spinner never looked right against this form's transparent/glass inputs —
+   inverting it (tried first) still rendered a visible dark swatch behind gray arrows. Removed
+   entirely instead (Maximum Supply is small enough to just type). */
+.drawer-modal-wide input[type="number"]::-webkit-inner-spin-button,
+.drawer-modal-wide input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.drawer-modal-wide input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Date-picker calendar icon: default is a dark glyph on transparent, invisible on our dark inputs
+   — filter:invert(1) is the standard trick to flip it light (no way to restyle the actual glyph
+   directly, it's UA shadow-DOM). */
+.drawer-modal-wide input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+/* Image dropzone (EventImageField.jsx) — dashed, drag-and-drop target. Mutually exclusive with
+   .event-image-crop-container below (only one renders at a time — no image yet vs. image picked),
+   not stacked/side-by-side. .is-dragover is toggled on dragenter/dragover, cleared on
+   dragleave/drop. */
+.event-image-dropzone {
+  border: 1px dashed var(--glass-border);
+  border-radius: 14px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease-in-out, background 0.15s ease-in-out;
+}
+
+/* Matches .event-image-crop-container's own height exactly, so the layout doesn't jump size when
+   swapping between "no image" and "image picked" states. */
+.event-image-dropzone-lg {
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.event-image-dropzone:hover {
+  border-color: var(--text-on-glass-muted);
+}
+
+.event-image-dropzone.is-dragover {
+  border-color: var(--accent-blue);
+  background: var(--glass-bg-light);
+}
+
+.event-image-dropzone-icon {
+  color: var(--text-on-glass-muted);
+  margin-bottom: 8px;
+}
+
+.event-image-crop-container {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* Overlaid on the crop tool's top-right corner — glass button (blurred, translucent, bordered) so
+   it reads against any photo behind it instead of disappearing into dark ones. box-sizing:border-
+   box + padding:0 + line-height:1 are all needed here specifically because this is a bare <button>
+   (not react-bootstrap's Button/.btn) — the browser's own default button padding is asymmetric
+   (more horizontal than vertical), which combined with content-box sizing was inflating the width
+   more than the height and rendering an oval instead of a circle. */
+.event-image-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  color: var(--text-on-glass);
+  cursor: pointer;
+  transition: background 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.event-image-remove-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--text-on-glass-muted);
 }
 
 /* Flex chain so .drawer-modal-inner actually fills the outer frame's height (including the
@@ -718,15 +914,17 @@ h1, h2, h3, h4, h5, h6,
   padding: 20px;
 }
 
-/* Wallet option row (laceWallet.jsx's "Lace / Midnight Network Wallet" card) — no fill at rest
-   (not even a lighter tint), no shadow/bevel — just the same flat border as the popup itself
-   (var(--glass-border), matching .drawer.drawer-modal's own border exactly, not a bespoke tone).
-   backdrop-filter is reset to none too: .card-button inherits .card's own blur(8px) elsewhere in
-   the app, and leaving that on here stacks a second blur pass on top of .drawer-modal-inner's
-   already-blurred-and-darkened background — two translucent blurred layers compounding read
-   visibly darker than either alone, which is why this block kept looking darker than the inner
-   layer around it even with no background-color of its own. Not interactive — Lace is the only
-   wallet option, so there's nothing to select here, just a static info row. */
+/* Wallet option row (laceWallet.jsx's "Lace"/"1am Wallet" cards, and the single "connected" card
+   once a wallet is hooked up) — no fill at rest (not even a lighter tint), no shadow/bevel — just
+   the same flat border as the popup itself (var(--glass-border), matching .drawer.drawer-modal's
+   own border exactly, not a bespoke tone). backdrop-filter is reset to none too: .card-button
+   inherits .card's own blur(8px) elsewhere in the app, and leaving that on here stacks a second
+   blur pass on top of .drawer-modal-inner's already-blurred-and-darkened background — two
+   translucent blurred layers compounding read visibly darker than either alone, which is why this
+   block kept looking darker than the inner layer around it even with no background-color of its
+   own. The "connected" state (a plain div, not a button) stays a static info row; the wallet-
+   picker cards (.wallet-picker-option below) are real <button>s and get their own interactive
+   styling further down. */
 .drawer-modal-inner .card-button {
   background: transparent;
   backdrop-filter: none;
@@ -746,12 +944,86 @@ h1, h2, h3, h4, h5, h6,
 }
 
 /* style.css's base .card-button .top-area sets cursor:pointer for the qash template's original
-   selectable-card use case — not applicable here, Lace is the only wallet option and the card is
-   a static info row (see the JSX for why it's no longer role="button"). Scoped to
-   .drawer-modal-inner only, not the bare .card-button .top-area selector, so any other
-   (Cardano-native) page still relying on the original clickable-card behavior is untouched. */
-.drawer-modal-inner .card-button .top-area {
+   selectable-card use case — not applicable to the static "connected" info row (a plain div, no
+   click handler), so it's reset back to default there. Excluded for .wallet-picker-option, which
+   IS a real clickable <button> and wants the pointer cursor. Scoped to .drawer-modal-inner only,
+   not the bare .card-button .top-area selector, so any other (Cardano-native) page still relying
+   on the original clickable-card behavior is untouched. */
+.drawer-modal-inner .card-button:not(.wallet-picker-option) .top-area {
   cursor: default;
+}
+
+/* Each installed wallet as its own selectable card — laceWallet.jsx renders one per
+   discoverCompatibleWallets() result. Native <button> reset to plain-block first (browser default
+   button chrome would otherwise fight the .card-button box styling above), then the same flat
+   border language as the rest of this popup at rest, brightening to --accent-blue once selected
+   (click, not hover, drives the "this is what Connect will use" state — hover gets a lighter,
+   separate cue). */
+.wallet-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wallet-picker-option {
+  /* display intentionally left alone — .card's own display:flex/flex-direction:column (style.css)
+     is what stacks .top-area above .bottom-area, and still applies fine to a <button>. Only the
+     native button chrome (border/background/padding/font/appearance) needs resetting here. */
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.wallet-picker-option:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.wallet-picker-option.is-selected {
+  border-color: var(--accent-blue);
+}
+
+/* style.css's global `button:focus { outline: 1px dotted; outline: 5px auto -webkit-focus-ring-
+   color; }` was stacking its own dark ring on top of this card's own border on every click (a
+   button gains :focus on click, not just via keyboard) — same category of clash
+   .card-expand-close-btn:focus solves above. Selecting a wallet already gives clear visual
+   feedback via .is-selected's border-color, so plain :focus needs no ring of its own; a real
+   keyboard-only indicator (:focus-visible) is kept so Tab navigation still shows something. */
+.wallet-picker-option:focus {
+  outline: none;
+}
+
+.wallet-picker-option:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.wallet-picker-radio {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.wallet-picker-option.is-selected .wallet-picker-radio {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue);
+  box-shadow: inset 0 0 0 3px var(--solid-bg);
+}
+
+.wallet-picker-detecting {
+  padding: 24px 0;
+  color: var(--text-on-glass-muted);
+  font-size: 14px;
 }
 
 /* Lighter border while midnight.connect() is in flight — same rgba(255,255,255,0.4) tone used

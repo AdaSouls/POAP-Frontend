@@ -11,6 +11,7 @@ import {
   errorFunction,
   loadingFunction,
 } from "../../toasts/sweetAlerts";
+import { useEventMetadata } from "../../hooks/useEventMetadata";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -25,6 +26,7 @@ const truncateHex = (hex) => {
 export default function MintPoap() {
   const { mintEvent, midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const { metadata } = useEventMetadata(mintEvent?.metadataURI);
 
   const [recipientPkHex, setRecipientPkHex] = useState("");
   const [loading, setLoading] = useState(false);
@@ -84,9 +86,18 @@ export default function MintPoap() {
             <div className="col-12">
               <div className="drawer-modal-preview-card">
                 <div className="d-flex align-items-center mb-3">
-                  <img className="mr-3 rounded-circle" src={eventNormal} width="48" height="48" alt="" />
+                  <img
+                    className="mr-3 rounded-circle"
+                    src={metadata?.imageUrl || eventNormal}
+                    width="48"
+                    height="48"
+                    alt=""
+                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = eventNormal; }}
+                  />
                   <div>
-                    <h5 className="mb-1" style={{ fontSize: "16px" }}>Event {truncateHex(mintEvent.eventId)}</h5>
+                    <h5 className="mb-1" style={{ fontSize: "16px" }}>
+                      {metadata?.name || `Event ${truncateHex(mintEvent.eventId)}`}
+                    </h5>
                   </div>
                 </div>
                 <ul className="list-unstyled mb-0 small">

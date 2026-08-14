@@ -25,7 +25,7 @@ repo) — no de la documentación de producto, para asegurar que los campos sean
 | `tokenFirstEvent[tokenId]` | ledger público (Map) | Público | — | el primer evento de cada token es público para siempre |
 | `tokenIssuer[tokenId]` | ledger público (Map) | Público | `poapCard.jsx` (issuerPkHex) | — |
 | `issuerHolderToken[hash(pk,issuerId)]` | ledger público (Map, índice) | Público (la key es un hash, no el pk crudo) | — | permite push-mint y reconciliación sin tocar el estado privado del holder |
-| `events[eventId]` (maxSupply, minted, expiration, organizer, isActive, isPublicMint) | ledger público (Map) | Público | `poapEvent.jsx` | listado de eventos, contador de minted/maxSupply |
+| `events[eventId]` (maxSupply, minted, expiration, organizer, isActive, isPublicMint, metadataURI) | ledger público (Map) | Público | `poapEvent.jsx`, `eventCard.jsx` | listado de eventos, contador de minted/maxSupply; metadataURI es un puntero a JSON off-chain (name/description/image), no el JSON en sí |
 | `issuers[issuerId]` (organizerPk, isActive) | ledger público (Map) | Público | `createIssuer.jsx` (indirecto) | — |
 | `burnedTokens[tokenId]` | ledger público (Map) | Público | — | — |
 | `isPaused`, `adminPk` | ledger público | Público | — | control admin |

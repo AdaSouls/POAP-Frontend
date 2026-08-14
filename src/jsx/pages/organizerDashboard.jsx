@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import Chart from "react-apexcharts";
+import { UserPlus } from "lucide-react";
 import Layout from "../layout/layout";
-import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import { getAllEvents } from "../../midnight/indexer.service";
 import { getEventStatus } from "../../utils/poapHelpers";
@@ -35,10 +36,15 @@ const OrganizerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [allEvents, setAllEvents] = useState([]);
   const { midnight: { provider } } = useDrawer();
+  const dispatch = useDrawerDispatch();
   const { isAdmin, isIssuer } = useUserRoles();
   const pollRef = useRef(null);
 
   const canView = isAdmin || isIssuer;
+
+  const openRegisterIssuer = () => {
+    dispatch({ type: "CREATE_ISSUER" });
+  };
 
   const loadEvents = useCallback(async () => {
     try {
@@ -122,7 +128,15 @@ const OrganizerDashboard = () => {
                 </span>
               )}
             </div>
-            <div className="inner-header-row-right" />
+            <div className="inner-header-row-right">
+              {isAdmin && (
+                <button className="inner-header-action-btn" onClick={openRegisterIssuer}>
+                  <span className="inner-header-action-btn-inner">
+                    <UserPlus size={14} /> Register Issuer
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

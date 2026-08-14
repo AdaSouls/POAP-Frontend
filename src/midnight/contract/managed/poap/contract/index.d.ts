@@ -5,7 +5,9 @@ export type EventRecord = { maxSupply: bigint;
                             expiration: bigint;
                             organizer: Uint8Array;
                             isActive: boolean;
-                            isPublicMint: boolean
+                            isPublicMint: boolean;
+                            metadataURI: string;
+                            privateMetadataCommit: Uint8Array
                           };
 
 export type IssuerRecord = { organizerPk: Uint8Array; isActive: boolean };
@@ -41,7 +43,9 @@ export type ImpureCircuits<PS> = {
               eventId_0: Uint8Array,
               maxSupply_0: bigint,
               expiration_0: bigint,
-              isPublicMint_0: boolean): __compactRuntime.CircuitResults<PS, []>;
+              isPublicMint_0: boolean,
+              metadataURI_0: string,
+              privateMetadataCommit_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   deactivateEvent(context: __compactRuntime.CircuitContext<PS>,
                   eventId_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   claimOrUpdate(context: __compactRuntime.CircuitContext<PS>,
@@ -52,6 +56,12 @@ export type ImpureCircuits<PS> = {
          recipientPk_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   burn(context: __compactRuntime.CircuitContext<PS>, tokenId_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   getCallerPk(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  getHolderPk(context: __compactRuntime.CircuitContext<PS>,
+              issuerId_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  revealPrivateMetadata(context: __compactRuntime.CircuitContext<PS>,
+                        eventId_0: Uint8Array,
+                        value_0: Uint8Array,
+                        rand_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -65,7 +75,9 @@ export type ProvableCircuits<PS> = {
               eventId_0: Uint8Array,
               maxSupply_0: bigint,
               expiration_0: bigint,
-              isPublicMint_0: boolean): __compactRuntime.CircuitResults<PS, []>;
+              isPublicMint_0: boolean,
+              metadataURI_0: string,
+              privateMetadataCommit_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   deactivateEvent(context: __compactRuntime.CircuitContext<PS>,
                   eventId_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   claimOrUpdate(context: __compactRuntime.CircuitContext<PS>,
@@ -75,9 +87,14 @@ export type ProvableCircuits<PS> = {
          eventId_0: Uint8Array,
          recipientPk_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   burn(context: __compactRuntime.CircuitContext<PS>, tokenId_0: bigint): __compactRuntime.CircuitResults<PS, []>;
+  revealPrivateMetadata(context: __compactRuntime.CircuitContext<PS>,
+                        eventId_0: Uint8Array,
+                        value_0: Uint8Array,
+                        rand_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type PureCircuits = {
+  computePrivateMetadataCommit(value_0: Uint8Array, rand_0: Uint8Array): Uint8Array;
 }
 
 export type Circuits<PS> = {
@@ -91,7 +108,9 @@ export type Circuits<PS> = {
               eventId_0: Uint8Array,
               maxSupply_0: bigint,
               expiration_0: bigint,
-              isPublicMint_0: boolean): __compactRuntime.CircuitResults<PS, []>;
+              isPublicMint_0: boolean,
+              metadataURI_0: string,
+              privateMetadataCommit_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   deactivateEvent(context: __compactRuntime.CircuitContext<PS>,
                   eventId_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   claimOrUpdate(context: __compactRuntime.CircuitContext<PS>,
@@ -102,6 +121,15 @@ export type Circuits<PS> = {
          recipientPk_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   burn(context: __compactRuntime.CircuitContext<PS>, tokenId_0: bigint): __compactRuntime.CircuitResults<PS, []>;
   getCallerPk(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  getHolderPk(context: __compactRuntime.CircuitContext<PS>,
+              issuerId_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  computePrivateMetadataCommit(context: __compactRuntime.CircuitContext<PS>,
+                               value_0: Uint8Array,
+                               rand_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  revealPrivateMetadata(context: __compactRuntime.CircuitContext<PS>,
+                        eventId_0: Uint8Array,
+                        value_0: Uint8Array,
+                        rand_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
 }
 
 export type Ledger = {
@@ -140,6 +168,13 @@ export type Ledger = {
     member(key_0: Uint8Array): boolean;
     lookup(key_0: Uint8Array): EventRecord;
     [Symbol.iterator](): Iterator<[Uint8Array, EventRecord]>
+  };
+  eventRevealedMetadata: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): Uint8Array;
+    [Symbol.iterator](): Iterator<[Uint8Array, Uint8Array]>
   };
   issuers: {
     isEmpty(): boolean;

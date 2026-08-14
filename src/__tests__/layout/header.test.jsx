@@ -10,9 +10,10 @@ describe('Header nav', () => {
     window.localStorage.clear();
   });
 
-  it('defaults to the Subscriber role and shows both its nav links when nothing is stored', () => {
+  it('defaults to the Subscriber role and shows all its nav links when nothing is stored', () => {
     renderWithProviders(<Header />);
     expect(screen.getByRole('button', { name: /subscriber/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /explore events/i })).toHaveAttribute('href', '/explore-events');
     expect(screen.getByRole('link', { name: /my subscriptions/i })).toHaveAttribute('href', '/my-subscriptions');
     expect(screen.getByRole('link', { name: /my pending approvals/i })).toHaveAttribute('href', '/my-pending-approvals');
   });

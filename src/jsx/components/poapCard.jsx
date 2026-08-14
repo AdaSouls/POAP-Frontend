@@ -5,6 +5,8 @@ import { useDrawer } from "../contexts/drawer/drawer.provider";
 import poapNormal from "../../images/svg/poap-normal.svg";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { getLastClaimTx } from "../../midnight/attendance-proof";
+import { getEvent } from "../../midnight/indexer.service";
+import { useEventMetadata } from "../hooks/useEventMetadata";
 import {
   getEventVisibility,
   setEventVisibility,
@@ -45,6 +47,27 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     return map;
   });
   const [shareCopied, setShareCopied] = useState(false);
+  // Origin event lookup — poap objects are built from local private state only (see the
+  // file-level comment above) and carry no event/metadata fields at all, so the card's thumbnail
+  // has to be fetched separately from the indexer. Not gated on isExpanded (unlike eventCard.jsx's
+  // equivalent eventDetail fetch) because the collapsed grid tile needs the thumbnail too.
+  const [originEvent, setOriginEvent] = useState(null);
+  const firstEventId = poap.attendedEventIds?.[0];
+  useEffect(() => {
+    if (!firstEventId) return undefined;
+    let cancelled = false;
+    getEvent(firstEventId)
+      .then((detail) => {
+        if (!cancelled) setOriginEvent(detail);
+      })
+      .catch((error) => {
+        console.error("Error loading origin event:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [firstEventId]);
+  const { metadata } = useEventMetadata(originEvent?.metadataURI);
   // Text reflows (wrapping, line-count changes) as the card's width/height FLIP-animates, which
   // looks janky since framer-motion only interpolates the box, not text layout. So the text gets
   // its own short fade, sequenced (not overlapping) with the resize: fade out first, THEN trigger
@@ -172,7 +195,12 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
             // align-items:stretch against however tall the content column naturally is.
             <div className="d-flex align-items-stretch card-media-row">
               <motion.div layout className="card-media-thumb-wrap" style={textStyle}>
-                <img className="card-media-thumb-icon" src={poapNormal} alt="" />
+                <img
+                  className="card-media-thumb-icon"
+                  src={metadata?.imageUrl || poapNormal}
+                  alt=""
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = poapNormal; }}
+                />
               </motion.div>
               <div className="card-media-content" style={textStyle}>
                 <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
@@ -198,6 +226,13 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                       Issuer: <span className="text-white">{truncateHex(poap.issuerPkHex)}</span>
                     </span>
                   </li>
+                  {metadata?.name && (
+                    <li className="d-flex align-items-center mb-1">
+                      <span className="text-muted small">
+                        First event: <span className="text-white">{metadata.name}</span>
+                      </span>
+                    </li>
+                  )}
                   {poap.attendedEventIds?.slice(0, 2).map((eventId) => (
                     <li key={eventId} className="d-flex align-items-center mb-1">
                       <Calendar size={13} className="mr-2" style={{ width: "18px" }} />
@@ -227,7 +262,11 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
           ) : (
             <div className="d-flex justify-content-start align-items-center mb-2">
               <motion.div layout className="card-media-thumb-small-wrap mr-3" style={textStyle}>
-                <img src={poapNormal} alt="" />
+                <img
+                  src={metadata?.imageUrl || poapNormal}
+                  alt=""
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = poapNormal; }}
+                />
               </motion.div>
               <div className="poap-info flex-grow-1" style={textStyle}>
                 <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
@@ -255,6 +294,13 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
               <p className="m-0 mb-3 text-break small font-weight-semibold">
                 {poap.issuerPkHex || "N/A"}
               </p>
+
+              {metadata?.name && (
+                <>
+                  <p className="m-0 small text-muted mb-1">First Event</p>
+                  <p className="m-0 mb-3 small font-weight-semibold">{metadata.name}</p>
+                </>
+              )}
 
               {poap.isSoulbound && (
                 <small className="text-muted d-block mb-3">

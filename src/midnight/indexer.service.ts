@@ -2,10 +2,12 @@
 // the Midnight Indexer GraphQL/WS API and mirrors on-chain POAP state into its own Postgres DB.
 // See poap-midnight/indexer/src/api/routes/{events,tokens}.ts for the exact response shapes.
 //
-// NOTE: this API only has on-chain fields — no event name/description/image metadata, and no
-// POST /api/events (see the migration plan's "Known limitations"). Attendance history is
-// explicitly not indexed (GET /api/tokens/:id/attendance returns 404 by design) — that lives only
-// in each wallet's private state.
+// NOTE: events carry a metadataURI (pointer to off-chain JSON — name/description/image/…, e.g.
+// "ipfs://<CID>" — not stored on-chain itself); every token minted for an event shares its
+// event's metadataURI, joined in by the indexer. There is still no POST /api/events (see the
+// migration plan's "Known limitations"). Attendance history is explicitly not indexed
+// (GET /api/tokens/:id/attendance returns 404 by design) — that lives only in each wallet's
+// private state.
 
 const BASE_URL = process.env.REACT_APP_MIDNIGHT_INDEXER_API_URL || "http://localhost:3001";
 
@@ -16,6 +18,7 @@ export type IndexedEvent = {
   expiration: number;
   isActive: boolean;
   isPublicMint: boolean;
+  metadataURI: string;
   minted: number;
   createdBlock: number | null;
   createdTx: string | null;
@@ -34,6 +37,7 @@ export type IndexedToken = {
   mintedTx: string | null;
   burnedBlock: number | null;
   burnedTx: string | null;
+  metadataURI: string | null;
 };
 
 async function getJson<T>(path: string): Promise<T> {

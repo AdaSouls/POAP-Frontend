@@ -3,7 +3,6 @@ import { AnimatePresence } from "framer-motion";
 import { Plus, PlusCircle } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
-import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import EventCard from "../components/eventCard";
 import EventFilters from "../components/EventFilters";
 import Tooltip from "../components/Tooltip";
@@ -50,19 +49,15 @@ const MyEvents = () => {
   const [filters, setFilters] = useState({});
   const [expandedId, setExpandedId] = useState(null);
   const { midnight: { provider } } = useDrawer();
-  const { isAdmin, isIssuer } = useUserRoles();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
 
-  const canCreateEvent = isAdmin || isIssuer;
+  // createEvent has no on-chain access gate anymore — any connected wallet can create an event.
+  const canCreateEvent = Boolean(provider);
 
   const createEvent = () => {
     if (!canCreateEvent) return;
     dispatch({ type: "CREATE_EVENT" });
-  };
-
-  const requestAccess = () => {
-    dispatch({ type: "CREATE_ISSUER" });
   };
 
   const loadEvents = useCallback(async () => {
@@ -120,9 +115,7 @@ const MyEvents = () => {
                     <Plus size={14} /> Create Event
                   </span>
                 </button>
-              ) : !provider ? (
-                // Tooltip-wrapped only here — the button is fully usable once the wallet is
-                // connected and has organizer access, so there's nothing to explain in that case.
+              ) : (
                 <Tooltip label="Connect your wallet to create an event">
                   <button className="inner-header-action-btn is-outline is-inert">
                     <span className="inner-header-action-btn-inner">
@@ -130,15 +123,6 @@ const MyEvents = () => {
                     </span>
                   </button>
                 </Tooltip>
-              ) : (
-                // Connected but no organizer access — replaces "Create Event" (which they can't
-                // use yet) with the same request-access entry point organizerInfo.jsx offers,
-                // instead of just a locked/tooltipped button explaining why.
-                <button className="inner-header-action-btn" onClick={requestAccess}>
-                  <span className="inner-header-action-btn-inner">
-                    Request organizer access
-                  </span>
-                </button>
               )}
               <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
             </div>

@@ -1,17 +1,18 @@
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import type { ContractAddress } from '@midnight-ntwrk/ledger-v8';
 import { findDeployedContract, type FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
+import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { combineLatest, firstValueFrom, from, map, type Observable } from 'rxjs';
 import { Contract, ledger as ledgerOf } from './contract/managed/poap/contract/index.js';
 import type { Ledger } from './contract/managed/poap/contract/index.js';
 import {
   POAP_PRIVATE_STATE_KEY,
   buildProviders,
-  connectToLace,
+  connectToWallet,
   createWitnesses,
   getOrCreatePrivateState,
 } from './providers';
-import type { PoapPrivateState, TokenRecord } from './witnesses';
+import { deriveCallerPk, type PoapPrivateState, type TokenRecord } from './witnesses';
 
 export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
 
@@ -33,27 +34,43 @@ export class PoapContractService {
     private readonly providers: PoapProviders,
     private readonly privateState: PoapPrivateState,
     readonly contractAddress: ContractAddress,
+    // Cheap, wallet-unique identifier available immediately on connect (no extra tx) — used to
+    // scope useMidnight.js's caller-pk cache per wallet, so switching wallets in the same browser
+    // profile can't serve a stale pk derived from a different wallet.
+    readonly walletCoinPublicKey: string,
   ) {}
 
-  static async connect(contractAddress: ContractAddress): Promise<PoapContractService> {
-    const connection = await connectToLace();
+  static async connect(contractAddress: ContractAddress, wallet: InitialAPI): Promise<PoapContractService> {
+    console.log('[PoapContractService.connect] connectToWallet()…');
+    const connection = await connectToWallet(wallet);
+    console.log('[PoapContractService.connect] connectToWallet() resolved');
     const providers = await buildProviders(connection);
+    console.log('[PoapContractService.connect] buildProviders() resolved');
     // Required before any private-state get/set — scopes storage to this contract address
     // (namespace isolation between different contracts sharing the same browser profile).
     providers.privateStateProvider.setContractAddress(contractAddress);
     const { privateState, isNew } = await getOrCreatePrivateState(providers);
+    console.log('[PoapContractService.connect] getOrCreatePrivateState() resolved, isNew:', isNew);
 
     // findDeployedContract's initialPrivateState must only be passed the first time (it requires
     // there be NO pre-existing private state at this key); on subsequent connects it loads the
     // existing state from the provider itself, so we omit it.
+    console.log('[PoapContractService.connect] findDeployedContract()…');
     const deployedContract = await findDeployedContract(providers, {
       compiledContract: compiledPoapContract,
       contractAddress,
       privateStateId: POAP_PRIVATE_STATE_KEY,
       ...(isNew ? { initialPrivateState: privateState } : {}),
     });
+    console.log('[PoapContractService.connect] findDeployedContract() resolved');
 
-    return new PoapContractService(deployedContract, providers, privateState, contractAddress);
+    return new PoapContractService(
+      deployedContract,
+      providers,
+      privateState,
+      contractAddress,
+      connection.shieldedAddress.shieldedCoinPublicKey,
+    );
   }
 
   /** Reactive stream combining public ledger state with this browser's private token state. */
@@ -71,20 +88,38 @@ export class PoapContractService {
     return firstValueFrom(this.state$);
   }
 
-  // getCallerPk is an exported circuit (confirmed against poap.compact directly, 2026-08-11) —
-  // call it rather than re-deriving the pk client-side, so this can't drift if the contract's
-  // domain separator ever changes.
+  // getCallerPk *is* an exported circuit, but the compiler leaves it out of provableCircuits
+  // (it discloses nothing, so nothing to prove) — midnight-js-contracts' callTx is built strictly
+  // from provableCircuits, so `callTx.getCallerPk` doesn't exist (confirmed 2026-08-14: "is not a
+  // function" at runtime, and via midnight-js-contracts' own source). Derived locally instead —
+  // see deriveCallerPk's comment in witnesses.ts for why this is safe against drift.
   async getCallerPkHex(): Promise<string> {
-    const { private: callResult } = await this.deployedContract.callTx.getCallerPk();
-    return Buffer.from(callResult.result).toString('hex');
+    return Buffer.from(deriveCallerPk(this.privateState.secretKey)).toString('hex');
   }
 
   async claimOrUpdate(eventId: Uint8Array, isSoulbound: boolean) {
     return this.deployedContract.callTx.claimOrUpdate(eventId, isSoulbound);
   }
 
-  async createEvent(eventId: Uint8Array, maxSupply: bigint, expiration: bigint, isPublicMint: boolean) {
-    return this.deployedContract.callTx.createEvent(eventId, maxSupply, expiration, isPublicMint);
+  // privateMetadataCommit: Bytes<32> — commit/reveal hook for private event metadata (see
+  // POAP-Midnight's revealPrivateMetadata circuit). No frontend UI collects this yet, so callers
+  // pass an all-zero commit (matches deploy.ts's demo event), meaning "no private part".
+  async createEvent(
+    eventId: Uint8Array,
+    maxSupply: bigint,
+    expiration: bigint,
+    isPublicMint: boolean,
+    metadataURI: string,
+    privateMetadataCommit: Uint8Array = new Uint8Array(32),
+  ) {
+    return this.deployedContract.callTx.createEvent(
+      eventId,
+      maxSupply,
+      expiration,
+      isPublicMint,
+      metadataURI,
+      privateMetadataCommit,
+    );
   }
 
   async deactivateEvent(eventId: Uint8Array) {

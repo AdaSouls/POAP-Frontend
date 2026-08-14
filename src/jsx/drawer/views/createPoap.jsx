@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import { getAllEvents } from '../../../midnight/indexer.service';
 import { recordLastClaimTx } from '../../../midnight/attendance-proof';
 import { loadingFunction, errorFunction, succesfullBlockchainCreation } from '../../toasts/sweetAlerts';
 import eventNormal from '../../../images/svg/event-normal.svg';
@@ -13,50 +12,22 @@ import eventOwnerIcon from '../../../icons/svg/collection-owner.svg';
 // "recipient address" concept here (that's mintTo(), an organizer-only push-mint — a different,
 // admin-facing action not covered by this view). Event data comes from the on-chain-only Midnight
 // indexer API, so there's no title/description/image to show — see indexer.service.ts.
+// Always opened from an event card's own "Subscribe" action (exploreEvents.jsx / myPendingApprovals.jsx),
+// which dispatches CREATE_POAP with that event as the payload — there's no standalone entry point
+// into this drawer anymore, so selectedEvent comes from claimEvent alone, no event picker needed.
 export default function CreatePoap() {
-  const [events, setEvents] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSoulbound, setIsSoulbound] = useState(false);
-  // Step 1: pick the event (+ its preview card). Step 2: soulbound choice + confirm/submit — the
-  // only one of these four forms with enough content to warrant a second step (event dropdown +
-  // preview card + toggle), per the /brainstorm design discussion.
+  // Step 1: event preview (read-only). Step 2: soulbound choice + confirm/submit.
   const [step, setStep] = useState(1);
 
-  const { event, midnight: { provider } } = useDrawer();
+  const { claimEvent: selectedEvent, midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const closeDrawer = () => {
     dispatch({ type: 'CLOSE_DRAWER' });
   };
-
-  const loadEvents = useCallback(async () => {
-    try {
-      const allEvents = await getAllEvents();
-      setEvents(allEvents);
-    } catch (error) {
-      console.error("Error loading events:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (event && event.event) {
-      setSelectedEvent(event.event);
-    }
-    loadEvents();
-  }, [event, loadEvents]);
-
-  useEffect(() => {
-    if (events.length > 0 && !selectedEvent) {
-      const eventIdFromUrl = searchParams.get('eventId');
-      if (eventIdFromUrl) {
-        const eventFromUrl = events.find((evt) => evt.eventId === eventIdFromUrl);
-        if (eventFromUrl) setSelectedEvent(eventFromUrl);
-      }
-    }
-  }, [events, searchParams, selectedEvent]);
 
   const truncateHex = (hex) => {
     if (!hex) return "N/A";
@@ -87,17 +58,17 @@ export default function CreatePoap() {
 
     setLoading(true);
     try {
-      loadingFunction("Claiming POAP", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Subscribing", "Please confirm the transaction in your Lace wallet…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
       const { txHash } = await provider.service.claimOrUpdate(eventIdBytes, isSoulbound);
       recordLastClaimTx(selectedEvent.issuerPk, txHash);
 
-      succesfullBlockchainCreation("POAP Claimed Successfully", `Transaction: ${txHash}`, "");
+      succesfullBlockchainCreation("Subscribed Successfully", `Transaction: ${txHash}`, "");
       closeDrawer();
       navigate("/my-subscriptions");
     } catch (error) {
-      console.error("Error claiming POAP:", error);
-      errorFunction("Error", error.message || "Failed to claim POAP. Please try again.", "");
+      console.error("Error subscribing:", error);
+      errorFunction("Error", error.message || "Failed to subscribe. Please try again.", "");
     } finally {
       setLoading(false);
     }
@@ -117,7 +88,7 @@ export default function CreatePoap() {
           <X size={15} />
         </button>
         <h4 className="text-center w-100 m-0 font-weight-semibold">
-          Claim POAP
+          Subscribe
         </h4>
       </div>
 
@@ -130,31 +101,8 @@ export default function CreatePoap() {
         <form name="createPoapForm" className="row g-3" onSubmit={handleSubmit}>
           {step === 1 && (
             <>
-              <div className="col-12">
-                <label className="form-label mb-2" style={{ fontWeight: '600' }}>
-                  Select Event
-                </label>
-                <select
-                  className="form-select"
-                  value={selectedEvent?.eventId || ''}
-                  onChange={(e) => {
-                    const evt = events.find((it) => it.eventId === e.target.value);
-                    setSelectedEvent(evt || null);
-                  }}
-                  required
-                >
-                  <option value="" disabled>Choose an event…</option>
-                  {events.map((evt) => (
-                    <option key={evt.eventId} value={evt.eventId}>
-                      {truncateHex(evt.eventId)} — {evt.minted}/{evt.maxSupply || '∞'} minted
-                      {isExpired(evt) ? ' (expired)' : !evt.isActive ? ' (inactive)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedEvent && (
-                <div className="col-12 mt-3">
+              {selectedEvent ? (
+                <div className="col-12">
                   <div className="drawer-modal-preview-card">
                     <div className="d-flex align-items-center mb-3">
                       <img className="mr-3 rounded-circle" src={eventNormal} width="48" height="48" alt="" />
@@ -180,6 +128,10 @@ export default function CreatePoap() {
                       </li>
                     </ul>
                   </div>
+                </div>
+              ) : (
+                <div className="col-12">
+                  <p className="text-muted small mb-0">No event selected.</p>
                 </div>
               )}
             </>
@@ -237,7 +189,7 @@ export default function CreatePoap() {
               onClick={handleSubmit}
               disabled={loading || !selectedEvent || !mintable}
             >
-              {loading ? 'Claiming…' : 'Claim POAP'}
+              {loading ? 'Subscribing…' : 'Subscribe'}
             </button>
           </div>
         )}

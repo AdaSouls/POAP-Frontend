@@ -2,7 +2,7 @@ import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventsPage from '../../jsx/pages/myEvents';
-import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
+import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { getAllEvents, getEvent, getTokensByEvent } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
@@ -51,18 +51,14 @@ describe('MyEvents page', () => {
     });
   });
 
-  it('dispatches CREATE_EVENT when create button is clicked by an organizer', async () => {
+  it('dispatches CREATE_EVENT when create button is clicked by a connected wallet', async () => {
     const dispatch = jest.fn();
     const drawerValue = {
       ...mockDrawerContext,
       midnight: { ...mockDrawerContext.midnight, provider: { address: 'bb'.repeat(32) } },
     };
 
-    renderWithProviders(<EventsPage />, {
-      drawerValue,
-      drawerDispatch: dispatch,
-      userRolesValue: { ...mockUserRoles, isIssuer: true },
-    });
+    renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
 
     const createButton = screen.getByRole('button', { name: /create event/i });
     await userEvent.click(createButton);
@@ -70,7 +66,7 @@ describe('MyEvents page', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 
-  it('replaces Create Event with a request-access button for a connected non-organizer wallet, and dispatches CREATE_ISSUER on click', async () => {
+  it('gives any connected wallet a usable Create Event button — createEvent has no on-chain access gate', async () => {
     const dispatch = jest.fn();
     const drawerValue = {
       ...mockDrawerContext,
@@ -79,12 +75,11 @@ describe('MyEvents page', () => {
 
     renderWithProviders(<EventsPage />, { drawerValue, drawerDispatch: dispatch });
 
-    expect(screen.queryByRole('button', { name: /create event/i })).not.toBeInTheDocument();
-    const requestButton = screen.getByRole('button', { name: /request organizer access/i });
-    await userEvent.click(requestButton);
+    const createButton = screen.getByRole('button', { name: /create event/i });
+    expect(createButton).not.toHaveClass('is-outline');
+    await userEvent.click(createButton);
 
-    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_ISSUER' });
-    expect(dispatch).not.toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_EVENT' });
   });
 
   it('separates my events from other events for a connected organizer', async () => {

@@ -1,5 +1,25 @@
-import type { WitnessContext } from '@midnight-ntwrk/compact-runtime';
+import { persistentHash, CompactTypeVector, Bytes32Descriptor, type WitnessContext } from '@midnight-ntwrk/compact-runtime';
 import type { Ledger, Witnesses } from './contract/managed/poap/contract/index.js';
+
+// derive_pk(sk) = persistentHash<Vector<2, Bytes<32>>>([pad(32, "adasouls:pk:v1:"), sk]) — see
+// poap.compact lines 95-96. Computed locally instead of via the getCallerPk circuit because the
+// compiler excludes it from provableCircuits (it discloses nothing to the ledger, so there's
+// nothing to prove) — meaning midnight-js-contracts' callTx, which is built strictly from
+// provableCircuits, genuinely has no getCallerPk entry (confirmed 2026-08-14 by reading
+// midnight-js-contracts' own source, not a copy/deploy mistake). The 32-byte domain separator
+// below is copied byte-for-byte from the compiled contract's own _derive_pk_0 (contract/index.js),
+// not hand re-encoded, specifically to avoid the padding/encoding drift risk this approach was
+// previously flagged for — re-copy this constant if the contract module is ever refreshed and the
+// admin has changed the domain separator string.
+const CALLER_PK_DOMAIN_SEPARATOR = new Uint8Array([
+  97, 100, 97, 115, 111, 117, 108, 115, 58, 112, 107, 58, 118, 49, 58,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+]);
+const derivePkHashType = new CompactTypeVector(2, Bytes32Descriptor);
+
+export function deriveCallerPk(secretKey: Uint8Array): Uint8Array {
+  return persistentHash(derivePkHashType, [CALLER_PK_DOMAIN_SEPARATOR, secretKey]);
+}
 
 // ── Private State ─────────────────────────────────────────────────────────────
 // Ported from poap-midnight/contracts/src/witnesses.ts. The only behavioral

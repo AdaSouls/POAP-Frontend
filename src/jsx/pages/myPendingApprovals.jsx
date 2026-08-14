@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Award } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
@@ -29,7 +28,6 @@ const MyPendingApprovals = () => {
   const [pending, setPending] = useState([]);
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
-  const navigate = useNavigate();
   const pollRef = useRef(null);
 
   const loadPending = useCallback(async () => {
@@ -67,11 +65,10 @@ const MyPendingApprovals = () => {
 
   // Reuses the existing "Claim POAP" drawer (createPoap.jsx) rather than a bespoke reconciliation
   // flow — claimOrUpdate is the same call either way, the contract branches internally based on
-  // whether issuerHolderToken already has an entry for this wallet+issuer. The drawer pre-selects
-  // whichever event is in the URL's ?eventId= (see createPoap.jsx), so setting it here is enough.
+  // whether issuerHolderToken already has an entry for this wallet+issuer. token.event (attached
+  // in loadPending above) pre-selects it in the drawer via CREATE_POAP's claimEvent payload.
   const claimPending = (token) => {
-    navigate(`/my-pending-approvals?eventId=${token.firstEventId}`);
-    dispatch({ type: "CREATE_POAP" });
+    dispatch({ type: "CREATE_POAP", payload: token.event });
   };
 
   return (
