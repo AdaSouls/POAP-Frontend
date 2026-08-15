@@ -208,10 +208,28 @@ body {
   object-fit: cover;
 }
 
-/* Loading / no metadata image / failed load — explicitly never falls back to a stale or generic
-   placeholder image, just this icon, sized like .card-media-thumb-icon's small-glyph treatment. */
+/* No metadata image / failed load — explicitly never falls back to a stale or generic placeholder
+   image, just this icon, sized like .card-media-thumb-icon's small-glyph treatment. NOT shown
+   while metadata is still being fetched — see .skeleton-block below for that state, so a still-
+   loading card doesn't read as "broken" while IPFS is just slow. */
 .card-media-thumb-broken-icon {
   color: var(--text-on-glass-muted);
+}
+
+/* Loading skeleton — eventCard.jsx's collapsed/expanded image, name, and description while
+   useEventMetadata() is still fetching from IPFS (can take a real few seconds, especially right
+   after a fresh createEvent upload). Pulses between the existing --glass-bg-hover tone and half
+   that opacity rather than swapping to a different color, so it reads as "this card's own surface,
+   still loading" instead of a visually distinct placeholder. */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.skeleton-block {
+  background: var(--glass-bg-hover);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 
 .card-media-content {

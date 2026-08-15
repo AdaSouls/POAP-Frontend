@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, ImageOff, Info, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
@@ -8,6 +8,9 @@ import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import { getEventStatus } from "../../utils/poapHelpers";
 import { getEvent, getTokensByEvent } from "../../midnight/indexer.service";
+import { getPrivateEventDraft } from "../../midnight/private-event-metadata";
+import { getPrivateContentSignedUrl } from "../../services/ipfs.service";
+import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../toasts/sweetAlerts";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 
 const truncateHex = (hex) => {
@@ -38,7 +41,11 @@ const EventCard = forwardRef(({
   useEffect(() => {
     setImgLoadError(false);
   }, [metadata?.imageUrl]);
-  const showBrokenImage = metadataLoading || !metadata?.imageUrl || imgLoadError;
+  // Split from metadataLoading on purpose — a still-loading card shows the pulsing skeleton
+  // (.skeleton-block below), not this broken-image icon, so a slow IPFS fetch doesn't read as
+  // "something failed." showBrokenImage is only the genuine no-image/failed-load case, once
+  // loading has actually finished one way or the other.
+  const showBrokenImage = !metadataLoading && (!metadata?.imageUrl || imgLoadError);
   const { midnight: { provider } } = useDrawer();
   const { isAdmin } = useUserRoles();
   const dispatch = useDrawerDispatch();
@@ -55,6 +62,78 @@ const EventCard = forwardRef(({
   // (organizer-minted) events.
   const canMintForEvent =
     variant !== "explore" && !event.isPublicMint && (isAdmin || provider?.address === event.issuerPk);
+
+  // Private-event metadata (commit/reveal) — only ever shown to the actual owner (not just any
+  // admin: reveal needs the (value, rand) pair only the creating browser ever had, see
+  // private-event-metadata.ts) and only if this exact browser is the one that created it —
+  // independent of whether the EVENT itself is public or private, since the extra-info field has
+  // its own public/private switch in createEvent.jsx now. No local draft (different device,
+  // cleared storage, field left public, or no extra info at all) means nothing to show — see
+  // private-event-metadata.ts's accepted limitation.
+  const isOwner = provider?.address === event.issuerPk;
+  const privateDraft = useMemo(
+    () => (isOwner ? getPrivateEventDraft(event.eventId) : null),
+    [isOwner, event.eventId],
+  );
+  const [revealStatus, setRevealStatus] = useState("checking"); // "checking" | "not-revealed" | "revealed"
+  const [revealedNotes, setRevealedNotes] = useState(null);
+  const [revealing, setRevealing] = useState(false);
+
+  useEffect(() => {
+    if (!isExpanded || !privateDraft || !provider) return undefined;
+    let cancelled = false;
+    setRevealStatus("checking");
+    provider.service
+      .getState()
+      .then(({ ledger }) => {
+        if (cancelled) return null;
+        const eventIdBytes = Uint8Array.from(Buffer.from(event.eventId, "hex"));
+        if (!ledger.eventRevealedMetadata.member(eventIdBytes)) {
+          setRevealStatus("not-revealed");
+          return null;
+        }
+        setRevealStatus("revealed");
+        // Fetched via the signed-URL path (not read back from localStorage) specifically to prove
+        // the on-chain value → CID → content round trip actually works, not just that this browser
+        // remembers what it typed in.
+        return getPrivateContentSignedUrl(privateDraft.valueHex)
+          .then((url) => fetch(url))
+          .then((response) => response.json())
+          .then((json) => {
+            if (!cancelled) setRevealedNotes(json?.notes ?? null);
+          });
+      })
+      .catch((error) => {
+        console.error("Error checking private-metadata reveal status:", error);
+        if (!cancelled) setRevealStatus("not-revealed");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isExpanded, privateDraft, provider, event.eventId]);
+
+  const handleReveal = async () => {
+    if (!privateDraft || !provider) return;
+    setRevealing(true);
+    try {
+      loadingFunction("Revealing Private Info", "Please confirm the transaction in your Lace wallet…", "");
+      const eventIdBytes = Uint8Array.from(Buffer.from(event.eventId, "hex"));
+      const valueBytes = Uint8Array.from(Buffer.from(privateDraft.valueHex, "hex"));
+      const randBytes = Uint8Array.from(Buffer.from(privateDraft.randHex, "hex"));
+      const { txHash } = await provider.service.revealPrivateMetadata(eventIdBytes, valueBytes, randBytes);
+      setRevealStatus("revealed");
+      const url = await getPrivateContentSignedUrl(privateDraft.valueHex);
+      const response = await fetch(url);
+      const json = await response.json();
+      setRevealedNotes(json?.notes ?? null);
+      succesfullBlockchainCreation("Private Info Revealed", `Transaction: ${txHash}`, "");
+    } catch (error) {
+      console.error("Error revealing private metadata:", error);
+      errorFunction("Error", error.message || "Failed to reveal private info. Please try again.", "");
+    } finally {
+      setRevealing(false);
+    }
+  };
 
   const openMintDrawer = () => {
     dispatch({ type: "CREATE_MINT", payload: event });
@@ -187,7 +266,9 @@ const EventCard = forwardRef(({
             // theme-dark-glass.css.
             <div className="d-flex align-items-stretch card-media-row">
               <motion.div layout className="card-media-thumb-wrap" style={textStyle}>
-                {showBrokenImage ? (
+                {metadataLoading ? (
+                  <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                ) : showBrokenImage ? (
                   <ImageOff size={22} className="card-media-thumb-broken-icon" />
                 ) : (
                   <img
@@ -200,9 +281,13 @@ const EventCard = forwardRef(({
               </motion.div>
               <div className="card-media-content" style={textStyle}>
                 <div className="d-flex align-items-start justify-content-between mb-1">
-                  <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
-                    {metadata?.name || `Event ${truncateHex(event.eventId)}`}
-                  </h4>
+                  {metadataLoading ? (
+                    <div className="skeleton-block" style={{ height: "15px", width: "60%" }} />
+                  ) : (
+                    <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
+                      {metadata?.name || `Event ${truncateHex(event.eventId)}`}
+                    </h4>
+                  )}
                   <span
                     className={`${statusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
                     style={{ fontSize: "10px", padding: "2px 8px" }}
@@ -210,19 +295,23 @@ const EventCard = forwardRef(({
                     {status}
                   </span>
                 </div>
-                {metadata?.description && (
-                  <p
-                    className="text-muted small mb-2"
-                    style={{
-                      fontSize: "11px",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {metadata.description}
-                  </p>
+                {metadataLoading ? (
+                  <div className="skeleton-block mb-2" style={{ height: "11px", width: "85%" }} />
+                ) : (
+                  metadata?.description && (
+                    <p
+                      className="text-muted small mb-2"
+                      style={{
+                        fontSize: "11px",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {metadata.description}
+                    </p>
+                  )
                 )}
 
                 <ul className="list-unstyled mb-2 mt-2" style={{ fontSize: "12px" }}>
@@ -293,7 +382,9 @@ const EventCard = forwardRef(({
               <div className="col-md-7">
                 <div className="d-flex align-items-start">
                   <motion.div layout className="card-media-thumb-wrap mr-3">
-                    {showBrokenImage ? (
+                    {metadataLoading ? (
+                      <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                    ) : showBrokenImage ? (
                       <ImageOff size={22} className="card-media-thumb-broken-icon" />
                     ) : (
                       <img
@@ -311,11 +402,26 @@ const EventCard = forwardRef(({
                     >
                       {status}
                     </span>
-                    <h4 className="mt-2 mb-1" style={{ fontSize: "16px", fontWeight: "600" }}>
-                      {metadata?.name || `Event ${truncateHex(event.eventId)}`}
-                    </h4>
-                    {metadata?.description && (
-                      <p className="text-muted small mb-0">{metadata.description}</p>
+                    {metadataLoading ? (
+                      <div className="skeleton-block mt-2" style={{ height: "16px", width: "160px" }} />
+                    ) : (
+                      <h4 className="mt-2 mb-1" style={{ fontSize: "16px", fontWeight: "600" }}>
+                        {metadata?.name || `Event ${truncateHex(event.eventId)}`}
+                      </h4>
+                    )}
+                    {metadataLoading ? (
+                      <div className="skeleton-block mt-2" style={{ height: "12px", width: "220px" }} />
+                    ) : (
+                      metadata?.description && (
+                        <p className="text-muted small mb-0">{metadata.description}</p>
+                      )
+                    )}
+                    {/* Extra info the organizer opted to make public (see createEvent.jsx's own
+                        public/private switch for this field) — same metadataURI JSON as
+                        name/description, visible to anyone, no reveal needed. Not to be confused
+                        with the owner-only private-info block further down. */}
+                    {metadata?.notes && (
+                      <p className="text-muted small mb-0 mt-1">{metadata.notes}</p>
                     )}
                   </div>
                 </div>
@@ -361,7 +467,7 @@ const EventCard = forwardRef(({
                   <p className="m-0 text-break small font-weight-semibold">{event.issuerPk}</p>
                 </div>
 
-                <div className={event.createdTx ? "mb-3" : "mb-0"}>
+                <div className="mb-3">
                   <p className="m-0 small text-muted mb-1">Block</p>
                   <p className="m-0 text-break small font-weight-semibold">{event.createdBlock ?? "N/A"}</p>
                 </div>
@@ -370,6 +476,33 @@ const EventCard = forwardRef(({
                   <div className="mb-0">
                     <p className="m-0 small text-muted mb-1">Tx</p>
                     <p className="m-0 text-break small font-weight-semibold">{event.createdTx}</p>
+                  </div>
+                )}
+
+                {privateDraft && (
+                  <div className="mt-3">
+                    <p className="m-0 small text-muted mb-1">Private Info</p>
+                    {revealStatus === "checking" ? (
+                      <p className="text-muted small mb-0">Checking reveal status…</p>
+                    ) : (
+                      <>
+                        <p className="m-0 text-break small font-weight-semibold mb-2">
+                          {revealStatus === "revealed" ? revealedNotes : privateDraft.notes}
+                        </p>
+                        {revealStatus === "revealed" ? (
+                          <span className="badge bg-success">Revealed</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-card-detail-action btn-sm"
+                            onClick={handleReveal}
+                            disabled={revealing}
+                          >
+                            {revealing ? "Revealing…" : "Reveal"}
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -447,7 +580,9 @@ const EventCard = forwardRef(({
                     {eventTokens.map((token) => (
                       <Tooltip key={token.tokenId} label={metadata?.name || `Event ${truncateHex(event.eventId)}`}>
                         <div className="card-media-thumb-small-wrap" style={{ position: "relative" }}>
-                          {showBrokenImage ? (
+                          {metadataLoading ? (
+                            <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                          ) : showBrokenImage ? (
                             <ImageOff size={14} className="card-media-thumb-broken-icon" />
                           ) : (
                             <img className="card-media-thumb-photo" src={metadata.imageUrl} alt="" />

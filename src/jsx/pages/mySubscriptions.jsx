@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { AnimatePresence } from "framer-motion";
 import { Award } from "lucide-react";
 import Layout from "../layout/layout";
-import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import PoapCard from "../components/poapCard";
 import PoapFilters from "../components/PoapFilters";
 import walletStatus from "../../images/collections/wallet-status.png";
@@ -46,7 +46,16 @@ const MySubscriptions = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [filters, setFilters] = useState({});
   const { midnight: { provider } } = useDrawer();
+  const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
+
+  const openGetHolderKey = () => {
+    dispatch({ type: "GET_HOLDER_KEY" });
+  };
+
+  const openRevealPrivateInfo = () => {
+    dispatch({ type: "REVEAL_PRIVATE_INFO" });
+  };
 
   const copyCollectionShareLink = () => {
     if (!provider || myPoaps.length === 0) return;
@@ -118,6 +127,16 @@ const MySubscriptions = () => {
               )}
             </div>
             <div className="inner-header-row-right">
+              {provider && (
+                <button className="btn btn-white btn-small" onClick={openGetHolderKey}>
+                  Get My Key
+                </button>
+              )}
+              {provider && (
+                <button className="btn btn-white btn-small" onClick={openRevealPrivateInfo}>
+                  Reveal Private Info
+                </button>
+              )}
               {provider && myPoaps.length > 0 && (
                 <button className="btn btn-white btn-small" onClick={copyCollectionShareLink}>
                   {shareCopied ? "Link copied ✓" : "Share my collection"}

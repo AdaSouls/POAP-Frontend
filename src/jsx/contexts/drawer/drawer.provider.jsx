@@ -34,6 +34,8 @@ export function DrawerProvider({ children }) {
     checkCollection: false,
     viewToken: false,
     createMint: false,
+    getHolderKey: false,
+    revealPrivateInfo: false,
     open: false,
     poapEvents: [],
     poapCollection: [],
@@ -123,6 +125,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true,
       };
     case 'SHOW_MIDNIGHT_WALLET':
@@ -139,6 +143,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true
       };
     case 'CREATE_SOUL':
@@ -155,6 +161,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true
       };
     case 'CREATE_SOUL_TOKEN':
@@ -171,6 +179,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true,
         collection: action.payload
       };
@@ -188,6 +198,8 @@ function drawerReducer(state, action) {
         checkCollection: true,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true, 
         items: action.payload
       };
@@ -205,6 +217,8 @@ function drawerReducer(state, action) {
           checkCollection: false,
           viewToken: true,
           createMint: false,
+          getHolderKey: false,
+          revealPrivateInfo: false,
           open: true,
           token: action.payload
         };
@@ -222,8 +236,46 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: true,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true,
         mintEvent: action.payload
+      };
+    case 'GET_HOLDER_KEY':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showMidnightWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: false,
+        createOwner: false,
+        checkCollection: false,
+        viewToken: false,
+        createMint: false,
+        getHolderKey: true,
+        revealPrivateInfo: false,
+        open: true
+      };
+    case 'REVEAL_PRIVATE_INFO':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showMidnightWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: false,
+        createOwner: false,
+        checkCollection: false,
+        viewToken: false,
+        createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: true,
+        open: true
       };
     case 'CLOSE_DRAWER':
       return {
@@ -239,6 +291,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: false
       };
     case 'CREATE_POAP':
@@ -255,6 +309,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true,
         claimEvent: action.payload
       };
@@ -272,6 +328,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true
       };
     case 'CREATE_ISSUER':
@@ -288,6 +346,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true
       };
     case 'CREATE_OWNER':
@@ -304,6 +364,8 @@ function drawerReducer(state, action) {
         checkCollection: false,
         viewToken: false,
         createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
         open: true
       };
     case 'UPDATE_EVENTS':

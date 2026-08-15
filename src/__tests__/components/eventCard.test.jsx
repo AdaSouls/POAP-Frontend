@@ -272,13 +272,14 @@ describe('EventCard Component', () => {
       expect(container.querySelector('.card-media-thumb-broken-icon')).not.toBeInTheDocument();
     });
 
-    it('shows the broken-image icon (never a stale/placeholder image) while metadata is still loading', () => {
+    it('shows a loading skeleton (never a stale/placeholder image, never the broken-image icon) while metadata is still loading', () => {
       global.fetch = jest.fn(() => new Promise(() => {})); // never resolves
       const eventWithMetadata = { ...mockEvent, metadataURI: 'https://example.com/meta-still-loading.json' };
 
       const { container } = renderWithProviders(<EventCard event={eventWithMetadata} />);
 
-      expect(container.querySelector('.card-media-thumb-broken-icon')).toBeInTheDocument();
+      expect(container.querySelector('.skeleton-block')).toBeInTheDocument();
+      expect(container.querySelector('.card-media-thumb-broken-icon')).not.toBeInTheDocument();
       expect(container.querySelector('.card-media-thumb-photo')).not.toBeInTheDocument();
     });
 

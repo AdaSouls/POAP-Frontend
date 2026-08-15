@@ -17,6 +17,23 @@ if (!navigator.clipboard) {
   });
 }
 
+// jsdom doesn't provide TextEncoder/TextDecoder as globals — needed by anything hashing text via
+// Web Crypto (src/utils/cid.ts's sha256) or, transitively, by the `effect` package some Midnight
+// SDK modules import at module scope. Node's own `util` module has real implementations.
+if (!global.TextEncoder) {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
+// jsdom's window.crypto only has getRandomValues, not the full Web Crypto API (no `.subtle`) —
+// needed by anything hashing via crypto.subtle.digest (src/utils/cid.ts's sha256). Node's own
+// `crypto.webcrypto` is a real, spec-compliant implementation.
+if (!global.crypto || !global.crypto.subtle) {
+  const { webcrypto } = require('crypto');
+  Object.defineProperty(global, 'crypto', { value: webcrypto, writable: true, configurable: true });
+}
+
 // jsdom doesn't implement IntersectionObserver — needed by framer-motion's `whileInView` prop
 // (scroll-reveal animations, e.g. index.jsx's use-case rows). A no-op stub is enough: tests query
 // rendered DOM content, not the animated visual state, so it never needs to actually fire.

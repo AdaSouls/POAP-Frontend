@@ -21,6 +21,29 @@ export function deriveCallerPk(secretKey: Uint8Array): Uint8Array {
   return persistentHash(derivePkHashType, [CALLER_PK_DOMAIN_SEPARATOR, secretKey]);
 }
 
+// holder_pk(issuerId) = persistentHash<Vector<3, Bytes<32>>>([pad(32, "adasouls:holder-pk:v1:"),
+// local_sk(), issuerId]) — see poap.compact's holder_pk circuit. Same exclusion-from-
+// provableCircuits situation as getCallerPk/deriveCallerPk above (getHolderPk discloses nothing on
+// its own, so callTx.getHolderPk doesn't exist either) — computed locally for the same reason,
+// domain separator copied byte-for-byte from the compiled contract's own _holder_pk_0
+// (contract/index.js), not hand re-encoded.
+//
+// This is what a subscriber needs to hand an organizer before that organizer can mintTo() them: a
+// per-issuer pseudonym, deliberately DIFFERENT from callerPk/deriveCallerPk above (that one is the
+// same value across every issuer — sharing it would let a chain observer correlate a wallet's POAPs
+// across unrelated organizers). Giving the wrong one (callerPk) to an organizer results in a token
+// minted to a pubkey this wallet's own claimOrUpdate can never reconcile against (see
+// holder_token_key in poap.compact) — effectively an unrecoverable mint.
+const HOLDER_PK_DOMAIN_SEPARATOR = new Uint8Array([
+  97, 100, 97, 115, 111, 117, 108, 115, 58, 104, 111, 108, 100, 101, 114, 45,
+  112, 107, 58, 118, 49, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+]);
+const deriveHolderPkHashType = new CompactTypeVector(3, Bytes32Descriptor);
+
+export function deriveHolderPk(secretKey: Uint8Array, issuerId: Uint8Array): Uint8Array {
+  return persistentHash(deriveHolderPkHashType, [HOLDER_PK_DOMAIN_SEPARATOR, secretKey, issuerId]);
+}
+
 // ── Private State ─────────────────────────────────────────────────────────────
 // Ported from poap-midnight/contracts/src/witnesses.ts. The only behavioral
 // difference from that reference is where secretKey comes from: here it's a

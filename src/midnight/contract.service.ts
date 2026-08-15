@@ -3,7 +3,7 @@ import type { ContractAddress } from '@midnight-ntwrk/ledger-v8';
 import { findDeployedContract, type FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
 import type { InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { combineLatest, firstValueFrom, from, map, type Observable } from 'rxjs';
-import { Contract, ledger as ledgerOf } from './contract/managed/poap/contract/index.js';
+import { Contract, ledger as ledgerOf, pureCircuits } from './contract/managed/poap/contract/index.js';
 import type { Ledger } from './contract/managed/poap/contract/index.js';
 import {
   POAP_PRIVATE_STATE_KEY,
@@ -12,9 +12,19 @@ import {
   createWitnesses,
   getOrCreatePrivateState,
 } from './providers';
-import { deriveCallerPk, type PoapPrivateState, type TokenRecord } from './witnesses';
+import { deriveCallerPk, deriveHolderPk, type PoapPrivateState, type TokenRecord } from './witnesses';
 
 export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
+
+// Pure — no ledger/witness access, no proof, no transaction (confirmed in the compiled contract:
+// exported as a standalone pureCircuits function, not part of provableCircuits/callTx at all).
+// This *is* the compiled contract's own persistentCommit computation, not a hand-reimplementation,
+// so there's no drift risk the way there was for deriveCallerPk/deriveHolderPk. Not a
+// PoapContractService method since it needs no connection — organizers compute this locally before
+// createEvent, from a value/rand pair that never touches the network until the transaction itself.
+export function computePrivateMetadataCommit(value: Uint8Array, rand: Uint8Array): Uint8Array {
+  return pureCircuits.computePrivateMetadataCommit(value, rand);
+}
 
 export type PoapState = {
   ledger: Ledger;
@@ -97,13 +107,23 @@ export class PoapContractService {
     return Buffer.from(deriveCallerPk(this.privateState.secretKey)).toString('hex');
   }
 
+  // Same provableCircuits exclusion as getCallerPk above — see deriveHolderPk's comment in
+  // witnesses.ts. This is the value a subscriber hands an organizer so that organizer can
+  // mintTo(eventId, thisValue) them — NOT their caller pk / wallet address, which is a different,
+  // globally-correlatable value and would result in an unrecoverable mint if used here by mistake.
+  async getHolderPkHex(issuerId: Uint8Array): Promise<string> {
+    return Buffer.from(deriveHolderPk(this.privateState.secretKey, issuerId)).toString('hex');
+  }
+
   async claimOrUpdate(eventId: Uint8Array, isSoulbound: boolean) {
     return this.deployedContract.callTx.claimOrUpdate(eventId, isSoulbound);
   }
 
-  // privateMetadataCommit: Bytes<32> — commit/reveal hook for private event metadata (see
-  // POAP-Midnight's revealPrivateMetadata circuit). No frontend UI collects this yet, so callers
-  // pass an all-zero commit (matches deploy.ts's demo event), meaning "no private part".
+  // privateMetadataCommit: Bytes<32> — commit/reveal hook for an event's optional extra-info field
+  // (see computePrivateMetadataCommit above and revealPrivateMetadata below). Independent of
+  // isPublicMint — createEvent.jsx's own step 4 has a separate public/private switch for this
+  // specific field. Defaults to the all-zero "no private part" commit for callers that don't set
+  // one (including when the field is left public, or empty).
   async createEvent(
     eventId: Uint8Array,
     maxSupply: bigint,
@@ -124,6 +144,14 @@ export class PoapContractService {
 
   async deactivateEvent(eventId: Uint8Array) {
     return this.deployedContract.callTx.deactivateEvent(eventId);
+  }
+
+  // Publishes `value` into the public eventRevealedMetadata ledger map, once it's verified to
+  // match the event's own privateMetadataCommit (computePrivateMetadataCommit(value, rand)). No
+  // identity check on-chain — knowing (value, rand) is itself the authorization, so this is safe
+  // to call with whatever the organizer locally stored at createEvent time.
+  async revealPrivateMetadata(eventId: Uint8Array, value: Uint8Array, rand: Uint8Array) {
+    return this.deployedContract.callTx.revealPrivateMetadata(eventId, value, rand);
   }
 
   async mintTo(eventId: Uint8Array, recipientPk: Uint8Array) {

@@ -11,6 +11,8 @@ import CheckCollection from './views/checkCollection.jsx';
 import ViewToken from './views/viewToken.jsx';
 import CreateIssuer from './views/createIssuer.jsx';
 import MintPoap from './views/mintPoap.jsx';
+import GetHolderKey from './views/getHolderKey.jsx';
+import RevealPrivateInfo from './views/revealPrivateInfo.jsx';
 
 export const Drawer = () => {
 
@@ -58,6 +60,14 @@ export const Drawer = () => {
       return <MintPoap />;
     }
 
+    if (state?.getHolderKey === true) {
+      return <GetHolderKey />;
+    }
+
+    if (state?.revealPrivateInfo === true) {
+      return <RevealPrivateInfo />;
+    }
+
   };
 
   // Key names an active flag rather than any content from the view itself, so AnimatePresence
@@ -65,7 +75,8 @@ export const Drawer = () => {
   // token prop changing) don't replay the animation.
   const activeViewKey = [
     'showCardanoWallet', 'showMidnightWallet', 'createSoul', 'createSoulToken', 'createPoap',
-    'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint',
+    'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint', 'getHolderKey',
+    'revealPrivateInfo',
   ].find((flag) => state?.[flag] === true) || 'none';
 
   // CLOSE_DRAWER flips every view flag to false in the same dispatch as `open: false` (see the
@@ -99,7 +110,10 @@ export const Drawer = () => {
   // Started as just the Midnight wallet-connect popup; the four create/claim/mint forms joined it
   // once they got the same glass-popup treatment (short forms, don't need a full-height side
   // panel).
-  const MODAL_VIEWS = ['showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint'];
+  const MODAL_VIEWS = [
+    'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
+    'revealPrivateInfo',
+  ];
   const isModalView = MODAL_VIEWS.includes(chromeViewKey);
   const drawerLayout = isModalView ? 'drawer-modal' : 'drawer-cart';
 

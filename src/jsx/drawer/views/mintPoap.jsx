@@ -113,19 +113,21 @@ export default function MintPoap() {
             </div>
 
             <div className="col-12 mt-3">
-              <label className="form-label">Recipient Public Key (hex)</label>
+              <label className="form-label">Recipient's Key (hex)</label>
               <input
                 type="text"
                 className="form-control"
-                placeholder="64-character hex public key"
+                placeholder="64-character hex key"
                 name="recipientPkHex"
                 value={recipientPkHex}
                 onChange={(event) => setRecipientPkHex(event.target.value)}
                 required
               />
               <small className="form-text text-muted">
-                The Midnight public key of the wallet you're minting to — they don't need to claim
-                anything themselves. Ask them for their address from the Wallet page.
+                Not their wallet address — this has to be the key they generate specifically for
+                you. Send them your organizer public key ({truncateHex(mintEvent.issuerPk)}), have
+                them open My Subscriptions → Get My Key and paste it in, and they'll get back the
+                value to paste here.
               </small>
             </div>
           </form>

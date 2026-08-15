@@ -1,4 +1,9 @@
-import { uploadImageToIPFS, uploadJSONToIPFS } from '../../services/ipfs.service';
+import {
+  uploadImageToIPFS,
+  uploadJSONToIPFS,
+  uploadPrivateJSONToIPFS,
+  getPrivateContentSignedUrl,
+} from '../../services/ipfs.service';
 
 function jsonResponse(body: unknown, ok = true, statusText = 'Error') {
   return { ok, statusText, json: jest.fn().mockResolvedValue(body) };
@@ -56,5 +61,44 @@ describe('ipfs.service', () => {
     }) as any;
 
     await expect(uploadJSONToIPFS({ name: 'x' })).rejects.toThrow('IPFS upload failed: Internal Server Error');
+  });
+
+  it('uploadPrivateJSONToIPFS posts to the private-network route and returns the ipfs:// uri', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ uri: 'ipfs://bafyPrivateCID' })) as any;
+
+    const uri = await uploadPrivateJSONToIPFS({ notes: 'secret' });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:4000/api/ipfs/upload-json-private',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: 'secret' }),
+      }),
+    );
+    expect(uri).toBe('ipfs://bafyPrivateCID');
+  });
+
+  it('getPrivateContentSignedUrl posts the value hex and returns the signed url', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ url: 'https://gateway.example/signed' })) as any;
+    const valueHex = 'aa'.repeat(32);
+
+    const url = await getPrivateContentSignedUrl(valueHex);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:4000/api/ipfs/private-signed-url',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: valueHex }),
+      }),
+    );
+    expect(url).toBe('https://gateway.example/signed');
+  });
+
+  it('getPrivateContentSignedUrl throws the server-provided error message on a non-OK response', async () => {
+    global.fetch = jest.fn().mockResolvedValue(jsonResponse({ error: 'Expected a 32-byte hex "value"' }, false)) as any;
+
+    await expect(getPrivateContentSignedUrl('not-hex')).rejects.toThrow('Expected a 32-byte hex "value"');
   });
 });

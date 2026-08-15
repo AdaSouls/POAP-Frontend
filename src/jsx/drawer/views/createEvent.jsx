@@ -12,8 +12,11 @@ import {
 } from "../../toasts/sweetAlerts";
 import EventDetailsFields from "../../components/EventDetailsFields";
 import EventImageField from "../../components/EventImageField";
-import { uploadImageToIPFS, uploadJSONToIPFS } from "../../../services/ipfs.service";
+import { uploadImageToIPFS, uploadJSONToIPFS, uploadPrivateJSONToIPFS } from "../../../services/ipfs.service";
 import { getCroppedImageBlob } from "../../../utils/cropImage";
+import { sha256 } from "../../../utils/cid";
+import { computePrivateMetadataCommit } from "../../../midnight/contract.service";
+import { savePrivateEventDraft } from "../../../midnight/private-event-metadata";
 import eventNormal from "../../../images/svg/event-normal.svg";
 
 // NOTE: createEvent(eventId, maxSupply, expiration, isPublicMint, metadataURI) circuit — the
@@ -26,7 +29,8 @@ export default function CreateEvent() {
   const dispatch = useDrawerDispatch();
 
   // Step 1: name/description. Step 2: image (drag-and-drop + crop). Step 3: supply/expiration/
-  // visibility + submit.
+  // visibility. Step 4: optional extra info, independent of the event's own public/private mint
+  // setting — has its own public/private switch (see extraInfoIsPrivate below).
   const [step, setStep] = useState(1);
   const [metadata, setMetadata] = useState({
     name: "",
@@ -37,6 +41,12 @@ export default function CreateEvent() {
   const [maxSupply, setMaxSupply] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
   const [isPublicMint, setIsPublicMint] = useState(true);
+  // Free-text extra info, independent of isPublicMint — its own switch decides whether it's baked
+  // into the public metadataURI JSON (extraInfoIsPrivate: false) or uploaded via the private
+  // commit/reveal flow (extraInfoIsPrivate: true). See src/midnight/private-event-metadata.ts and
+  // docs/privacy-matrix.md.
+  const [extraInfo, setExtraInfo] = useState("");
+  const [extraInfoIsPrivate, setExtraInfoIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
   // Cropped once when leaving step 2, reused both for step 3's preview card and the actual
   // upload at submit — avoids re-running the canvas crop twice.
@@ -101,11 +111,36 @@ export default function CreateEvent() {
         imageUri = await uploadImageToIPFS(preparedImageBlob);
       }
 
+      // Extra info's own switch decides where it goes — independent of isPublicMint. Public: just
+      // another key in the same metadataURI JSON everyone already reads (no crypto, no reveal,
+      // visible immediately). Private: the commit/reveal flow — value = sha256 of the exact JSON
+      // that also gets uploaded, so the same 32 bytes double as the IPFS content's own CID digest
+      // (verified against the real Pinata API, see private-event-metadata.ts's design notes), no
+      // separate URI needs to be stored anywhere, just value/rand.
+      const trimmedExtraInfo = extraInfo.trim();
+      let privateMetadataCommit;
+      let privateDraft = null;
+      if (trimmedExtraInfo && extraInfoIsPrivate) {
+        loadingFunction("Creating Event", "Uploading private info to IPFS…", "");
+        const privateJSON = { notes: trimmedExtraInfo };
+        const value = await sha256(JSON.stringify(privateJSON));
+        const rand = new Uint8Array(32);
+        crypto.getRandomValues(rand);
+        privateMetadataCommit = computePrivateMetadataCommit(value, rand);
+        await uploadPrivateJSONToIPFS(privateJSON);
+        privateDraft = {
+          notes: trimmedExtraInfo,
+          valueHex: Buffer.from(value).toString("hex"),
+          randHex: Buffer.from(rand).toString("hex"),
+        };
+      }
+
       loadingFunction("Creating Event", "Uploading metadata to IPFS…", "");
       const metadataURI = await uploadJSONToIPFS({
         name: metadata.name.trim(),
         ...(metadata.description.trim() ? { description: metadata.description.trim() } : {}),
         ...(imageUri ? { image: imageUri } : {}),
+        ...(trimmedExtraInfo && !extraInfoIsPrivate ? { notes: trimmedExtraInfo } : {}),
       });
 
       const eventId = new Uint8Array(32);
@@ -123,7 +158,12 @@ export default function CreateEvent() {
         expiration,
         isPublicMint,
         metadataURI,
+        ...(privateMetadataCommit ? [privateMetadataCommit] : []),
       );
+
+      if (privateDraft) {
+        savePrivateEventDraft(Buffer.from(eventId).toString("hex"), privateDraft);
+      }
 
       closeDrawer();
       succesfullBlockchainCreation("Event Created Successfully", `Transaction: ${txHash}`, "");
@@ -158,6 +198,7 @@ export default function CreateEvent() {
         <span className={`step-dot${step === 1 ? ' active' : ''}`} />
         <span className={`step-dot${step === 2 ? ' active' : ''}`} />
         <span className={`step-dot${step === 3 ? ' active' : ''}`} />
+        <span className={`step-dot${step === 4 ? ' active' : ''}`} />
       </div>
 
       <div className="drawer-body">
@@ -254,6 +295,56 @@ export default function CreateEvent() {
                   </div>
                 </div>
               </div>
+
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <div className="col-12">
+                <label className="form-label">Extra Info (optional)</label>
+                <textarea
+                  className="form-control"
+                  placeholder="Anything extra you want attached to this event — an address, a note, whatever you want."
+                  id="extraInfo"
+                  name="extraInfo"
+                  rows={5}
+                  style={{ height: "120px", resize: "vertical", paddingTop: "12px" }}
+                  value={extraInfo}
+                  onChange={(event) => setExtraInfo(event.target.value)}
+                />
+                <small className="form-text text-muted">
+                  Independent of Public Mint/Invite-Only above — this field has its own
+                  public/private setting below.
+                </small>
+              </div>
+
+              <div className="col-12 mt-3">
+                <div className="drawer-modal-preview-card">
+                  <div className="d-flex align-items-center" style={{ gap: "14px" }}>
+                    <div className="form-check form-switch mb-0 flex-shrink-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="extraInfoIsPrivate"
+                        aria-label="Extra info is private"
+                        checked={extraInfoIsPrivate}
+                        onChange={(event) => setExtraInfoIsPrivate(event.target.checked)}
+                      />
+                    </div>
+                    <div>
+                      <span className="d-block font-weight-semibold">
+                        {extraInfoIsPrivate ? "Private" : "Public"}
+                      </span>
+                      <small className="form-text text-muted d-block mt-1">
+                        {extraInfoIsPrivate
+                          ? "Hidden until you reveal it later from the event's own page."
+                          : "Visible to anyone as soon as the event is created."}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </form>
@@ -294,6 +385,25 @@ export default function CreateEvent() {
               type="button"
               className="btn btn-outline-secondary"
               onClick={() => setStep(2)}
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              className="btn btn-gradient flex-grow-1"
+              onClick={() => setStep(4)}
+              disabled={!isStep3Valid()}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+        {step === 4 && (
+          <div className="d-flex gap-2 w-100">
+            <Button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => setStep(3)}
               disabled={loading}
             >
               Back
