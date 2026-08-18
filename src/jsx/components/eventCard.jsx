@@ -57,7 +57,7 @@ const EventCard = forwardRef(({
   // authorization (is_admin() || ev.organizer == caller_pk()).
   // !event.isPublicMint is a frontend-only restriction on top of that: the contract itself doesn't
   // forbid push-minting into a public event, but public events are meant to be self-claimed via
-  // claimOrUpdate (see createPoap.jsx/"Subscribe") — push-minting into one would silently bypass
+  // claim() (see createPoap.jsx/"Subscribe") — push-minting into one would silently bypass
   // that flow, so the organizer-mint UI only offers this for the organizer's own private
   // (organizer-minted) events.
   const canMintForEvent =

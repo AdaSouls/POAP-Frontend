@@ -2,7 +2,7 @@
 // revealPrivateMetadata later, plus the original notes text so it can be shown pre-reveal without
 // any network fetch. Stored in localStorage, not private state: the contract only ever sees the
 // commit (a hash), never this. Scoped per event, same one-key-per-item pattern as
-// attendance-proof.ts's recordLastClaimTx, rather than one big JSON blob (simpler, no
+// collection-share.ts's visibility flags, rather than one big JSON blob (simpler, no
 // read-modify-write races between tabs).
 //
 // Known limitation, accepted by design (see project memory): if this browser's localStorage is

@@ -3,31 +3,30 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PoapCard from '../../jsx/components/poapCard';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
-import { getEventVisibility } from '../../midnight/collection-share';
-import { getEvent } from '../../midnight/indexer.service';
-
-jest.mock('../../midnight/indexer.service');
+import { getTokenVisibility } from '../../midnight/collection-share';
 
 describe('PoapCard Component', () => {
   const mockPoap = {
     issuerPkHex: 'aa'.repeat(32),
-    tokenId: 1n,
+    tokenId: 1,
+    firstEventId: 'bb'.repeat(32),
     isSoulbound: false,
-    attendedEventIds: ['bb'.repeat(32), 'cc'.repeat(32)],
+    isBurned: false,
+    tokenMetadataURI: null,
+    metadataURI: null,
+    mintedTx: null,
+    mintedBlock: null,
   };
-
-  beforeEach(() => {
-    getEvent.mockReset().mockResolvedValue(null);
-  });
 
   it('renders the token id', () => {
     renderWithProviders(<PoapCard poap={mockPoap} />);
     expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
   });
 
-  it('shows how many events were attended', () => {
+  it('shows the issuer and event for this token', () => {
     renderWithProviders(<PoapCard poap={mockPoap} />);
-    expect(screen.getByText(/2 events attended/i)).toBeInTheDocument();
+    expect(screen.getByText(/Issuer:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Event:/i)).toBeInTheDocument();
   });
 
   it('shows a soulbound badge when isSoulbound is true', () => {
@@ -35,14 +34,14 @@ describe('PoapCard Component', () => {
     expect(screen.getByText(/Soulbound/i)).toBeInTheDocument();
   });
 
-  it('does not show a soulbound badge when isSoulbound is false', () => {
+  it('does not show a soulbound badge when isSoulbound is false or unknown', () => {
     renderWithProviders(<PoapCard poap={mockPoap} />);
     expect(screen.queryByText(/Soulbound/i)).not.toBeInTheDocument();
   });
 
-  it('handles a token with no attended events', () => {
-    renderWithProviders(<PoapCard poap={{ ...mockPoap, attendedEventIds: [] }} />);
-    expect(screen.getByText(/0 events attended/i)).toBeInTheDocument();
+  it('shows a burned badge when isBurned is true', () => {
+    renderWithProviders(<PoapCard poap={{ ...mockPoap, isBurned: true }} />);
+    expect(screen.getByText(/Burned/i)).toBeInTheDocument();
   });
 
   it('calls onExpand when the card is clicked', async () => {
@@ -67,15 +66,18 @@ describe('PoapCard Component', () => {
 
   describe('expanded state', () => {
     const issuerPkHex = 'bb'.repeat(32);
-    const eventIdA = 'aa'.repeat(32);
-    const eventIdC = 'cc'.repeat(32);
     const holderPkHex = 'ff'.repeat(32);
 
     const poap = {
       issuerPkHex,
-      tokenId: 42n,
+      tokenId: 42,
+      firstEventId: 'aa'.repeat(32),
       isSoulbound: true,
-      attendedEventIds: [eventIdA, eventIdC],
+      isBurned: false,
+      tokenMetadataURI: null,
+      metadataURI: null,
+      mintedTx: 'tx-hash-42',
+      mintedBlock: 100,
     };
 
     const drawerValue = {
@@ -102,26 +104,32 @@ describe('PoapCard Component', () => {
       expect(screen.getByText(/not enforce this restriction on-chain/i)).toBeInTheDocument();
     });
 
-    it('renders one checked-by-default checkbox per attended event', () => {
+    it('shows the on-chain mint transaction as verified proof', () => {
       renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
-      const checkboxes = screen.getAllByRole('checkbox');
-      expect(checkboxes).toHaveLength(2);
-      checkboxes.forEach((cb) => expect(cb).toBeChecked());
+      expect(screen.getByText('Verified ✓')).toBeInTheDocument();
+      expect(screen.getByText('tx-hash-42')).toBeInTheDocument();
     });
 
-    it('unchecking an event persists it as hidden via collection-share', async () => {
-      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
-      const checkboxes = screen.getAllByRole('checkbox');
-      await userEvent.click(checkboxes[0]);
-      expect(checkboxes[0]).not.toBeChecked();
-      expect(getEventVisibility(issuerPkHex, eventIdA)).toBe(false);
-      expect(getEventVisibility(issuerPkHex, eventIdC)).toBe(true);
+    it('shows no proof message when the token has no mint tx yet', () => {
+      renderWithProviders(<PoapCard poap={{ ...poap, mintedTx: null }} isExpanded />, { drawerValue });
+      expect(screen.getByText(/no mint transaction found/i)).toBeInTheDocument();
     });
 
-    it('copies a share link built from the holder pk and visible events', async () => {
+    it('defaults the share-visibility toggle to checked', () => {
       renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
-      const checkboxes = screen.getAllByRole('checkbox');
-      await userEvent.click(checkboxes[0]); // hide eventIdA
+      expect(screen.getByRole('checkbox')).toBeChecked();
+    });
+
+    it('unchecking the toggle persists it as hidden via collection-share', async () => {
+      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
+      const checkbox = screen.getByRole('checkbox');
+      await userEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+      expect(getTokenVisibility(issuerPkHex, poap.tokenId)).toBe(false);
+    });
+
+    it('copies a share link built from the holder pk and this token', async () => {
+      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
 
       await userEvent.click(screen.getByText(/copy share link/i));
 
@@ -139,34 +147,29 @@ describe('PoapCard Component', () => {
     });
   });
 
-  describe('origin event metadata', () => {
+  describe('token metadata', () => {
     const originalFetch = global.fetch;
 
     afterEach(() => {
       global.fetch = originalFetch;
     });
 
-    it('does not call getEvent when there are no attended events', () => {
-      renderWithProviders(<PoapCard poap={{ ...mockPoap, attendedEventIds: [] }} />);
-      expect(getEvent).not.toHaveBeenCalled();
-    });
-
-    it('looks up the first attended event', () => {
+    it('shows the fallback POAP # title when no metadata resolves', () => {
       renderWithProviders(<PoapCard poap={mockPoap} />);
-      expect(getEvent).toHaveBeenCalledWith(mockPoap.attendedEventIds[0]);
+      expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
     });
 
-    it('shows a "First event" line and thumbnail once the origin event metadata resolves', async () => {
-      getEvent.mockResolvedValue({ metadataURI: 'https://example.com/meta.json' });
+    it('shows the resolved name and thumbnail once tokenMetadataURI resolves', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({ name: 'Genesis Meetup', image: 'https://example.com/img.png' }),
       });
 
-      renderWithProviders(<PoapCard poap={mockPoap} />);
+      renderWithProviders(
+        <PoapCard poap={{ ...mockPoap, tokenId: 2, tokenMetadataURI: 'https://example.com/meta.json' }} />
+      );
 
-      expect(await screen.findByText(/first event:/i)).toBeInTheDocument();
-      expect(screen.getByText('Genesis Meetup')).toBeInTheDocument();
+      expect(await screen.findByText('Genesis Meetup')).toBeInTheDocument();
     });
   });
 });

@@ -18,11 +18,12 @@ const truncateHex = (hex) => {
   return `${hex.slice(0, 8)}…${hex.slice(-6)}`;
 };
 
-// mintTo(eventId, recipientPk) — the organizer-only push-mint circuit (poap.compact) — is the
-// counterpart to createPoap.jsx's self-service claimOrUpdate: instead of the recipient claiming
-// their own token, the organizer mints it directly to a wallet that hasn't claimed anything
-// locally yet. Always opened pre-filled with a specific event (CREATE_MINT's payload, dispatched
-// from eventCard.jsx's expanded detail — no event selector here, unlike Claim POAP).
+// mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit) — the organizer-only
+// push-mint circuit (poap.compact) — is the counterpart to createPoap.jsx's self-service claim():
+// instead of the recipient claiming their own token, the organizer mints a brand-new one directly
+// to a recipient's per-issuer holder pk. Always opened pre-filled with a specific event
+// (CREATE_MINT's payload, dispatched from eventCard.jsx's expanded detail — no event selector
+// here, unlike Claim POAP).
 export default function MintPoap() {
   const { mintEvent, midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
@@ -53,7 +54,15 @@ export default function MintPoap() {
       loadingFunction("Minting POAP", "Please confirm the transaction in your Lace wallet…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(mintEvent.eventId, "hex"));
       const recipientPk = Uint8Array.from(Buffer.from(recipientPkHex.trim(), "hex"));
-      const { txHash } = await midnight.provider.service.mintTo(eventIdBytes, recipientPk);
+      // Mirror the event's own public metadata onto this token — mintTo stores exactly what's
+      // passed here, there's no on-chain fallback to the event's metadataURI (see
+      // contract.service.ts). Private per-token metadata isn't set from this drawer, so it's left
+      // as the default "no private part".
+      const { txHash } = await midnight.provider.service.mintTo(
+        eventIdBytes,
+        recipientPk,
+        mintEvent.metadataURI || ""
+      );
 
       succesfullBlockchainCreation("POAP Minted Successfully", `Transaction: ${txHash}`, "");
       closeDrawer();

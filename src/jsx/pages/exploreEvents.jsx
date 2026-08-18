@@ -43,7 +43,7 @@ function applyFilters(events, filters) {
 }
 
 // The self-claim counterpart to myEvents.jsx's own-events list: browse OTHER organizers' public
-// events and self-claim (claimOrUpdate, via the existing createPoap.jsx drawer) into one — not to
+// events and self-claim (claim(), via the existing createPoap.jsx drawer) into one — not to
 // be confused with mintPoap.jsx's organizer push-mint (mintTo), which is a separate flow this page
 // never touches.
 const ExploreEvents = () => {

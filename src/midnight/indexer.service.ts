@@ -3,11 +3,13 @@
 // See poap-midnight/indexer/src/api/routes/{events,tokens}.ts for the exact response shapes.
 //
 // NOTE: events carry a metadataURI (pointer to off-chain JSON — name/description/image/…, e.g.
-// "ipfs://<CID>" — not stored on-chain itself); every token minted for an event shares its
-// event's metadataURI, joined in by the indexer. There is still no POST /api/events (see the
-// migration plan's "Known limitations"). Attendance history is explicitly not indexed
-// (GET /api/tokens/:id/attendance returns 404 by design) — that lives only in each wallet's
-// private state.
+// "ipfs://<CID>" — for context/display); each token now also carries its OWN tokenMetadataURI,
+// inherited from the event at claim() time or personalized per-recipient via mintTo() — prefer
+// tokenMetadataURI over the parent event's metadataURI when rendering a specific token. There is
+// still no POST /api/events (see the migration plan's "Known limitations"). Attendance/history is
+// no longer a concept at all — every claim mints a brand-new token scoped to exactly one event
+// (GET /api/tokens/:id/attendance returns 410 Gone by design; see firstEventId on the token
+// itself instead).
 
 const BASE_URL = process.env.REACT_APP_MIDNIGHT_INDEXER_API_URL || "http://localhost:3001";
 
@@ -37,6 +39,11 @@ export type IndexedToken = {
   mintedTx: string | null;
   burnedBlock: number | null;
   burnedTx: string | null;
+  // This token's own metadata — inherited from the event at claim() time, or personalized via
+  // mintTo(). Prefer this over metadataURI below for rendering the actual badge.
+  tokenMetadataURI: string | null;
+  tokenPrivateMetadataCommit: string | null; // hex, all-zero (64 "0" chars) means "no private part"
+  // The parent event's own metadata, for context (e.g. "part of event X").
   metadataURI: string | null;
 };
 

@@ -7,8 +7,8 @@ import PoapCard from "../components/poapCard";
 import PoapFilters from "../components/PoapFilters";
 import walletStatus from "../../images/collections/wallet-status.png";
 import loadingGif from "../../images/loading.gif";
-import { getEventVisibility, encodeShareableCollection, buildShareUrl } from "../../midnight/collection-share";
-import { filterVisibleEvents } from "../../utils/poapHelpers";
+import { getTokenVisibility, encodeShareableCollection, buildShareUrl } from "../../midnight/collection-share";
+import { getMyTokens } from "../../midnight/my-tokens";
 
 const REFRESH_INTERVAL_MS = 5000;
 
@@ -27,25 +27,27 @@ function applyPoapFilters(poaps, filters) {
   const sortBy = filters.sortBy || "tokenId";
   const order = filters.order || "desc";
   result.sort((a, b) => {
-    const av = sortBy === "attendanceCount" ? a.attendedEventIds.length : Number(a.tokenId);
-    const bv = sortBy === "attendanceCount" ? b.attendedEventIds.length : Number(b.tokenId);
+    const av = sortBy === "mintedBlock" ? (a.mintedBlock ?? 0) : Number(a.tokenId);
+    const bv = sortBy === "mintedBlock" ? (b.mintedBlock ?? 0) : Number(b.tokenId);
     return order === "asc" ? av - bv : bv - av;
   });
 
   return result;
 }
 
-// "My Subscriptions" reads from this browser's private state (one SPOAP token per issuer, with
-// its own attendance list) — see src/midnight/witnesses.ts. This is deliberately NOT sourced from
-// the public indexer: attendance history is private witness state and isn't indexed on-chain at
-// all.
+// "My Subscriptions" is sourced live from the indexer, by this wallet's per-issuer holder pk (see
+// src/midnight/my-tokens.ts) — NOT from local private state. That's what makes an organizer's
+// push-mint (mintTo) show up here automatically on reconnect, with no separate "claim it" step:
+// claim() has no reconciliation path anymore (see poap.compact), so the indexer-by-holder-pk read
+// is the only source of truth for "what do I own" that works regardless of which browser claimed
+// (or was pushed) a given token.
 const MySubscriptions = () => {
   const [loading, setLoading] = useState(true);
   const [myPoaps, setMyPoaps] = useState([]);
   const [shareCopied, setShareCopied] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [filters, setFilters] = useState({});
-  const { midnight: { provider } } = useDrawer();
+  const { poapEvents, midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
 
@@ -59,11 +61,9 @@ const MySubscriptions = () => {
 
   const copyCollectionShareLink = () => {
     if (!provider || myPoaps.length === 0) return;
-    const entries = myPoaps.map((poap) => ({
-      issuerPkHex: poap.issuerPkHex,
-      tokenId: poap.tokenId,
-      visibleEventIds: filterVisibleEvents(poap, getEventVisibility),
-    }));
+    const entries = myPoaps
+      .filter((poap) => getTokenVisibility(poap.issuerPkHex, poap.tokenId))
+      .map((poap) => ({ issuerPkHex: poap.issuerPkHex, tokenId: poap.tokenId }));
     const encoded = encodeShareableCollection(entries);
     navigator.clipboard?.writeText(buildShareUrl(provider.address, encoded));
     setShareCopied(true);
@@ -79,20 +79,15 @@ const MySubscriptions = () => {
 
     try {
       const { privateState } = await provider.service.getState();
-      const poaps = Object.entries(privateState.tokens || {}).map(([issuerPkHex, token]) => ({
-        issuerPkHex,
-        tokenId: token.tokenId,
-        isSoulbound: token.attendance.isSoulbound,
-        attendedEventIds: token.attendance.eventIds.map((id) => Buffer.from(id).toString("hex")),
-      }));
-      setMyPoaps(poaps);
+      const tokens = await getMyTokens(provider.service, poapEvents, privateState.tokens || {});
+      setMyPoaps(tokens);
     } catch (error) {
       console.error("Error fetching POAPs:", error);
       setMyPoaps([]);
     } finally {
       setLoading(false);
     }
-  }, [provider]);
+  }, [provider, poapEvents]);
 
   useEffect(() => {
     loadPoaps();
@@ -100,16 +95,16 @@ const MySubscriptions = () => {
     return () => clearInterval(pollRef.current);
   }, [loadPoaps]);
 
-  // If the expanded token drops out of myPoaps mid-poll (e.g. private state changed), don't leave
-  // the grid stuck showing zero cards — fall back to the full grid instead.
+  // If the expanded token drops out of myPoaps mid-poll, don't leave the grid stuck showing zero
+  // cards — fall back to the full grid instead.
   useEffect(() => {
-    if (expandedId && !myPoaps.some((p) => p.issuerPkHex === expandedId)) {
+    if (expandedId && !myPoaps.some((p) => String(p.tokenId) === expandedId)) {
       setExpandedId(null);
     }
   }, [myPoaps, expandedId]);
 
   const filteredPoaps = useMemo(() => applyPoapFilters(myPoaps, filters), [myPoaps, filters]);
-  const visiblePoaps = expandedId ? filteredPoaps.filter((p) => p.issuerPkHex === expandedId) : filteredPoaps;
+  const visiblePoaps = expandedId ? filteredPoaps.filter((p) => String(p.tokenId) === expandedId) : filteredPoaps;
 
   return (
     <Layout activeMenu={3}>
@@ -118,11 +113,8 @@ const MySubscriptions = () => {
           <div className="inner-header-row">
             <div className="inner-header-row-left">
               {provider && (
-                // One SPOAP token per issuer (see claimOrUpdate/issuerHolderToken in poap.compact)
-                // — this count is exactly "how many issuers you're subscribed to", matching the
-                // page's own name, not a separate/different number from the POAP count.
                 <span className="badge badge-count-outline">
-                  {filteredPoaps.length} {filteredPoaps.length === 1 ? "Subscription" : "Subscriptions"}
+                  {filteredPoaps.length} {filteredPoaps.length === 1 ? "POAP" : "POAPs"}
                 </span>
               )}
             </div>
@@ -158,10 +150,10 @@ const MySubscriptions = () => {
                 <AnimatePresence mode="popLayout">
                   {visiblePoaps.map((poap) => (
                     <PoapCard
-                      key={poap.issuerPkHex}
+                      key={poap.tokenId}
                       poap={poap}
-                      isExpanded={poap.issuerPkHex === expandedId}
-                      onExpand={() => setExpandedId(poap.issuerPkHex)}
+                      isExpanded={String(poap.tokenId) === expandedId}
+                      onExpand={() => setExpandedId(String(poap.tokenId))}
                       onCollapse={() => setExpandedId(null)}
                     />
                   ))}

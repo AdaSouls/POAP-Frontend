@@ -2,17 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
-import { recordLastClaimTx } from '../../../midnight/attendance-proof';
 import { loadingFunction, errorFunction, succesfullBlockchainCreation } from '../../toasts/sweetAlerts';
 import eventNormal from '../../../images/svg/event-normal.svg';
 import eventOwnerIcon from '../../../icons/svg/collection-owner.svg';
 
-// Claiming a SPOAP on Midnight is a single self-service call — claimOrUpdate(eventId, isSoulbound)
-// mints on first claim and updates the same token on every claim after, so there's no separate
+// Claiming a POAP on Midnight is a single self-service call — claim(eventId, isSoulbound) mints a
+// brand-new token scoped to (holder, event); calling it again for the same event the same wallet
+// already claimed reverts on-chain ("Wallet already claimed this event"), so there's no separate
 // "recipient address" concept here (that's mintTo(), an organizer-only push-mint — a different,
 // admin-facing action not covered by this view). Event data comes from the on-chain-only Midnight
 // indexer API, so there's no title/description/image to show — see indexer.service.ts.
-// Always opened from an event card's own "Subscribe" action (exploreEvents.jsx / myPendingApprovals.jsx),
+// Always opened from an event card's own "Subscribe" action (exploreEvents.jsx),
 // which dispatches CREATE_POAP with that event as the payload — there's no standalone entry point
 // into this drawer anymore, so selectedEvent comes from claimEvent alone, no event picker needed.
 export default function CreatePoap() {
@@ -60,8 +60,7 @@ export default function CreatePoap() {
     try {
       loadingFunction("Subscribing", "Please confirm the transaction in your Lace wallet…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
-      const { txHash } = await provider.service.claimOrUpdate(eventIdBytes, isSoulbound);
-      recordLastClaimTx(selectedEvent.issuerPk, txHash);
+      const { txHash } = await provider.service.claim(eventIdBytes, isSoulbound);
 
       succesfullBlockchainCreation("Subscribed Successfully", `Transaction: ${txHash}`, "");
       closeDrawer();

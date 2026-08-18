@@ -54,22 +54,18 @@ describe('SharedCollection', () => {
     getTokensByOwner.mockResolvedValue([
       { tokenId: 1, ownerPk: holderPkHex, issuerPk: issuerPkHex, firstEventId: eventIdA, isBurned: false },
     ]);
-    const encoded = encodeShareableCollection([
-      { issuerPkHex, tokenId: 1n, visibleEventIds: [eventIdA] },
-    ]);
+    const encoded = encodeShareableCollection([{ issuerPkHex, tokenId: 1n }]);
 
     renderAt(`/share/${holderPkHex}?d=${encoded}`);
 
     await waitFor(() => {
-      expect(screen.getByText(/not verified on-chain, do not treat as proof/i)).toBeInTheDocument();
+      expect(screen.getByText(/not itself verifiable/i)).toBeInTheDocument();
     });
   });
 
   it('drops declared entries whose issuer/token pair is not actually on-chain', async () => {
     getTokensByOwner.mockResolvedValue([]); // nothing verified for this pk
-    const encoded = encodeShareableCollection([
-      { issuerPkHex, tokenId: 999n, visibleEventIds: [eventIdA] },
-    ]);
+    const encoded = encodeShareableCollection([{ issuerPkHex, tokenId: 999n }]);
 
     renderAt(`/share/${holderPkHex}?d=${encoded}`);
 

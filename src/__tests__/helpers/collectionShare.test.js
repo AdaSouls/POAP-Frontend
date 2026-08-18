@@ -1,6 +1,6 @@
 import {
-  getEventVisibility,
-  setEventVisibility,
+  getTokenVisibility,
+  setTokenVisibility,
   encodeShareableCollection,
   decodeShareableCollection,
   buildShareUrl,
@@ -8,37 +8,37 @@ import {
 
 describe('collection-share visibility', () => {
   const issuerPkHex = 'bb'.repeat(32);
-  const eventIdHex = 'aa'.repeat(32);
+  const tokenId = 1;
 
   beforeEach(() => {
     window.localStorage.clear();
   });
 
   it('defaults to visible when nothing has been stored', () => {
-    expect(getEventVisibility(issuerPkHex, eventIdHex)).toBe(true);
+    expect(getTokenVisibility(issuerPkHex, tokenId)).toBe(true);
   });
 
   it('persists an explicit hide', () => {
-    setEventVisibility(issuerPkHex, eventIdHex, false);
-    expect(getEventVisibility(issuerPkHex, eventIdHex)).toBe(false);
+    setTokenVisibility(issuerPkHex, tokenId, false);
+    expect(getTokenVisibility(issuerPkHex, tokenId)).toBe(false);
   });
 
   it('persists an explicit show after a previous hide', () => {
-    setEventVisibility(issuerPkHex, eventIdHex, false);
-    setEventVisibility(issuerPkHex, eventIdHex, true);
-    expect(getEventVisibility(issuerPkHex, eventIdHex)).toBe(true);
+    setTokenVisibility(issuerPkHex, tokenId, false);
+    setTokenVisibility(issuerPkHex, tokenId, true);
+    expect(getTokenVisibility(issuerPkHex, tokenId)).toBe(true);
   });
 
-  it('scopes visibility per issuer+event pair', () => {
-    setEventVisibility(issuerPkHex, eventIdHex, false);
-    expect(getEventVisibility('cc'.repeat(32), eventIdHex)).toBe(true);
+  it('scopes visibility per issuer+token pair', () => {
+    setTokenVisibility(issuerPkHex, tokenId, false);
+    expect(getTokenVisibility('cc'.repeat(32), tokenId)).toBe(true);
   });
 });
 
 describe('collection-share encode/decode', () => {
   const entries = [
-    { issuerPkHex: 'bb'.repeat(32), tokenId: 42n, visibleEventIds: ['aa'.repeat(32), 'cc'.repeat(32)] },
-    { issuerPkHex: 'dd'.repeat(32), tokenId: 7n, visibleEventIds: ['ee'.repeat(32)] },
+    { issuerPkHex: 'bb'.repeat(32), tokenId: 42n },
+    { issuerPkHex: 'dd'.repeat(32), tokenId: 7n },
   ];
 
   it('round-trips entries, including bigint tokenIds', () => {

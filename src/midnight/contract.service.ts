@@ -115,8 +115,8 @@ export class PoapContractService {
     return Buffer.from(deriveHolderPk(this.privateState.secretKey, issuerId)).toString('hex');
   }
 
-  async claimOrUpdate(eventId: Uint8Array, isSoulbound: boolean) {
-    return this.deployedContract.callTx.claimOrUpdate(eventId, isSoulbound);
+  async claim(eventId: Uint8Array, isSoulbound: boolean) {
+    return this.deployedContract.callTx.claim(eventId, isSoulbound);
   }
 
   // privateMetadataCommit: Bytes<32> — commit/reveal hook for an event's optional extra-info field
@@ -154,8 +154,24 @@ export class PoapContractService {
     return this.deployedContract.callTx.revealPrivateMetadata(eventId, value, rand);
   }
 
-  async mintTo(eventId: Uint8Array, recipientPk: Uint8Array) {
-    return this.deployedContract.callTx.mintTo(eventId, recipientPk);
+  // Same commit/reveal mechanism as revealPrivateMetadata above, but for one specific token's
+  // private field (tokenPrivateMetadataCommit) instead of the event-level one.
+  async revealPrivateTokenMetadata(tokenId: bigint, value: Uint8Array, rand: Uint8Array) {
+    return this.deployedContract.callTx.revealPrivateTokenMetadata(tokenId, value, rand);
+  }
+
+  // tokenMetadataURI/tokenPrivateMetadataCommit let the organizer personalize this specific
+  // recipient's token. The contract stores exactly what's passed here — there's no on-chain
+  // fallback to the event's own metadataURI/privateMetadataCommit, so callers that want to mirror
+  // the event (the common case) must pass ev.metadataURI/ev.privateMetadataCommit explicitly. The
+  // defaults below (empty URI, all-zero commit) mean "this token has no metadata", not "inherit".
+  async mintTo(
+    eventId: Uint8Array,
+    recipientPk: Uint8Array,
+    tokenMetadataURI: string = '',
+    tokenPrivateMetadataCommit: Uint8Array = new Uint8Array(32),
+  ) {
+    return this.deployedContract.callTx.mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit);
   }
 
   async burn(tokenId: bigint) {

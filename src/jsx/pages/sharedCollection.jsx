@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
-import { Calendar } from "lucide-react";
 import { getTokensByOwner } from "../../midnight/indexer.service";
 import { decodeShareableCollection } from "../../midnight/collection-share";
 import poapNormal from "../../images/svg/poap-normal.svg";
@@ -98,7 +97,9 @@ const SharedCollection = () => {
             By the holder
           </h5>
           <p className="text-muted small">
-            Reported by the collection owner — not verified on-chain, do not treat as proof.
+            Reported by the collection owner — cross-checked against on-chain data below (only
+            pairs that actually exist for this address are shown), but the fact they chose to
+            include it is not itself verifiable.
           </p>
           <ul className="list-unstyled">
             {declared
@@ -106,17 +107,9 @@ const SharedCollection = () => {
               .map((entry) => (
                 <li key={`${entry.issuerPkHex}-${entry.tokenId}`} className="card card-outline-only shared-collection-item--declared mb-2">
                   <div className="card-body card-outline-only-body">
-                    <p className="m-0 small text-muted mb-2">
+                    <p className="m-0 small text-muted">
                       POAP #{String(entry.tokenId)} · Issuer: {truncateHex(entry.issuerPkHex)}
                     </p>
-                    <ul className="list-unstyled mb-0">
-                      {entry.visibleEventIds.map((eventId) => (
-                        <li key={eventId} className="d-flex align-items-center mb-1">
-                          <Calendar size={14} className="mr-2" />
-                          <span className="text-break small">{truncateHex(eventId)}</span>
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 </li>
               ))}

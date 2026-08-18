@@ -35,7 +35,6 @@ const ROLE_NAV_ITEMS = {
   [SITE_ROLES.SUBSCRIBER]: [
     { href: "/explore-events", label: "Explore Events" },
     { href: "/my-subscriptions", label: "My Subscriptions" },
-    { href: "/my-pending-approvals", label: "My Pending Approvals" },
   ],
   [SITE_ROLES.ORGANIZER]: [
     { href: "/my-events", label: "My Events" },

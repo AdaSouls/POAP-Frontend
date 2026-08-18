@@ -3,6 +3,7 @@ import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import PoapEvent from "../components/poapEvent";
 import { checkEventsMintedByAddress } from "../../utils/poapHelpers";
+import { getMyTokens } from "../../midnight/my-tokens";
 
 const ClaimMint = () => {
   const { poapEvents, midnight: { provider } } = useDrawer();
@@ -15,15 +16,12 @@ const ClaimMint = () => {
     }
     try {
       const { privateState } = await provider.service.getState();
-      const tokens = Object.entries(privateState.tokens || {}).map(([issuerPkHex, token]) => ({
-        issuerPkHex,
-        attendedEventIds: token.attendance.eventIds.map((id) => Buffer.from(id).toString("hex")),
-      }));
+      const tokens = await getMyTokens(provider.service, poapEvents, privateState.tokens || {});
       setMyTokens(tokens);
     } catch (error) {
       console.error("Error loading tokens:", error);
     }
-  }, [provider]);
+  }, [provider, poapEvents]);
 
   useEffect(() => {
     loadMyTokens();

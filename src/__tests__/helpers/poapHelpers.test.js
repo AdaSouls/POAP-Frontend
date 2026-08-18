@@ -1,4 +1,4 @@
-import { getEventStatus, filterVisibleEvents } from '../../utils/poapHelpers';
+import { getEventStatus } from '../../utils/poapHelpers';
 
 describe('getEventStatus', () => {
   it('returns inactive when isActive is false, regardless of other fields', () => {
@@ -21,18 +21,5 @@ describe('getEventStatus', () => {
   it('returns active when minted is below maxSupply and not expired', () => {
     const future = Math.floor(Date.now() / 1000) + 3600;
     expect(getEventStatus({ isActive: true, expiration: future, maxSupply: 10, minted: 3 })).toBe('active');
-  });
-});
-
-describe('filterVisibleEvents', () => {
-  const poap = { issuerPkHex: 'bb'.repeat(32), attendedEventIds: ['aa'.repeat(32), 'cc'.repeat(32)] };
-
-  it('keeps only events the visibility lookup marks visible', () => {
-    const isVisible = (issuerPkHex, eventId) => eventId === 'aa'.repeat(32);
-    expect(filterVisibleEvents(poap, isVisible)).toEqual(['aa'.repeat(32)]);
-  });
-
-  it('returns an empty array when the poap has no attended events', () => {
-    expect(filterVisibleEvents({ issuerPkHex: 'bb'.repeat(32) }, () => true)).toEqual([]);
   });
 });

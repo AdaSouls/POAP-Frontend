@@ -171,8 +171,8 @@ const Dashboard = () => {
           </h1>
           <p className="text-muted role-hero-desc index-hero-desc">
             AdaSouls issues privacy-preserving POAPs on the Midnight network — a single Compact
-            contract that can represent far more than event badges, while attendance and
-            ownership history stay in each wallet's own private state.
+            contract that can represent far more than event badges, while your wallet identity is
+            derived locally and shared with an organizer only when you choose to.
           </p>
           <button
             type="button"

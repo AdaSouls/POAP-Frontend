@@ -3,9 +3,8 @@ import { X } from "lucide-react";
 import FilterPopover from "./FilterPopover";
 
 // Same client-side filter/sort pattern as EventFilters.jsx, for mySubscriptions.jsx's own POAP
-// list. This list comes from private state (see mySubscriptions.jsx's own comment on why), not
-// the indexer — only the fields already shaped there (issuerPkHex, isSoulbound, attendedEventIds)
-// are filterable, there's no server-side query to extend.
+// list (see src/midnight/my-tokens.ts for the shape — one entry per token, sourced from the
+// indexer).
 const PoapFilters = ({ filters, onFilterChange, onReset }) => {
   const handleFilterChange = (key, value) => {
     onFilterChange({ ...filters, [key]: value });
@@ -61,7 +60,7 @@ const PoapFilters = ({ filters, onFilterChange, onReset }) => {
           onChange={(e) => handleFilterChange("sortBy", e.target.value)}
         >
           <option value="tokenId">Token ID</option>
-          <option value="attendanceCount">Events Attended</option>
+          <option value="mintedBlock">Most Recent</option>
         </select>
       </div>
 

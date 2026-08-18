@@ -36,12 +36,15 @@ function withTimeout(promise, ms, onTimeout) {
 
 // getCallerPkHex() derives the caller's pk locally (see witnesses.ts#deriveCallerPk — no tx, no
 // chain interaction). Still cached across page loads to avoid recomputing on every reconnect —
-// keyed by the wallet's own coinPublicKey so switching wallets in the same browser profile can't
-// serve a stale pk cached from a *different* wallet. (Found 2026-08-14: the old global, unscoped
-// key caused "My Events" to silently show nothing for a wallet that had previously connected as a
-// different wallet in this browser.)
+// keyed by the wallet's own coinPublicKey AND the contract address, so switching wallets in the
+// same browser profile can't serve a stale pk cached from a *different* wallet (found 2026-08-14),
+// and — just as important — redeploying the contract can't serve a stale pk cached from the
+// *previous* deployment either (found 2026-08-19: getOrCreatePrivateState generates a fresh
+// local_sk() per contract address, so caller_pk() genuinely differs across deployments even for
+// the same wallet; without the contract address in the key, a post-redeploy "My Events" silently
+// shows nothing because the cached address no longer matches any event's on-chain organizer).
 async function resolveCallerPkHex(service) {
-  const cacheKey = CALLER_PK_CACHE_PREFIX + service.walletCoinPublicKey;
+  const cacheKey = CALLER_PK_CACHE_PREFIX + service.walletCoinPublicKey + ':' + service.contractAddress;
   const cached = window.localStorage.getItem(cacheKey);
   if (cached) return cached;
 

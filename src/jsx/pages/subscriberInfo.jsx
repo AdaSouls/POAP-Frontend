@@ -31,14 +31,12 @@ const SubscriberInfo = () => {
             <h1 className="role-hero-title">Discover events, claim POAPs, build your collection</h1>
             <p className="text-muted role-hero-desc">
               As a subscriber, you browse events published by organizers and claim POAPs to your
-              wallet — your attendance history stays in your own private state.
+              wallet. Tokens an organizer mints directly to you show up here automatically too —
+              no separate approval step.
             </p>
             <div className="role-hero-cta-group">
               <Link to="/my-subscriptions" className="btn btn-role-cta">
                 Go to My Subscriptions
-              </Link>
-              <Link to="/my-pending-approvals" className="btn btn-role-cta btn-role-cta-outline">
-                Go to My Pending Approvals
               </Link>
             </div>
           </div>

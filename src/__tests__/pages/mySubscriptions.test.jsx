@@ -3,56 +3,85 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MySubscriptions from '../../jsx/pages/mySubscriptions';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
+import { getTokensByOwner } from '../../midnight/indexer.service';
 
-function connectedDrawerValue(getState) {
+jest.mock('../../midnight/indexer.service');
+
+const ISSUER_PK = 'bb'.repeat(32);
+const HOLDER_PK = 'ff'.repeat(32);
+
+function connectedDrawerValue({ events = [{ issuerPk: ISSUER_PK }], getHolderPkHex } = {}) {
   return {
     ...mockDrawerContext,
+    poapEvents: events,
     midnight: {
       ...mockDrawerContext.midnight,
       provider: {
-        address: 'aa'.repeat(32),
-        service: { getState },
+        address: HOLDER_PK,
+        service: {
+          getState: jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } }),
+          getHolderPkHex: getHolderPkHex ?? jest.fn().mockResolvedValue(HOLDER_PK),
+        },
       },
     },
   };
 }
 
-describe('MySubscriptions page', () => {
-  const mockTokens = {
-    ['bb'.repeat(32)]: {
-      tokenId: 1n,
-      attendance: { eventIds: [Buffer.from('cc'.repeat(32), 'hex')], isSoulbound: false },
-    },
+function mockToken(overrides = {}) {
+  return {
+    tokenId: 1,
+    ownerPk: HOLDER_PK,
+    issuerPk: ISSUER_PK,
+    firstEventId: 'cc'.repeat(32),
+    isBurned: false,
+    mintedBlock: 10,
+    mintedTx: 'tx-1',
+    burnedBlock: null,
+    burnedTx: null,
+    tokenMetadataURI: null,
+    tokenPrivateMetadataCommit: null,
+    metadataURI: null,
+    ...overrides,
   };
+}
 
-  const twoMockTokens = {
-    ...mockTokens,
-    ['dd'.repeat(32)]: {
-      tokenId: 2n,
-      attendance: { eventIds: [Buffer.from('ee'.repeat(32), 'hex')], isSoulbound: false },
-    },
-  };
+describe('MySubscriptions page', () => {
+  beforeEach(() => {
+    getTokensByOwner.mockReset();
+  });
 
   it('renders the inner nav (page title dropped — the main nav already shows the active page)', () => {
+    getTokensByOwner.mockResolvedValue([]);
     renderWithProviders(<MySubscriptions />);
     expect(screen.getByRole('button', { name: /filters/i })).toBeInTheDocument();
   });
 
-  it('loads and displays tokens from private state when wallet is connected', async () => {
-    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: mockTokens } });
-    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
+  it('loads and displays tokens sourced from the indexer by holder pk when wallet is connected', async () => {
+    getTokensByOwner.mockResolvedValue([mockToken()]);
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue() });
 
     await waitFor(() => {
-      expect(getState).toHaveBeenCalled();
+      expect(getTokensByOwner).toHaveBeenCalledWith(HOLDER_PK);
     });
     await waitFor(() => {
       expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
     });
   });
 
+  it('shows tokens an organizer push-minted, with no separate claim/approval step', async () => {
+    // A push-minted token never touches local private state — getTokensByOwner alone (via this
+    // wallet's holder pk for that issuer) is what makes it show up here.
+    getTokensByOwner.mockResolvedValue([mockToken({ tokenId: 7 })]);
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue() });
+
+    await waitFor(() => {
+      expect(screen.getByText(/POAP #7/i)).toBeInTheDocument();
+    });
+  });
+
   it('shows empty state when no POAPs are found', async () => {
-    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
-    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
+    getTokensByOwner.mockResolvedValue([]);
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue() });
 
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();
@@ -60,8 +89,8 @@ describe('MySubscriptions page', () => {
   });
 
   it('does not show a share button when there are no POAPs', async () => {
-    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: {} } });
-    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
+    getTokensByOwner.mockResolvedValue([]);
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue() });
 
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();
@@ -71,8 +100,8 @@ describe('MySubscriptions page', () => {
 
   it('copies a collection share link keyed by the holder pk once POAPs are loaded', async () => {
     navigator.clipboard.writeText.mockClear();
-    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: mockTokens } });
-    const drawerValue = connectedDrawerValue(getState);
+    getTokensByOwner.mockResolvedValue([mockToken()]);
+    const drawerValue = connectedDrawerValue();
     renderWithProviders(<MySubscriptions />, { drawerValue });
 
     await waitFor(() => {
@@ -89,16 +118,16 @@ describe('MySubscriptions page', () => {
   });
 
   it('hides sibling cards when one is expanded, and restores them on collapse', async () => {
-    const getState = jest.fn().mockResolvedValue({ ledger: {}, privateState: { tokens: twoMockTokens } });
-    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue(getState) });
+    getTokensByOwner.mockResolvedValue([mockToken({ tokenId: 1 }), mockToken({ tokenId: 2 })]);
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue() });
 
     await waitFor(() => {
       expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
       expect(screen.getByText(/POAP #2/i)).toBeInTheDocument();
     });
 
-    // PoapFilters defaults to sorting by Token ID descending, so POAP #2 (tokenId 2n) renders
-    // first — the same "real default sort" convention EventFilters/myEvents.jsx already uses.
+    // PoapFilters defaults to sorting by Token ID descending, so POAP #2 renders first — same
+    // convention EventFilters/myEvents.jsx already uses.
     await userEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
 
     // AnimatePresence's exit is animated, so the sibling leaves the DOM asynchronously.

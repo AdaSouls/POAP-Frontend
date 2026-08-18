@@ -25,9 +25,9 @@ const Overview = () => {
               <h2>AdaSouls on Midnight</h2>
               <p className="text-muted">
                 AdaSouls issues privacy-preserving POAPs on the Midnight network. A single Compact
-                smart contract tracks event attendance: the public ledger records that a valid
-                POAP exists, while each wallet's attendance history stays in its own private
-                state.
+                smart contract mints a token per event you claim: the public ledger records that a
+                valid POAP exists, while your wallet identity is derived locally and never shared
+                directly with an organizer.
               </p>
               {provider ? (
                 <div className="alert alert-success">
@@ -69,8 +69,8 @@ const Overview = () => {
                   <div className="step-number">3</div>
                   <h5>Claim your POAP</h5>
                   <p className="text-muted small">
-                    Mint your token — or, if you already have one for that organizer, its
-                    attendance record updates instead of minting a duplicate.
+                    Mint a fresh token for that event — one claim per event, and any token an
+                    organizer sends you directly shows up here too, automatically.
                   </p>
                 </div>
               </div>

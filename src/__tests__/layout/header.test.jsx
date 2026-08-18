@@ -15,13 +15,6 @@ describe('Header nav', () => {
     expect(screen.getByRole('button', { name: /subscriber/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /explore events/i })).toHaveAttribute('href', '/explore-events');
     expect(screen.getByRole('link', { name: /my subscriptions/i })).toHaveAttribute('href', '/my-subscriptions');
-    expect(screen.getByRole('link', { name: /my pending approvals/i })).toHaveAttribute('href', '/my-pending-approvals');
-  });
-
-  it('only shows "My Pending Approvals" for the Subscriber role, not Organizer', () => {
-    window.localStorage.setItem(STORAGE_KEY, 'organizer');
-    renderWithProviders(<Header />);
-    expect(screen.queryByRole('link', { name: /my pending approvals/i })).not.toBeInTheDocument();
   });
 
   it('restores the last-selected role from localStorage on mount', () => {

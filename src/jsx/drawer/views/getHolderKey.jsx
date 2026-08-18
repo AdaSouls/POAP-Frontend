@@ -9,10 +9,9 @@ import { errorFunction } from "../../toasts/sweetAlerts";
 // getHolderPk(issuerId) is a per-organizer pseudonym (poap.compact) — deliberately DIFFERENT from
 // the caller pk shown as "your address" everywhere else in the app. It's the only value an
 // organizer can actually mintTo() a wallet with; sharing the wrong one (the plain address) results
-// in a token this wallet's own claimOrUpdate can never reconcile — see witnesses.ts's
-// deriveHolderPk comment. This view exists purely so a subscriber can generate and copy that value
-// for a specific organizer, out-of-band (chat, email, in person) — there's no on-chain "give me
-// this" handshake to automate here.
+// in an unrecoverable mint — see witnesses.ts's deriveHolderPk comment. This view exists purely so
+// a subscriber can generate and copy that value for a specific organizer, out-of-band (chat,
+// email, in person) — there's no on-chain "give me this" handshake to automate here.
 export default function GetHolderKey() {
   const { midnight } = useDrawer();
   const dispatch = useDrawerDispatch();

@@ -14,7 +14,6 @@ import { getAllEvents } from "../midnight/indexer.service";
 import MyEvents from "./pages/myEvents";
 import ExploreEvents from "./pages/exploreEvents";
 import MySubscriptions from "./pages/mySubscriptions";
-import MyPendingApprovals from "./pages/myPendingApprovals";
 import Overview from "./pages/overview";
 import OrganizerDashboard from "./pages/organizerDashboard";
 import SharedCollection from "./pages/sharedCollection";
@@ -55,7 +54,6 @@ const Router = () => {
           <Route path="/my-events" element={<MyEvents />} />
           <Route path="/explore-events" element={<ExploreEvents />} />
           <Route path="/my-subscriptions" element={<MySubscriptions />} />
-          <Route path="/my-pending-approvals" element={<MyPendingApprovals />} />
           <Route path="/organizer" element={<OrganizerInfo />} />
           <Route path="/subscriber" element={<SubscriberInfo />} />
           {/* No nav link points here anymore — deliberately shelved rather than deleted, for a
