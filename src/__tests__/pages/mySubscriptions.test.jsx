@@ -127,8 +127,9 @@ describe('MySubscriptions page', () => {
     });
 
     // PoapFilters defaults to sorting by Token ID descending, so POAP #2 renders first — same
-    // convention EventFilters/myEvents.jsx already uses.
-    await userEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
+    // convention EventFilters/myEvents.jsx already uses. No separate "View Details" button
+    // anymore — the card itself is the click target (see poapCard.jsx).
+    await userEvent.click(screen.getByText(/POAP #2/i).closest('.card'));
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /collapse poap details/i })).toBeInTheDocument();

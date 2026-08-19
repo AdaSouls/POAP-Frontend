@@ -105,6 +105,15 @@ const MySubscriptions = () => {
 
   const filteredPoaps = useMemo(() => applyPoapFilters(myPoaps, filters), [myPoaps, filters]);
 
+  // While one card is expanded, every other card is left out of the grid entirely instead of just
+  // reflowing around it — each card already carries its own initial/exit animation props, so
+  // AnimatePresence fades/scales them away and back in on its own; no separate dimming/hiding
+  // logic needed. Matches eventCard.jsx's own grids (myEvents.jsx/exploreEvents.jsx).
+  const visiblePoaps = useMemo(
+    () => (expandedId ? filteredPoaps.filter((p) => String(p.tokenId) === expandedId) : filteredPoaps),
+    [filteredPoaps, expandedId],
+  );
+
   return (
     <Layout activeMenu={3}>
       <div className="role-subscriber">
@@ -147,7 +156,7 @@ const MySubscriptions = () => {
             <>
               {provider && filteredPoaps.length > 0 && (
                 <AnimatePresence mode="popLayout">
-                  {filteredPoaps.map((poap) => (
+                  {visiblePoaps.map((poap) => (
                     <PoapCard
                       key={poap.tokenId}
                       poap={poap}

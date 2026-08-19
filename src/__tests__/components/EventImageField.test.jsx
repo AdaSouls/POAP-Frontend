@@ -103,4 +103,30 @@ describe('EventImageField', () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(errorFunction).toHaveBeenCalledWith('Image Too Large', expect.any(String), '');
   });
+
+  describe('noCrop', () => {
+    const file = makeFile('ticket.png', 'image/png', 1024);
+
+    it('shows a plain, uncropped preview image instead of the Cropper', () => {
+      const { container } = render(
+        <EventImageField values={{ ...emptyValues, imageFile: file }} onChange={jest.fn()} noCrop />,
+      );
+
+      const img = container.querySelector('img');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveStyle({ objectFit: 'contain' });
+      // react-easy-crop renders its own internal <img> too, but always inside a container with
+      // this class — its absence confirms the Cropper itself never mounted.
+      expect(container.querySelector('.reactEasyCrop_Container')).not.toBeInTheDocument();
+    });
+
+    it('still supports removing the image and never reports croppedAreaPixels', async () => {
+      const onChange = jest.fn();
+      render(<EventImageField values={{ ...emptyValues, imageFile: file }} onChange={onChange} noCrop />);
+
+      await userEvent.click(screen.getByRole('button', { name: /remove image/i }));
+
+      expect(onChange).toHaveBeenCalledWith({ ...emptyValues, imageFile: null, croppedAreaPixels: null });
+    });
+  });
 });

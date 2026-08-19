@@ -99,7 +99,7 @@ describe('MyEvents page', () => {
     });
   });
 
-  it('keeps sibling cards visible when one is expanded, and after it collapses again', async () => {
+  it('hides sibling cards while one is expanded, and brings them back after it collapses', async () => {
     renderWithProviders(<EventsPage />);
 
     await waitFor(() => {
@@ -115,8 +115,9 @@ describe('MyEvents page', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /collapse event details/i })).toBeInTheDocument();
     }, { timeout: 2000 });
-    // The sibling never left the DOM — only the clicked card resized into its expanded layout.
-    expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
+    // The sibling is left out of the grid entirely while one card is expanded — only the expanded
+    // card itself remains, full width (see myEvents.jsx's visibleEvents).
+    expect(screen.queryByText(/Event cccccccc/i)).not.toBeInTheDocument();
     expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
 
     await userEvent.click(screen.getByRole('button', { name: /collapse event details/i }));

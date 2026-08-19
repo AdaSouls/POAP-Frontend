@@ -53,6 +53,11 @@ async function fetchMetadata(metadataURI) {
       // above. Undefined when the organizer left the switch off, so callers should fall back to
       // imageUrl (poapImageUrl || imageUrl) rather than assume this is always present.
       poapImageUrl: json.poapImage ? await resolveIpfs(json.poapImage) : undefined,
+      // Only set on individually push-minted Credential tokens (see mintPoap.jsx) — the actual
+      // ticket/diploma/document content, shown full-size when the holder opens that specific
+      // token (poapCard.jsx's expanded view). Never present on event-level metadataURI or on
+      // self-claimed tokens, which have no per-token metadata of their own.
+      documentImageUrl: json.documentImage ? await resolveIpfs(json.documentImage) : undefined,
     };
   } catch {
     return null;

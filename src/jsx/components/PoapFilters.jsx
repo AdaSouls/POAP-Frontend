@@ -1,6 +1,23 @@
 import React from "react";
 import { X } from "lucide-react";
 import FilterPopover from "./FilterPopover";
+import SelectDropdown from "./SelectDropdown";
+
+const TYPE_OPTIONS = [
+  { value: "", label: "All Types" },
+  { value: "soulbound", label: "Soulbound" },
+  { value: "transferable", label: "Transferable" },
+];
+
+const SORT_BY_OPTIONS = [
+  { value: "tokenId", label: "Token ID" },
+  { value: "mintedBlock", label: "Most Recent" },
+];
+
+const ORDER_OPTIONS = [
+  { value: "desc", label: "Descending" },
+  { value: "asc", label: "Ascending" },
+];
 
 // Same client-side filter/sort pattern as EventFilters.jsx, for mySubscriptions.jsx's own POAP
 // list (see src/midnight/my-tokens.ts for the shape — one entry per token, sourced from the
@@ -39,42 +56,35 @@ const PoapFilters = ({ filters, onFilterChange, onReset }) => {
 
       <div>
         <label htmlFor="poap-filter-type" className="form-label small text-muted">Type</label>
-        <select
+        <SelectDropdown
           id="poap-filter-type"
-          className="form-select form-select-sm"
+          size="sm"
           value={filters.soulbound || ""}
-          onChange={(e) => handleFilterChange("soulbound", e.target.value || undefined)}
-        >
-          <option value="">All Types</option>
-          <option value="soulbound">Soulbound</option>
-          <option value="transferable">Transferable</option>
-        </select>
+          onChange={(value) => handleFilterChange("soulbound", value || undefined)}
+          options={TYPE_OPTIONS}
+        />
       </div>
 
       <div>
         <label htmlFor="poap-filter-sortBy" className="form-label small text-muted">Sort By</label>
-        <select
+        <SelectDropdown
           id="poap-filter-sortBy"
-          className="form-select form-select-sm"
+          size="sm"
           value={filters.sortBy || "tokenId"}
-          onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-        >
-          <option value="tokenId">Token ID</option>
-          <option value="mintedBlock">Most Recent</option>
-        </select>
+          onChange={(value) => handleFilterChange("sortBy", value)}
+          options={SORT_BY_OPTIONS}
+        />
       </div>
 
       <div>
         <label htmlFor="poap-filter-order" className="form-label small text-muted">Order</label>
-        <select
+        <SelectDropdown
           id="poap-filter-order"
-          className="form-select form-select-sm"
+          size="sm"
           value={filters.order || "desc"}
-          onChange={(e) => handleFilterChange("order", e.target.value)}
-        >
-          <option value="desc">Descending</option>
-          <option value="asc">Ascending</option>
-        </select>
+          onChange={(value) => handleFilterChange("order", value)}
+          options={ORDER_OPTIONS}
+        />
       </div>
     </FilterPopover>
   );

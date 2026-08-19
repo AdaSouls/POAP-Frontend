@@ -25,7 +25,28 @@ function isValidImageFile(file) {
 // crop/pin anything to IPFS (see cropImage.js, which also downscales and compresses the final
 // crop so IPFS never gets an unnecessarily large file, regardless of how big the original upload
 // was).
-export default function EventImageField({ values, onChange, circular = false }) {
+//
+// `id`/`label` default to the original hardcoded values so every existing caller (createEvent.jsx,
+// one instance per wizard step, never two on screen at once) is unaffected. Callers that render
+// more than one instance on the same page at the same time (mintPoap.jsx) must pass distinct
+// `id`s — otherwise both dropzones' hidden file inputs would share id="eventImage", which is
+// invalid HTML and breaks label association/testing-library queries for the second instance.
+//
+// `noCrop`: some images (a credential's document/ticket/diploma — see mintPoap.jsx) must keep
+// their original aspect ratio — horizontal, vertical, or square — rather than being forced into
+// the fixed square (or circular) crop every other caller wants. When true, the Cropper is skipped
+// entirely: the picked file is shown via a plain `object-fit: contain` preview and uploaded
+// as-is, `croppedAreaPixels` is never set (stays null forever), which every caller already
+// treats as "use the raw file, nothing to crop" (see e.g. mintPoap.jsx's handleSubmit).
+export default function EventImageField({
+  values,
+  onChange,
+  circular = false,
+  noCrop = false,
+  id = "eventImage",
+  label = "Image",
+  helperText = "Optional. Automatically resized and pinned to IPFS — no need to host it yourself.",
+}) {
   const { imageFile } = values;
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -92,21 +113,29 @@ export default function EventImageField({ values, onChange, circular = false }) 
 
   return (
     <div className="col-12 mb-3">
-      <label className="form-label" htmlFor="eventImage">Image</label>
+      <label className="form-label" htmlFor={id}>{label}</label>
 
       {previewUrl ? (
         <div className="event-image-crop-container">
-          <Cropper
-            image={previewUrl}
-            crop={crop}
-            zoom={zoom}
-            aspect={1}
-            cropShape={circular ? "round" : "rect"}
-            style={circular ? undefined : { cropAreaStyle: { borderRadius: 16 } }}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={handleCropComplete}
-          />
+          {noCrop ? (
+            <img
+              src={previewUrl}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          ) : (
+            <Cropper
+              image={previewUrl}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape={circular ? "round" : "rect"}
+              style={circular ? undefined : { cropAreaStyle: { borderRadius: 16 } }}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={handleCropComplete}
+            />
+          )}
           <button
             type="button"
             className="event-image-remove-btn"
@@ -137,17 +166,15 @@ export default function EventImageField({ values, onChange, circular = false }) 
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            id="eventImage"
-            name="eventImage"
+            id={id}
+            name={id}
             onChange={handleFileInputChange}
             style={{ display: "none" }}
           />
         </div>
       )}
 
-      <small className="form-text text-muted">
-        Optional. Automatically resized and pinned to IPFS — no need to host it yourself.
-      </small>
+      <small className="form-text text-muted">{helperText}</small>
     </div>
   );
 }

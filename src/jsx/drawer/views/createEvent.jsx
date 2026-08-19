@@ -2,7 +2,7 @@ import {
   useDrawer,
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
 import { X } from "lucide-react";
 import {
@@ -12,29 +12,54 @@ import {
 } from "../../toasts/sweetAlerts";
 import EventDetailsFields from "../../components/EventDetailsFields";
 import EventImageField from "../../components/EventImageField";
+import CategoryPicker from "../../components/CategoryPicker";
+import TaxonomyStepFields from "../../components/TaxonomyStepFields";
+import ChannelsField from "../../components/ChannelsField";
+import OrganizationProfileFields from "../../components/OrganizationProfileFields";
 import { uploadImageToIPFS, uploadJSONToIPFS, uploadPrivateJSONToIPFS } from "../../../services/ipfs.service";
 import { getCroppedImageBlob } from "../../../utils/cropImage";
 import { sha256 } from "../../../utils/cid";
 import { computePrivateMetadataCommit } from "../../../midnight/contract.service";
 import { savePrivateEventDraft } from "../../../midnight/private-event-metadata";
+import {
+  EVENT_CATEGORIES,
+  getCategoryConfig,
+  isOrganizationProfileApplicable,
+  serializeTaxonomyValues,
+} from "../../constants/eventCategories";
 import eventNormal from "../../../images/svg/event-normal.svg";
 
 // NOTE: createEvent(eventId, maxSupply, expiration, isPublicMint, metadataURI) circuit — the
-// metadataURI is a pointer to off-chain JSON (name/description/image/…), not stored on-chain
-// itself. It's shared by every token minted for this event. Built here from steps 1-2's fields by
-// pinning an (optional) image and the resulting JSON to IPFS via the local server/ proxy —
-// never a manually-authored URI, and never a Pinata key in this bundle.
+// metadataURI is a pointer to off-chain JSON (name/description/image/category/…), not stored
+// on-chain itself. It's shared by every token minted for this event. Built here from the wizard's
+// steps by pinning an (optional) image and the resulting JSON to IPFS via the local server/ proxy
+// — never a manually-authored URI, and never a Pinata key in this bundle.
+//
+// Step 0 picks a category (Event/Subscription/Credential, see
+// src/jsx/constants/eventCategories.js) before anything else — see
+// docs/event-creation-wizard-design.md for the full design. Every category then walks the SAME
+// step sequence (details → image → supply/visibility → channels → taxonomy → org profile
+// [conditional] → extra info → POAP image), just with different taxonomy fields and a fixed,
+// non-editable isPublicMint derived from the category. `step` is 0 for the category picker, then a
+// 1-based index into `steps` (computed below) once a category is chosen.
+const STEP_DETAILS = "details";
+const STEP_IMAGE = "image";
+const STEP_SUPPLY = "supply";
+const STEP_CHANNELS = "channels";
+const STEP_TAXONOMY = "taxonomy";
+const STEP_ORG_PROFILE = "orgProfile";
+const STEP_EXTRA_INFO = "extraInfo";
+const STEP_POAP_IMAGE = "poapImage";
+
+const CATEGORY_LIST = Object.values(EVENT_CATEGORIES);
+
 export default function CreateEvent() {
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
-  // Step 1: name/description. Step 2: image (drag-and-drop + crop) — this is the event's own
-  // listing/cover image. Step 3: supply/expiration/visibility. Step 4: optional extra info,
-  // independent of the event's own public/private mint setting — has its own public/private switch
-  // (see extraInfoIsPrivate below). Step 5: optional distinct image for the claimed POAP itself,
-  // gated by usePoapImage — off by default, in which case the POAP just displays the event's own
-  // image (poapImage omitted from the metadata JSON entirely, see handleSubmit/useEventMetadata.js).
-  const [step, setStep] = useState(1);
+  const [category, setCategory] = useState(null);
+  const [step, setStep] = useState(0);
+
   const [metadata, setMetadata] = useState({
     name: "",
     description: "",
@@ -43,11 +68,13 @@ export default function CreateEvent() {
   });
   const [maxSupply, setMaxSupply] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
-  const [isPublicMint, setIsPublicMint] = useState(true);
-  // Free-text extra info, independent of isPublicMint — its own switch decides whether it's baked
-  // into the public metadataURI JSON (extraInfoIsPrivate: false) or uploaded via the private
-  // commit/reveal flow (extraInfoIsPrivate: true). See src/midnight/private-event-metadata.ts and
-  // docs/privacy-matrix.md.
+  const [channels, setChannels] = useState([]);
+  const [taxonomyValues, setTaxonomyValues] = useState({});
+  const [organizationProfile, setOrganizationProfile] = useState({});
+  // Free-text extra info, independent of the category's fixed mint type — its own switch decides
+  // whether it's baked into the public metadataURI JSON (extraInfoIsPrivate: false) or uploaded via
+  // the private commit/reveal flow (extraInfoIsPrivate: true). See
+  // src/midnight/private-event-metadata.ts and docs/privacy-matrix.md.
   const [extraInfo, setExtraInfo] = useState("");
   const [extraInfoIsPrivate, setExtraInfoIsPrivate] = useState(false);
   const [usePoapImage, setUsePoapImage] = useState(false);
@@ -56,8 +83,8 @@ export default function CreateEvent() {
   // with the event's own image.
   const [poapImageValues, setPoapImageValues] = useState({ imageFile: null, croppedAreaPixels: null });
   const [loading, setLoading] = useState(false);
-  // Cropped once when leaving step 2, reused both for step 3's preview card and the actual
-  // upload at submit — avoids re-running the canvas crop twice.
+  // Cropped once when leaving the image step, reused both for the supply step's preview card and
+  // the actual upload at submit — avoids re-running the canvas crop twice.
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const [preparedImageBlob, setPreparedImageBlob] = useState(null);
   const previewUrlRef = useRef(null);
@@ -68,35 +95,92 @@ export default function CreateEvent() {
     };
   }, []);
 
-  const isStep1Valid = () => metadata.name.trim().length > 0;
-  const isStep3Valid = () => Number(maxSupply) >= 0;
-  const isStep5Valid = () => !usePoapImage || Boolean(poapImageValues.imageFile);
+  const categoryConfig = getCategoryConfig(category);
+
+  // STEP_ORG_PROFILE is always in the sequence now — it collects an organizer display name (see
+  // OrganizationProfileFields.jsx), which is just as relevant for an individual as for a company,
+  // so the step itself is never skipped. Only its address sub-fields are conditionally shown,
+  // via showOrgAddress below (recomputed on every taxonomy answer) — see
+  // isOrganizationProfileApplicable's doc comment for the per-category rule on that part.
+  //
+  // STEP_POAP_IMAGE only applies to categories where every token shares the event's own image set
+  // (Event/Subscription, isPublicMint) — a single image chosen once at event-creation time,
+  // inherited by every self-claim. Credential tokens are minted individually afterward (push-mint,
+  // see mintPoap.jsx) with their own per-recipient image, so there's nothing for this step to set:
+  // asking for one shared "POAP image" here would be misleading, not just redundant.
+  const showOrgAddress = isOrganizationProfileApplicable(category, taxonomyValues);
+  const steps = useMemo(() => {
+    if (!categoryConfig) return [];
+    const list = [
+      STEP_DETAILS, STEP_IMAGE, STEP_SUPPLY, STEP_CHANNELS, STEP_TAXONOMY, STEP_ORG_PROFILE, STEP_EXTRA_INFO,
+    ];
+    if (categoryConfig.isPublicMint) {
+      list.push(STEP_POAP_IMAGE);
+    }
+    return list;
+  }, [categoryConfig]);
+
+  const currentStepKey = step > 0 ? steps[step - 1] : null;
+  const isLastStep = step > 0 && step === steps.length;
+
+  const isDetailsValid = () => metadata.name.trim().length > 0;
+  const isSupplyValid = () => Number(maxSupply) >= 0;
+  const isPoapImageValid = () => !usePoapImage || Boolean(poapImageValues.imageFile);
+
+  const stepValidators = {
+    [STEP_DETAILS]: isDetailsValid,
+    [STEP_SUPPLY]: isSupplyValid,
+    [STEP_POAP_IMAGE]: isPoapImageValid,
+  };
+  const isCurrentStepValid = () => {
+    if (step === 0) return category !== null;
+    const validator = stepValidators[currentStepKey];
+    return validator ? validator() : true;
+  };
 
   const closeDrawer = () => {
     dispatch({ type: "CLOSE_DRAWER" });
   };
 
-  const goToStep3 = async () => {
-    if (metadata.imageFile) {
-      try {
-        const blob = metadata.croppedAreaPixels
-          ? await getCroppedImageBlob(metadata.imageFile, metadata.croppedAreaPixels)
-          : metadata.imageFile;
-        setPreparedImageBlob(blob);
-        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-        const url = URL.createObjectURL(blob);
-        previewUrlRef.current = url;
-        setPreviewImageUrl(url);
-      } catch (error) {
-        console.error("Error preparing image preview:", error);
-      }
-    } else {
+  // Only called when metadata.imageFile is truthy (see handleNext) — the no-image case is handled
+  // inline there, synchronously.
+  const prepareImagePreview = async () => {
+    try {
+      const blob = metadata.croppedAreaPixels
+        ? await getCroppedImageBlob(metadata.imageFile, metadata.croppedAreaPixels)
+        : metadata.imageFile;
+      setPreparedImageBlob(blob);
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      const url = URL.createObjectURL(blob);
+      previewUrlRef.current = url;
+      setPreviewImageUrl(url);
+    } catch (error) {
+      console.error("Error preparing image preview:", error);
+    }
+  };
+
+  // Stays synchronous (no `await` reached) whenever there's no image to crop — the common case —
+  // so the step change lands in the same React batch as the click, instead of deferring to a
+  // microtask. Only the actual crop path needs the extra tick.
+  const handleNext = () => {
+    if (currentStepKey === STEP_IMAGE && metadata.imageFile) {
+      prepareImagePreview().then(() => setStep((s) => s + 1));
+      return;
+    }
+    if (currentStepKey === STEP_IMAGE) {
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
       previewUrlRef.current = null;
       setPreparedImageBlob(null);
       setPreviewImageUrl(null);
     }
-    setStep(3);
+    setStep((s) => s + 1);
+  };
+
+  // Going back from the first content step returns to the category picker (step 0) — category and
+  // every field already entered stay as-is, only actually replaced if a different category is
+  // subsequently chosen.
+  const handleBack = () => {
+    setStep((s) => Math.max(0, s - 1));
   };
 
   const handleSubmit = async (e) => {
@@ -107,12 +191,17 @@ export default function CreateEvent() {
       return;
     }
 
-    if (!isStep3Valid()) {
+    if (!categoryConfig) {
+      errorFunction("Validation Error", "Choose what you're creating first.", "");
+      return;
+    }
+
+    if (!isSupplyValid()) {
       errorFunction("Validation Error", "Maximum Supply must be 0 (unlimited) or greater.", "");
       return;
     }
 
-    if (!isStep5Valid()) {
+    if (!isPoapImageValid()) {
       errorFunction("Validation Error", "Please choose a POAP image, or turn the switch off to use the event's own image.", "");
       return;
     }
@@ -134,12 +223,13 @@ export default function CreateEvent() {
         poapImageUri = await uploadImageToIPFS(poapBlob);
       }
 
-      // Extra info's own switch decides where it goes — independent of isPublicMint. Public: just
-      // another key in the same metadataURI JSON everyone already reads (no crypto, no reveal,
-      // visible immediately). Private: the commit/reveal flow — value = sha256 of the exact JSON
-      // that also gets uploaded, so the same 32 bytes double as the IPFS content's own CID digest
-      // (verified against the real Pinata API, see private-event-metadata.ts's design notes), no
-      // separate URI needs to be stored anywhere, just value/rand.
+      // Extra info's own switch decides where it goes — independent of the category's fixed mint
+      // type. Public: just another key in the same metadataURI JSON everyone already reads (no
+      // crypto, no reveal, visible immediately). Private: the commit/reveal flow — value = sha256
+      // of the exact JSON that also gets uploaded, so the same 32 bytes double as the IPFS
+      // content's own CID digest (verified against the real Pinata API, see
+      // private-event-metadata.ts's design notes), no separate URI needs to be stored anywhere,
+      // just value/rand.
       const trimmedExtraInfo = extraInfo.trim();
       let privateMetadataCommit;
       let privateDraft = null;
@@ -158,6 +248,11 @@ export default function CreateEvent() {
         };
       }
 
+      const taxonomyEntries = serializeTaxonomyValues(category, taxonomyValues);
+      const hasOrgProfileField = Object.values(organizationProfile).some(
+        (value) => typeof value === "string" && value.trim().length > 0,
+      );
+
       loadingFunction("Creating Event", "Uploading metadata to IPFS…", "");
       const metadataURI = await uploadJSONToIPFS({
         name: metadata.name.trim(),
@@ -165,6 +260,10 @@ export default function CreateEvent() {
         ...(imageUri ? { image: imageUri } : {}),
         ...(trimmedExtraInfo && !extraInfoIsPrivate ? { notes: trimmedExtraInfo } : {}),
         ...(poapImageUri ? { poapImage: poapImageUri } : {}),
+        category,
+        ...taxonomyEntries,
+        ...(channels.length ? { channels } : {}),
+        ...(hasOrgProfileField ? { organization: organizationProfile } : {}),
       });
 
       const eventId = new Uint8Array(32);
@@ -180,7 +279,7 @@ export default function CreateEvent() {
         eventId,
         BigInt(maxSupply || 0),
         expiration,
-        isPublicMint,
+        categoryConfig.isPublicMint,
         metadataURI,
         ...(privateMetadataCommit ? [privateMetadataCommit] : []),
       );
@@ -214,29 +313,33 @@ export default function CreateEvent() {
           <X size={15} />
         </button>
         <h4 className="text-center w-100 m-0 font-weight-semibold">
-          Create Event
+          {categoryConfig ? categoryConfig.headerTitle : "New POAP Group"}
         </h4>
       </div>
 
-      <div className="drawer-modal-steps">
-        <span className={`step-dot${step === 1 ? ' active' : ''}`} />
-        <span className={`step-dot${step === 2 ? ' active' : ''}`} />
-        <span className={`step-dot${step === 3 ? ' active' : ''}`} />
-        <span className={`step-dot${step === 4 ? ' active' : ''}`} />
-        <span className={`step-dot${step === 5 ? ' active' : ''}`} />
-      </div>
+      {categoryConfig && (
+        <div className="drawer-modal-steps">
+          {steps.map((stepKey, index) => (
+            <span key={stepKey} className={`step-dot${step === index + 1 ? ' active' : ''}`} />
+          ))}
+        </div>
+      )}
 
       <div className="drawer-body">
         <form className="row g-3" onSubmit={handleSubmit}>
-          {step === 1 && (
+          {step === 0 && (
+            <CategoryPicker value={category} onChange={setCategory} categories={CATEGORY_LIST} />
+          )}
+
+          {currentStepKey === STEP_DETAILS && (
             <EventDetailsFields values={metadata} onChange={setMetadata} />
           )}
 
-          {step === 2 && (
+          {currentStepKey === STEP_IMAGE && (
             <EventImageField values={metadata} onChange={setMetadata} />
           )}
 
-          {step === 3 && (
+          {currentStepKey === STEP_SUPPLY && (
             <>
               <div className="col-12">
                 <div className="drawer-modal-preview-card">
@@ -262,13 +365,14 @@ export default function CreateEvent() {
               </div>
 
               <div className="col-12">
-                <label className="form-label">
+                <label className="form-label" htmlFor="maxSupply">
                   Maximum Supply <span className="text-danger">*</span>
                 </label>
                 <input
                   type="number"
                   className="form-control"
                   placeholder="0 for unlimited"
+                  id="maxSupply"
                   name="maxSupply"
                   value={maxSupply}
                   onChange={(event) => setMaxSupply(event.target.value)}
@@ -281,10 +385,11 @@ export default function CreateEvent() {
               </div>
 
               <div className="col-12 mb-3">
-                <label className="form-label">Expiration Date</label>
+                <label className="form-label" htmlFor="expirationDate">Expiration Date</label>
                 <input
                   type="date"
                   className="form-control"
+                  id="expirationDate"
                   name="expirationDate"
                   value={expirationDate}
                   onChange={(event) => setExpirationDate(event.target.value)}
@@ -297,34 +402,43 @@ export default function CreateEvent() {
               <div className="col-12 mb-4">
                 <div className="drawer-modal-preview-card">
                   <div className="d-flex align-items-center" style={{ gap: "14px" }}>
-                    <div className="form-check form-switch mb-0 flex-shrink-0">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="isPublicMint"
-                        aria-label="Public mint"
-                        checked={isPublicMint}
-                        onChange={(event) => setIsPublicMint(event.target.checked)}
-                      />
-                    </div>
                     <div>
                       <span className="d-block font-weight-semibold">
-                        {isPublicMint ? "Public Mint" : "Invite-Only Mint"}
+                        {categoryConfig.isPublicMint ? "Public Mint" : "Invite-Only Mint"}
                       </span>
                       <small className="form-text text-muted d-block mt-1">
-                        {isPublicMint
-                          ? "Anyone can claim a POAP for this event without the organizer minting to them."
-                          : "Only the organizer can mint POAPs for this event — attendees can't claim on their own."}
+                        {categoryConfig.isPublicMint
+                          ? `Anyone can claim a POAP for this without you minting it individually — set by the "${categoryConfig.label}" category.`
+                          : `Only you can mint POAPs for this — recipients can't claim on their own. Set by the "${categoryConfig.label}" category.`}
                       </small>
                     </div>
                   </div>
                 </div>
               </div>
-
             </>
           )}
 
-          {step === 4 && (
+          {currentStepKey === STEP_CHANNELS && (
+            <ChannelsField values={channels} onChange={setChannels} />
+          )}
+
+          {currentStepKey === STEP_TAXONOMY && (
+            <TaxonomyStepFields
+              taxonomy={categoryConfig.taxonomy}
+              values={taxonomyValues}
+              onChange={setTaxonomyValues}
+            />
+          )}
+
+          {currentStepKey === STEP_ORG_PROFILE && (
+            <OrganizationProfileFields
+              values={organizationProfile}
+              onChange={setOrganizationProfile}
+              showAddress={showOrgAddress}
+            />
+          )}
+
+          {currentStepKey === STEP_EXTRA_INFO && (
             <>
               <div className="col-12">
                 <label className="form-label">Extra Info (optional)</label>
@@ -339,8 +453,7 @@ export default function CreateEvent() {
                   onChange={(event) => setExtraInfo(event.target.value)}
                 />
                 <small className="form-text text-muted">
-                  Independent of Public Mint/Invite-Only above — this field has its own
-                  public/private setting below.
+                  Its own public/private setting below, independent of everything else.
                 </small>
               </div>
 
@@ -373,7 +486,7 @@ export default function CreateEvent() {
             </>
           )}
 
-          {step === 5 && (
+          {currentStepKey === STEP_POAP_IMAGE && (
             <>
               <div className="col-12">
                 <div className="drawer-modal-preview-card">
@@ -411,89 +524,44 @@ export default function CreateEvent() {
       </div>
 
       <div className="drawer-footer">
-        {step === 1 && (
+        {step === 0 ? (
           <Button
             type="button"
             className="btn btn-gradient btn-block w-100"
-            onClick={() => setStep(2)}
-            disabled={!isStep1Valid()}
+            onClick={handleNext}
+            disabled={!isCurrentStepValid()}
           >
             Next
           </Button>
-        )}
-        {step === 2 && (
+        ) : (
           <div className="d-flex gap-2 w-100">
             <Button
               type="button"
               className="btn btn-card-detail-action"
-              onClick={() => setStep(1)}
-            >
-              Back
-            </Button>
-            <Button
-              type="button"
-              className="btn btn-gradient flex-grow-1"
-              onClick={goToStep3}
-            >
-              Next
-            </Button>
-          </div>
-        )}
-        {step === 3 && (
-          <div className="d-flex gap-2 w-100">
-            <Button
-              type="button"
-              className="btn btn-card-detail-action"
-              onClick={() => setStep(2)}
-            >
-              Back
-            </Button>
-            <Button
-              type="button"
-              className="btn btn-gradient flex-grow-1"
-              onClick={() => setStep(4)}
-              disabled={!isStep3Valid()}
-            >
-              Next
-            </Button>
-          </div>
-        )}
-        {step === 4 && (
-          <div className="d-flex gap-2 w-100">
-            <Button
-              type="button"
-              className="btn btn-card-detail-action"
-              onClick={() => setStep(3)}
-            >
-              Back
-            </Button>
-            <Button
-              type="button"
-              className="btn btn-gradient flex-grow-1"
-              onClick={() => setStep(5)}
-            >
-              Next
-            </Button>
-          </div>
-        )}
-        {step === 5 && (
-          <div className="d-flex gap-2 w-100">
-            <Button
-              type="button"
-              className="btn btn-card-detail-action"
-              onClick={() => setStep(4)}
+              onClick={handleBack}
               disabled={loading}
             >
               Back
             </Button>
-            <Button
-              type="submit"
-              className="btn btn-gradient flex-grow-1"
-              onClick={handleSubmit}
-              disabled={loading || !isStep3Valid() || !isStep5Valid()}
-            >
-              {loading ? "Creating Event…" : "Create Event"}
-            </Button>
+            {isLastStep ? (
+              <Button
+                type="submit"
+                className="btn btn-gradient flex-grow-1"
+                onClick={handleSubmit}
+                disabled={loading || !isCurrentStepValid()}
+              >
+                {loading ? "Creating…" : "Create"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                className="btn btn-gradient flex-grow-1"
+                onClick={handleNext}
+                disabled={!isCurrentStepValid()}
+              >
+                Next
+              </Button>
+            )}
           </div>
         )}
       </div>

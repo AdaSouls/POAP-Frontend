@@ -94,8 +94,12 @@ const MyEvents = () => {
     }
   }, [ownEvents, expandedId]);
 
-  const expandedEvent = useMemo(
-    () => ownEvents.find((e) => e.eventId === expandedId) || null,
+  // While one card is expanded, every other card is left out of the grid entirely — each card
+  // already carries its own initial/exit animation props, so AnimatePresence fades/scales them
+  // away and back in on its own; no separate dimming/hiding logic needed. See eventCard.jsx's own
+  // top-of-file comment for why this replaced the old floating-overlay approach.
+  const visibleEvents = useMemo(
+    () => (expandedId ? ownEvents.filter((e) => e.eventId === expandedId) : ownEvents),
     [ownEvents, expandedId],
   );
 
@@ -141,7 +145,7 @@ const MyEvents = () => {
             </div>
           ) : ownEvents.length > 0 ? (
             <AnimatePresence mode="popLayout">
-              {ownEvents.map((event) => (
+              {visibleEvents.map((event) => (
                 <EventCard
                   key={event.eventId}
                   event={event}
@@ -165,20 +169,6 @@ const MyEvents = () => {
             </div>
           )}
         </div>
-
-        {/* Floating expanded card — a separate overlay instance, not part of the grid above, so
-            the grid never reflows when one event expands (see eventCard.jsx's own comment). */}
-        <AnimatePresence>
-          {expandedEvent && (
-            <EventCard
-              key={`${expandedEvent.eventId}-overlay`}
-              event={expandedEvent}
-              isExpanded
-              overlay
-              onCollapse={() => setExpandedId(null)}
-            />
-          )}
-        </AnimatePresence>
       </div>
     </Layout>
   );

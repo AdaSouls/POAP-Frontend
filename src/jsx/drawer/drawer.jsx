@@ -121,6 +121,15 @@ export const Drawer = () => {
   // for a 2-column layout — every other modal view stays at the shared narrow width.
   const isWideModalView = chromeViewKey === 'createEvent';
 
+  // Translucent/glass form-control treatment (see .drawer-modal-glass-form in
+  // theme-dark-glass.css) instead of the default solid --solid-bg fill — explicitly requested for
+  // createEvent, then extended to createMint (mintPoap.jsx), getHolderKey, and revealPrivateInfo
+  // once their own inputs got the same "reads as a plain black box" feedback (all Subscriber-role
+  // forms: Get My Key and Reveal Private Info are both opened from mySubscriptions.jsx/poapCard.jsx
+  // context). Independent of isWideModalView — this only swaps input colors, doesn't touch modal
+  // width.
+  const isGlassFormView = ['createEvent', 'createMint', 'getHolderKey', 'revealPrivateInfo'].includes(chromeViewKey);
+
   const closeDrawer = () => dispatch({ type: 'CLOSE_DRAWER' });
 
   // The modal's own fade is handled by the outer .drawer-modal's CSS opacity transition (driven
@@ -143,7 +152,7 @@ export const Drawer = () => {
       {isOpen && isModalView && (
         <div className="drawer-modal-overlay" onClick={closeDrawer} aria-hidden="true"></div>
       )}
-      <div className={`drawer ${drawerLayout} ${drawerTone} ${isWideModalView ? 'drawer-modal-wide' : ''} ${isOpen ? 'open' : ''}`}>
+      <div className={`drawer ${drawerLayout} ${drawerTone} ${isWideModalView ? 'drawer-modal-wide' : ''} ${isGlassFormView ? 'drawer-modal-glass-form' : ''} ${isOpen ? 'open' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeViewKey}

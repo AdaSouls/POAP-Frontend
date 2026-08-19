@@ -43,7 +43,8 @@ describe('EventFilters Component', () => {
     render(<EventFilters filters={{}} onFilterChange={mockOnFilterChange} onReset={mockOnReset} />);
 
     await openPopover();
-    await userEvent.selectOptions(screen.getByLabelText(/^Status$/i), 'active');
+    await userEvent.click(screen.getByLabelText(/^Status$/i));
+    await userEvent.click(screen.getByRole('option', { name: 'Active' }));
 
     expect(mockOnFilterChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }));
   });

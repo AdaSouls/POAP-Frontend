@@ -1,6 +1,27 @@
 import React from "react";
 import { X } from "lucide-react";
 import FilterPopover from "./FilterPopover";
+import SelectDropdown from "./SelectDropdown";
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All Statuses" },
+  { value: "active", label: "Active" },
+  { value: "expired", label: "Expired" },
+  { value: "full", label: "Full" },
+  { value: "inactive", label: "Inactive" },
+];
+
+const SORT_BY_OPTIONS = [
+  { value: "createdBlock", label: "Block Created" },
+  { value: "expiration", label: "Expiration" },
+  { value: "maxSupply", label: "Max Supply" },
+  { value: "minted", label: "Minted" },
+];
+
+const ORDER_OPTIONS = [
+  { value: "desc", label: "Descending" },
+  { value: "asc", label: "Ascending" },
+];
 
 // Filtering is entirely client-side — the Midnight indexer's GET /api/events has no server-side
 // filter params (see src/midnight/indexer.service.ts), so myEvents.jsx fetches everything once and
@@ -55,18 +76,13 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
 
       <div>
         <label htmlFor="filter-status" className="form-label small text-muted">Status</label>
-        <select
+        <SelectDropdown
           id="filter-status"
-          className="form-select form-select-sm"
+          size="sm"
           value={filters.status || ""}
-          onChange={(e) => handleFilterChange("status", e.target.value || undefined)}
-        >
-          <option value="">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="expired">Expired</option>
-          <option value="full">Full</option>
-          <option value="inactive">Inactive</option>
-        </select>
+          onChange={(value) => handleFilterChange("status", value || undefined)}
+          options={STATUS_OPTIONS}
+        />
       </div>
 
       <div>
@@ -95,30 +111,24 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
 
       <div>
         <label htmlFor="filter-sortBy" className="form-label small text-muted">Sort By</label>
-        <select
+        <SelectDropdown
           id="filter-sortBy"
-          className="form-select form-select-sm"
+          size="sm"
           value={filters.sortBy || "createdBlock"}
-          onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-        >
-          <option value="createdBlock">Block Created</option>
-          <option value="expiration">Expiration</option>
-          <option value="maxSupply">Max Supply</option>
-          <option value="minted">Minted</option>
-        </select>
+          onChange={(value) => handleFilterChange("sortBy", value)}
+          options={SORT_BY_OPTIONS}
+        />
       </div>
 
       <div>
         <label htmlFor="filter-order" className="form-label small text-muted">Order</label>
-        <select
+        <SelectDropdown
           id="filter-order"
-          className="form-select form-select-sm"
+          size="sm"
           value={filters.order || "desc"}
-          onChange={(e) => handleFilterChange("order", e.target.value)}
-        >
-          <option value="desc">Descending</option>
-          <option value="asc">Ascending</option>
-        </select>
+          onChange={(value) => handleFilterChange("order", value)}
+          options={ORDER_OPTIONS}
+        />
       </div>
     </FilterPopover>
   );

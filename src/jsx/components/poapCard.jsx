@@ -4,6 +4,7 @@ import { ImageOff, X } from "lucide-react";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
+import CategoryBadge from "./CategoryBadge";
 import {
   getTokenVisibility,
   setTokenVisibility,
@@ -87,6 +88,15 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     setTimeout(() => setShareCopied(false), 2000);
   };
 
+  // No "pending"/claim state exists for a POAP — mintTo() (organizer push-mint) and claim()
+  // (self-mint) both leave the token already owned by the recipient the instant the transaction
+  // lands, with no separate claim/approval step (see mySubscriptions.jsx reading straight from the
+  // indexer by holder pk). So the only real states here are "still owned" vs. "burned" — same
+  // top-right badge slot/style as eventCard.jsx's own status badge, instead of Burned living down
+  // in the row with Soulbound.
+  const poapStatusBadgeClass = poap.isBurned ? "badge bg-secondary" : "badge status-badge-active";
+  const poapStatusLabel = poap.isBurned ? "Burned" : "Active";
+
   return (
     <motion.div
       ref={ref}
@@ -130,7 +140,10 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
           {!isExpanded ? (
             <div className="d-flex align-items-stretch card-media-row">
-              <motion.div layout className="card-media-thumb-wrap" style={{ ...textStyle, borderRadius: "50%", overflow: "hidden" }}>
+              {/* The image is never part of textStyle's fade — only text fades out before the
+                  resize and back in after, the image stays visible throughout (and stays the same
+                  size/crop as the collapsed tile in the expanded branch below, not a smaller one). */}
+              <motion.div layout className="card-media-thumb-wrap" style={{ borderRadius: "50%", overflow: "hidden" }}>
                 {metadataLoading ? (
                   <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
                 ) : showBrokenImage ? (
@@ -145,11 +158,19 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                 )}
               </motion.div>
               <div className="card-media-content" style={textStyle}>
-                <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
-                  {metadata?.name || `POAP #${String(poap.tokenId)}`}
-                </h4>
-                <div className="d-flex align-items-center mb-2">
-                  {poap.isSoulbound && (
+                <div className="d-flex align-items-start justify-content-between mb-1">
+                  <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
+                    {metadata?.name || `POAP #${String(poap.tokenId)}`}
+                  </h4>
+                  <span
+                    className={`${poapStatusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
+                    style={{ fontSize: "10px", padding: "2px 8px" }}
+                  >
+                    {poapStatusLabel}
+                  </span>
+                </div>
+                {poap.isSoulbound && (
+                  <div className="d-flex align-items-center mb-2">
                     <span
                       className="badge bg-info mr-2"
                       style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
@@ -157,19 +178,14 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     >
                       Soulbound
                     </span>
-                  )}
-                  {poap.isBurned && (
-                    <span className="badge bg-secondary mr-2" style={{ fontSize: "10px", padding: "2px 8px" }}>
-                      Burned
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <ul className="list-unstyled mb-2" style={{ fontSize: "12px" }}>
                   <li className="d-flex align-items-center mb-1">
                     <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
                     <span className="text-muted small">
-                      Issuer: <span className="text-white">{truncateHex(poap.issuerPkHex)}</span>
+                      Issuer: <span className="text-white">{metadata?.organization?.name || truncateHex(poap.issuerPkHex)}</span>
                     </span>
                   </li>
                   <li className="d-flex align-items-center mb-1">
@@ -180,23 +196,13 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                 </ul>
 
                 <div className="d-flex justify-content-end mt-auto">
-                  <button
-                    type="button"
-                    className="btn btn-white btn-small"
-                    style={{ fontSize: "11px", padding: "3px 10px" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleExpand();
-                    }}
-                  >
-                    View Details
-                  </button>
+                  <CategoryBadge category={metadata?.category} />
                 </div>
               </div>
             </div>
           ) : (
             <div className="d-flex justify-content-start align-items-center mb-2">
-              <motion.div layout className="card-media-thumb-small-wrap mr-3" style={{ ...textStyle, borderRadius: "50%", overflow: "hidden" }}>
+              <motion.div layout className="card-media-thumb-wrap mr-3" style={{ borderRadius: "50%", overflow: "hidden" }}>
                 {metadataLoading ? (
                   <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
                 ) : showBrokenImage ? (
@@ -211,11 +217,19 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                 )}
               </motion.div>
               <div className="poap-info flex-grow-1" style={textStyle}>
-                <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
-                  {metadata?.name || `POAP #${String(poap.tokenId)}`}
-                </h4>
-                <div className="d-flex align-items-center">
-                  {poap.isSoulbound && (
+                <div className="d-flex align-items-center justify-content-between">
+                  <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
+                    {metadata?.name || `POAP #${String(poap.tokenId)}`}
+                  </h4>
+                  <span
+                    className={`${poapStatusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
+                    style={{ fontSize: "11px", padding: "3px 10px" }}
+                  >
+                    {poapStatusLabel}
+                  </span>
+                </div>
+                {poap.isSoulbound && (
+                  <div className="d-flex align-items-center">
                     <span
                       className="badge bg-info mr-2"
                       style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
@@ -223,14 +237,23 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     >
                       Soulbound
                     </span>
-                  )}
-                  {poap.isBurned && (
-                    <span className="badge bg-secondary mr-2" style={{ fontSize: "10px", padding: "2px 8px" }}>
-                      Burned
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
+            </div>
+          )}
+
+          {/* Only set on individually push-minted Credential tokens (see mintPoap.jsx) — the
+              actual ticket/diploma/document content this credential represents. Absent for every
+              other token (self-claimed, or Credential tokens minted before this field existed),
+              so this block simply doesn't render rather than showing a placeholder. */}
+          {isExpanded && metadata?.documentImageUrl && (
+            <div className="mb-3" style={textStyle}>
+              <img
+                src={metadata.documentImageUrl}
+                alt=""
+                style={{ width: "100%", borderRadius: 12, display: "block" }}
+              />
             </div>
           )}
 

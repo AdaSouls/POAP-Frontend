@@ -44,6 +44,18 @@ describe('PoapCard Component', () => {
     expect(screen.getByText(/Burned/i)).toBeInTheDocument();
   });
 
+  it('shows an Active status badge (top-right, like eventCard.jsx) when not burned', () => {
+    renderWithProviders(<PoapCard poap={mockPoap} />);
+    expect(screen.getByText(/^Active$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Burned$/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a Burned status badge instead of Active once burned — no separate "pending"/claim state exists', () => {
+    renderWithProviders(<PoapCard poap={{ ...mockPoap, isBurned: true }} />);
+    expect(screen.getByText(/^Burned$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Active$/i)).not.toBeInTheDocument();
+  });
+
   it('calls onExpand when the card is clicked', async () => {
     const onExpand = jest.fn();
     renderWithProviders(<PoapCard poap={mockPoap} onExpand={onExpand} />);
@@ -55,13 +67,9 @@ describe('PoapCard Component', () => {
     await waitFor(() => expect(onExpand).toHaveBeenCalled());
   });
 
-  it('calls onExpand when the view details button is clicked', async () => {
-    const onExpand = jest.fn();
-    renderWithProviders(<PoapCard poap={mockPoap} onExpand={onExpand} />);
-
-    await userEvent.click(screen.getByRole('button', { name: /View Details/i }));
-
-    await waitFor(() => expect(onExpand).toHaveBeenCalled());
+  it('renders no action button in the collapsed tile — the card itself is the click target', () => {
+    renderWithProviders(<PoapCard poap={mockPoap} />);
+    expect(screen.queryByRole('button', { name: /view details/i })).not.toBeInTheDocument();
   });
 
   describe('expanded state', () => {
@@ -170,6 +178,61 @@ describe('PoapCard Component', () => {
       );
 
       expect(await screen.findByText('Genesis Meetup')).toBeInTheDocument();
+    });
+
+    it('shows the full-size document image in the expanded view for a push-minted credential', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          name: 'Diploma',
+          documentImage: 'https://example.com/diploma.png',
+        }),
+      });
+
+      const { container } = renderWithProviders(
+        <PoapCard
+          poap={{ ...mockPoap, tokenId: 3, tokenMetadataURI: 'https://example.com/meta-diploma.json' }}
+          isExpanded
+        />
+      );
+
+      await waitFor(() => {
+        expect(container.querySelector('img[src="https://example.com/diploma.png"]')).toBeInTheDocument();
+      });
+    });
+
+    it('shows no document-image block for a token with no documentImage (self-claimed)', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ name: 'Genesis Meetup', image: 'https://example.com/img.png' }),
+      });
+
+      const { container } = renderWithProviders(
+        <PoapCard
+          poap={{ ...mockPoap, tokenId: 4, tokenMetadataURI: 'https://example.com/meta-no-doc.json' }}
+          isExpanded
+        />
+      );
+
+      await waitFor(() => {
+        expect(container.querySelector('img[src="https://example.com/img.png"]')).toBeInTheDocument();
+      });
+      // Only the small circular icon should render — no second, full-size document-image block.
+      expect(container.querySelectorAll('img')).toHaveLength(1);
+    });
+
+    it("shows the organizer's display name instead of the raw issuer key when set", async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ name: 'Diploma', organization: { name: 'AdaSouls Inc.' } }),
+      });
+
+      renderWithProviders(
+        <PoapCard poap={{ ...mockPoap, tokenId: 5, tokenMetadataURI: 'https://example.com/meta-issuer-name.json' }} />
+      );
+
+      expect(await screen.findByText('AdaSouls Inc.')).toBeInTheDocument();
+      expect(screen.queryByText(/aaaaaaaa…aaaaaa/)).not.toBeInTheDocument();
     });
   });
 });
