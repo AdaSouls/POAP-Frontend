@@ -117,7 +117,7 @@ describe('MySubscriptions page', () => {
     expect(screen.getByText(/link copied/i)).toBeInTheDocument();
   });
 
-  it('hides sibling cards when one is expanded, and restores them on collapse', async () => {
+  it('keeps sibling cards visible when one is expanded, and after it collapses again', async () => {
     getTokensByOwner.mockResolvedValue([mockToken({ tokenId: 1 }), mockToken({ tokenId: 2 })]);
     renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue() });
 
@@ -130,10 +130,11 @@ describe('MySubscriptions page', () => {
     // convention EventFilters/myEvents.jsx already uses.
     await userEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
 
-    // AnimatePresence's exit is animated, so the sibling leaves the DOM asynchronously.
     await waitFor(() => {
-      expect(screen.queryByText(/POAP #1/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /collapse poap details/i })).toBeInTheDocument();
     });
+    // The sibling never left the DOM — only the clicked card resized into its expanded layout.
+    expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
     expect(screen.getByText(/POAP #2/i)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /collapse poap details/i }));

@@ -46,7 +46,7 @@ describe('EventCard Component', () => {
     expect(screen.queryByText(/Block:/i)).not.toBeInTheDocument();
   });
 
-  it('shows the fetched description in the collapsed tile', async () => {
+  it('does not show the description in the collapsed tile (only in expanded details)', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue({ name: 'DevCon 2026', description: 'A great event' }),
@@ -56,6 +56,19 @@ describe('EventCard Component', () => {
     const eventWithMetadata = { ...mockEvent, metadataURI: 'https://example.com/meta-description-only.json' };
 
     renderWithProviders(<EventCard event={eventWithMetadata} />);
+
+    await screen.findByText('DevCon 2026');
+    expect(screen.queryByText('A great event')).not.toBeInTheDocument();
+  });
+
+  it('shows the fetched description in the expanded details', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ name: 'DevCon 2026', description: 'A great event' }),
+    });
+    const eventWithMetadata = { ...mockEvent, metadataURI: 'https://example.com/meta-description-expanded.json' };
+
+    renderWithProviders(<EventCard event={eventWithMetadata} isExpanded overlay />);
 
     expect(await screen.findByText('A great event')).toBeInTheDocument();
   });
@@ -67,9 +80,7 @@ describe('EventCard Component', () => {
     const card = screen.getByText(/Event aaaaaaaa/i).closest('.card');
     await userEvent.click(card);
 
-    // onExpand is deliberately delayed until the text's own fade-out finishes, so the resize
-    // never starts while text is still visible — see eventCard.jsx's TEXT_FADE_MS.
-    await waitFor(() => expect(onExpand).toHaveBeenCalled());
+    expect(onExpand).toHaveBeenCalled();
   });
 
   it('displays mint progress', () => {
@@ -131,22 +142,26 @@ describe('EventCard Component', () => {
     expect(screen.queryByRole('button', { name: /mint poap/i })).not.toBeInTheDocument();
   });
 
-  describe('expanded state', () => {
+  // isExpanded alone now only affects the grid tile (it becomes an invisible ghost placeholder —
+  // see "keeps the grid slot reserved" below); expanded content only renders with overlay too,
+  // since expanding is a separate floating instance now rather than in-place morphing. See
+  // eventCard.jsx's own top-of-file comment for why.
+  describe('expanded overlay', () => {
     it('shows the full (untruncated) event id and issuer', () => {
-      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      renderWithProviders(<EventCard event={mockEvent} isExpanded overlay />);
       expect(screen.getByText(mockEvent.eventId)).toBeInTheDocument();
       expect(screen.getByText(mockEvent.issuerPk)).toBeInTheDocument();
     });
 
     it('fetches and shows the live token count for this event', async () => {
-      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      renderWithProviders(<EventCard event={mockEvent} isExpanded overlay />);
 
       expect(getEvent).toHaveBeenCalledWith(mockEvent.eventId);
       expect(await screen.findByText(/7 live tokens/i)).toBeInTheDocument();
     });
 
     it('shows an empty state when no tokens have been minted for this event', async () => {
-      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      renderWithProviders(<EventCard event={mockEvent} isExpanded overlay />);
       await waitFor(() => expect(getTokensByEvent).toHaveBeenCalledWith(mockEvent.eventId));
       expect(await screen.findByText(/no poaps minted for this event yet/i)).toBeInTheDocument();
     });
@@ -156,7 +171,7 @@ describe('EventCard Component', () => {
         { tokenId: 1, ownerPk: 'cc'.repeat(32), isBurned: false },
         { tokenId: 2, ownerPk: 'dd'.repeat(32), isBurned: true },
       ]);
-      const { container } = renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      const { container } = renderWithProviders(<EventCard event={mockEvent} isExpanded overlay />);
 
       await waitFor(() => {
         expect(container.querySelectorAll('.card-media-thumb-small-wrap')).toHaveLength(2);
@@ -166,22 +181,33 @@ describe('EventCard Component', () => {
 
     it('calls onCollapse when the close button is clicked', async () => {
       const onCollapse = jest.fn();
-      renderWithProviders(<EventCard event={mockEvent} isExpanded onCollapse={onCollapse} />);
+      renderWithProviders(<EventCard event={mockEvent} isExpanded overlay onCollapse={onCollapse} />);
 
       await userEvent.click(screen.getByRole('button', { name: /collapse event details/i }));
 
-      await waitFor(() => expect(onCollapse).toHaveBeenCalled());
+      expect(onCollapse).toHaveBeenCalled();
+    });
+
+    it('calls onCollapse when clicking the scrim outside the card', async () => {
+      const onCollapse = jest.fn();
+      const { container } = renderWithProviders(
+        <EventCard event={mockEvent} isExpanded overlay onCollapse={onCollapse} />,
+      );
+
+      fireEvent.click(container.querySelector('.event-card-overlay-scrim'));
+
+      expect(onCollapse).toHaveBeenCalled();
     });
 
     it('does not show a Mint POAP button for a regular attendee', () => {
-      renderWithProviders(<EventCard event={mockEvent} isExpanded />, {
+      renderWithProviders(<EventCard event={mockEvent} isExpanded overlay />, {
         userRolesValue: { ...mockUserRoles, isAdmin: false, isIssuer: false },
       });
       expect(screen.queryByRole('button', { name: /mint poap/i })).not.toBeInTheDocument();
     });
 
     it('shows a Mint POAP button for the admin on a private event', () => {
-      renderWithProviders(<EventCard event={privateMockEvent} isExpanded />, {
+      renderWithProviders(<EventCard event={privateMockEvent} isExpanded overlay />, {
         userRolesValue: { ...mockUserRoles, isAdmin: true },
       });
       expect(screen.getByRole('button', { name: /mint poap/i })).toBeInTheDocument();
@@ -195,7 +221,7 @@ describe('EventCard Component', () => {
         ...mockDrawerContext,
         midnight: { ...mockDrawerContext.midnight, provider: { address: privateMockEvent.issuerPk } },
       };
-      renderWithProviders(<EventCard event={privateMockEvent} isExpanded />, {
+      renderWithProviders(<EventCard event={privateMockEvent} isExpanded overlay />, {
         drawerValue,
         userRolesValue: { ...mockUserRoles, isIssuer: false },
       });
@@ -208,7 +234,7 @@ describe('EventCard Component', () => {
         ...mockDrawerContext,
         midnight: { ...mockDrawerContext.midnight, provider: { address: privateMockEvent.issuerPk } },
       };
-      renderWithProviders(<EventCard event={otherEvent} isExpanded />, {
+      renderWithProviders(<EventCard event={otherEvent} isExpanded overlay />, {
         drawerValue,
         userRolesValue: { ...mockUserRoles, isIssuer: true },
       });
@@ -222,7 +248,7 @@ describe('EventCard Component', () => {
         ...mockDrawerContext,
         midnight: { ...mockDrawerContext.midnight, provider: { address: mockEvent.issuerPk } },
       };
-      renderWithProviders(<EventCard event={mockEvent} isExpanded />, {
+      renderWithProviders(<EventCard event={mockEvent} isExpanded overlay />, {
         drawerValue,
         userRolesValue: { ...mockUserRoles, isAdmin: true },
       });
@@ -231,7 +257,7 @@ describe('EventCard Component', () => {
 
     it('dispatches CREATE_MINT with the event when Mint POAP is clicked', async () => {
       const dispatch = jest.fn();
-      renderWithProviders(<EventCard event={privateMockEvent} isExpanded />, {
+      renderWithProviders(<EventCard event={privateMockEvent} isExpanded overlay />, {
         drawerDispatch: dispatch,
         userRolesValue: { ...mockUserRoles, isAdmin: true },
       });
@@ -239,6 +265,16 @@ describe('EventCard Component', () => {
       await userEvent.click(screen.getByRole('button', { name: /mint poap/i }));
 
       expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_MINT', payload: privateMockEvent });
+    });
+  });
+
+  describe('grid tile ghost placeholder', () => {
+    it('keeps the grid slot reserved but invisible when this event is the one expanded elsewhere', () => {
+      const { container } = renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      const hoverGroup = container.querySelector('.card-hover-group');
+      expect(hoverGroup).toHaveStyle({ visibility: 'hidden' });
+      // Still the collapsed markup underneath (for accurate sizing), not the expanded content.
+      expect(screen.queryByText(/live tokens/i)).not.toBeInTheDocument();
     });
   });
 
@@ -335,7 +371,7 @@ describe('EventCard Component', () => {
         ...mockDrawerContext,
         midnight: { ...mockDrawerContext.midnight, provider: { address: mockEvent.issuerPk } },
       };
-      renderWithProviders(<EventCard event={mockEvent} isExpanded variant="explore" />, {
+      renderWithProviders(<EventCard event={mockEvent} isExpanded overlay variant="explore" />, {
         drawerValue,
         userRolesValue: { ...mockUserRoles, isAdmin: true, isIssuer: true },
       });

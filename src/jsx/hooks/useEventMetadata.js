@@ -1,10 +1,35 @@
 import { useEffect, useState } from "react";
+import { getPublicGatewayDomain } from "../../services/ipfs.service";
 
-const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
+// ipfs.io's gateway doesn't send CORS headers reliably (ERR_FAILED, no
+// Access-Control-Allow-Origin), and the shared gateway.pinata.cloud one 404s on recently-pinned
+// content (propagation lag) and rate-limits (429) under normal use. This account's own dedicated
+// gateway (fetched once via getPublicGatewayDomain, see server/index.js) serves its own pins
+// immediately and isn't shared with other Pinata users — used whenever it's reachable, falling
+// back to the shared gateway only if the local server itself can't be reached.
+const FALLBACK_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
 
-function resolveIpfs(uri) {
+let gatewayDomainPromise = null;
+function resolveGatewayBase() {
+  if (!gatewayDomainPromise) {
+    gatewayDomainPromise = getPublicGatewayDomain()
+      .then((domain) => `https://${domain}.mypinata.cloud/ipfs/`)
+      .catch(() => {
+        // Don't cache a failure forever (unlike a successful resolution, cached below via the
+        // module-level variable staying set) — a momentarily-unreachable local server shouldn't
+        // permanently downgrade every metadata fetch for the rest of the tab's life; retry on the
+        // next call instead, only falling back for this one.
+        gatewayDomainPromise = null;
+        return FALLBACK_GATEWAY;
+      });
+  }
+  return gatewayDomainPromise;
+}
+
+async function resolveIpfs(uri) {
   if (typeof uri === "string" && uri.startsWith("ipfs://")) {
-    return IPFS_GATEWAY + uri.slice("ipfs://".length);
+    const base = await resolveGatewayBase();
+    return base + uri.slice("ipfs://".length);
   }
   return uri;
 }
@@ -17,10 +42,18 @@ const metadataCache = new Map();
 
 async function fetchMetadata(metadataURI) {
   try {
-    const response = await fetch(resolveIpfs(metadataURI));
+    const response = await fetch(await resolveIpfs(metadataURI));
     if (!response.ok) return null;
     const json = await response.json();
-    return { ...json, imageUrl: json.image ? resolveIpfs(json.image) : undefined };
+    return {
+      ...json,
+      imageUrl: json.image ? await resolveIpfs(json.image) : undefined,
+      // Optional, organizer-set at createEvent time (see createEvent.jsx's usePoapImage switch) —
+      // the image the *claimed token itself* displays, separate from the event's own listing image
+      // above. Undefined when the organizer left the switch off, so callers should fall back to
+      // imageUrl (poapImageUrl || imageUrl) rather than assume this is always present.
+      poapImageUrl: json.poapImage ? await resolveIpfs(json.poapImage) : undefined,
+    };
   } catch {
     return null;
   }
@@ -44,7 +77,18 @@ export function useEventMetadata(metadataURI) {
     setLoading(true);
 
     if (!metadataCache.has(metadataURI)) {
-      metadataCache.set(metadataURI, fetchMetadata(metadataURI));
+      // A failed fetch (network hiccup, gateway momentarily down) is evicted from the cache right
+      // after resolving instead of staying cached as a permanent null — otherwise one bad request
+      // right after createEvent (before IPFS/gateway propagation catches up) would keep showing the
+      // fallback name/no-image for the rest of the tab's lifetime, even once the content is really
+      // available. A successful result still stays cached forever, same as before.
+      metadataCache.set(
+        metadataURI,
+        fetchMetadata(metadataURI).then((result) => {
+          if (result === null) metadataCache.delete(metadataURI);
+          return result;
+        })
+      );
     }
 
     metadataCache.get(metadataURI).then((result) => {

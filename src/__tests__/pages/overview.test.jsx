@@ -11,7 +11,7 @@ describe('Overview Page', () => {
 
   it('shows a prompt to connect when no wallet is connected', () => {
     renderWithProviders(<Overview />);
-    expect(screen.getAllByText(/Connect your Lace wallet/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Connect your wallet/i).length).toBeGreaterThan(0);
   });
 
   it('shows wallet connected message when wallet is connected', () => {

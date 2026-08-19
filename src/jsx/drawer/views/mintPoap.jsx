@@ -51,7 +51,7 @@ export default function MintPoap() {
 
     setLoading(true);
     try {
-      loadingFunction("Minting POAP", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Minting POAP", `Please confirm the transaction in your ${midnight.provider.wallet} wallet…`, "");
       const eventIdBytes = Uint8Array.from(Buffer.from(mintEvent.eventId, "hex"));
       const recipientPk = Uint8Array.from(Buffer.from(recipientPkHex.trim(), "hex"));
       // Mirror the event's own public metadata onto this token — mintTo stores exactly what's
@@ -97,7 +97,7 @@ export default function MintPoap() {
                 <div className="d-flex align-items-center mb-3">
                   <img
                     className="mr-3 rounded-circle"
-                    src={metadata?.imageUrl || eventNormal}
+                    src={metadata?.poapImageUrl || metadata?.imageUrl || eventNormal}
                     width="48"
                     height="48"
                     alt=""

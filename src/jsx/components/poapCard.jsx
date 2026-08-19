@@ -1,8 +1,7 @@
-import React, { forwardRef, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { ImageOff, X } from "lucide-react";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
-import poapNormal from "../../images/svg/poap-normal.svg";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import {
@@ -38,7 +37,15 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
   const [visible, setVisible] = useState(() => getTokenVisibility(poap.issuerPkHex, poap.tokenId));
   const [shareCopied, setShareCopied] = useState(false);
-  const { metadata } = useEventMetadata(poap.tokenMetadataURI || poap.metadataURI);
+  const { metadata, loading: metadataLoading } = useEventMetadata(poap.tokenMetadataURI || poap.metadataURI);
+  const poapImageUrl = metadata?.poapImageUrl || metadata?.imageUrl;
+  // Same broken/loading treatment as eventCard.jsx's own cards — never a stale/placeholder image,
+  // ever, while the real one isn't confirmed available.
+  const [imgLoadError, setImgLoadError] = useState(false);
+  useEffect(() => {
+    setImgLoadError(false);
+  }, [poapImageUrl]);
+  const showBrokenImage = !metadataLoading && (!poapImageUrl || imgLoadError);
   // Text reflows (wrapping, line-count changes) as the card's width/height FLIP-animates, which
   // looks janky since framer-motion only interpolates the box, not text layout. So the text gets
   // its own short fade, sequenced (not overlapping) with the resize: fade out first, THEN trigger
@@ -123,13 +130,19 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
           {!isExpanded ? (
             <div className="d-flex align-items-stretch card-media-row">
-              <motion.div layout className="card-media-thumb-wrap" style={textStyle}>
-                <img
-                  className="card-media-thumb-icon"
-                  src={metadata?.imageUrl || poapNormal}
-                  alt=""
-                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = poapNormal; }}
-                />
+              <motion.div layout className="card-media-thumb-wrap" style={{ ...textStyle, borderRadius: "50%", overflow: "hidden" }}>
+                {metadataLoading ? (
+                  <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                ) : showBrokenImage ? (
+                  <ImageOff size={22} className="card-media-thumb-broken-icon" />
+                ) : (
+                  <img
+                    className="card-media-thumb-photo"
+                    src={poapImageUrl}
+                    alt=""
+                    onError={() => setImgLoadError(true)}
+                  />
+                )}
               </motion.div>
               <div className="card-media-content" style={textStyle}>
                 <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>
@@ -183,12 +196,19 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
             </div>
           ) : (
             <div className="d-flex justify-content-start align-items-center mb-2">
-              <motion.div layout className="card-media-thumb-small-wrap mr-3" style={textStyle}>
-                <img
-                  src={metadata?.imageUrl || poapNormal}
-                  alt=""
-                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = poapNormal; }}
-                />
+              <motion.div layout className="card-media-thumb-small-wrap mr-3" style={{ ...textStyle, borderRadius: "50%", overflow: "hidden" }}>
+                {metadataLoading ? (
+                  <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                ) : showBrokenImage ? (
+                  <ImageOff size={14} className="card-media-thumb-broken-icon" />
+                ) : (
+                  <img
+                    className="card-media-thumb-photo"
+                    src={poapImageUrl}
+                    alt=""
+                    onError={() => setImgLoadError(true)}
+                  />
+                )}
               </motion.div>
               <div className="poap-info flex-grow-1" style={textStyle}>
                 <h4 className="mb-1" style={{ fontSize: "15px", fontWeight: "600" }}>

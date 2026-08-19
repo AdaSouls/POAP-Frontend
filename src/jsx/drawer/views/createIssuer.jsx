@@ -42,7 +42,7 @@ export default function CreateIssuer() {
 
     setLoading(true);
     try {
-      loadingFunction("Registering Issuer", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Registering Issuer", `Please confirm the transaction in your ${midnight.provider.wallet} wallet…`, "");
       const issuerPk = Uint8Array.from(Buffer.from(issuerPkHex.trim(), "hex"));
       const { txHash } = await midnight.provider.service.registerIssuer(issuerPk);
 

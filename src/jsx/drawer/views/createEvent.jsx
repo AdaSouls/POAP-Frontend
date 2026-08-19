@@ -28,9 +28,12 @@ export default function CreateEvent() {
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
 
-  // Step 1: name/description. Step 2: image (drag-and-drop + crop). Step 3: supply/expiration/
-  // visibility. Step 4: optional extra info, independent of the event's own public/private mint
-  // setting — has its own public/private switch (see extraInfoIsPrivate below).
+  // Step 1: name/description. Step 2: image (drag-and-drop + crop) — this is the event's own
+  // listing/cover image. Step 3: supply/expiration/visibility. Step 4: optional extra info,
+  // independent of the event's own public/private mint setting — has its own public/private switch
+  // (see extraInfoIsPrivate below). Step 5: optional distinct image for the claimed POAP itself,
+  // gated by usePoapImage — off by default, in which case the POAP just displays the event's own
+  // image (poapImage omitted from the metadata JSON entirely, see handleSubmit/useEventMetadata.js).
   const [step, setStep] = useState(1);
   const [metadata, setMetadata] = useState({
     name: "",
@@ -47,6 +50,11 @@ export default function CreateEvent() {
   // docs/privacy-matrix.md.
   const [extraInfo, setExtraInfo] = useState("");
   const [extraInfoIsPrivate, setExtraInfoIsPrivate] = useState(false);
+  const [usePoapImage, setUsePoapImage] = useState(false);
+  // Separate {imageFile, croppedAreaPixels} pair — EventImageField hardcodes those two field names
+  // on whatever `values` object it's given, so this can't share `metadata` above without colliding
+  // with the event's own image.
+  const [poapImageValues, setPoapImageValues] = useState({ imageFile: null, croppedAreaPixels: null });
   const [loading, setLoading] = useState(false);
   // Cropped once when leaving step 2, reused both for step 3's preview card and the actual
   // upload at submit — avoids re-running the canvas crop twice.
@@ -62,6 +70,7 @@ export default function CreateEvent() {
 
   const isStep1Valid = () => metadata.name.trim().length > 0;
   const isStep3Valid = () => Number(maxSupply) >= 0;
+  const isStep5Valid = () => !usePoapImage || Boolean(poapImageValues.imageFile);
 
   const closeDrawer = () => {
     dispatch({ type: "CLOSE_DRAWER" });
@@ -94,12 +103,17 @@ export default function CreateEvent() {
     e.preventDefault();
 
     if (!provider) {
-      errorFunction("Wallet Required", "Please connect your Lace wallet first.", "");
+      errorFunction("Wallet Required", "Please connect your wallet first.", "");
       return;
     }
 
     if (!isStep3Valid()) {
       errorFunction("Validation Error", "Maximum Supply must be 0 (unlimited) or greater.", "");
+      return;
+    }
+
+    if (!isStep5Valid()) {
+      errorFunction("Validation Error", "Please choose a POAP image, or turn the switch off to use the event's own image.", "");
       return;
     }
 
@@ -109,6 +123,15 @@ export default function CreateEvent() {
       if (preparedImageBlob) {
         loadingFunction("Creating Event", "Uploading image to IPFS…", "");
         imageUri = await uploadImageToIPFS(preparedImageBlob);
+      }
+
+      let poapImageUri;
+      if (usePoapImage && poapImageValues.imageFile) {
+        loadingFunction("Creating Event", "Uploading POAP image to IPFS…", "");
+        const poapBlob = poapImageValues.croppedAreaPixels
+          ? await getCroppedImageBlob(poapImageValues.imageFile, poapImageValues.croppedAreaPixels)
+          : poapImageValues.imageFile;
+        poapImageUri = await uploadImageToIPFS(poapBlob);
       }
 
       // Extra info's own switch decides where it goes — independent of isPublicMint. Public: just
@@ -141,6 +164,7 @@ export default function CreateEvent() {
         ...(metadata.description.trim() ? { description: metadata.description.trim() } : {}),
         ...(imageUri ? { image: imageUri } : {}),
         ...(trimmedExtraInfo && !extraInfoIsPrivate ? { notes: trimmedExtraInfo } : {}),
+        ...(poapImageUri ? { poapImage: poapImageUri } : {}),
       });
 
       const eventId = new Uint8Array(32);
@@ -150,7 +174,7 @@ export default function CreateEvent() {
         ? BigInt(Math.floor(new Date(expirationDate).getTime() / 1000))
         : 0n;
 
-      loadingFunction("Creating Event", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Creating Event", `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
 
       const { txHash } = await provider.service.createEvent(
         eventId,
@@ -199,6 +223,7 @@ export default function CreateEvent() {
         <span className={`step-dot${step === 2 ? ' active' : ''}`} />
         <span className={`step-dot${step === 3 ? ' active' : ''}`} />
         <span className={`step-dot${step === 4 ? ' active' : ''}`} />
+        <span className={`step-dot${step === 5 ? ' active' : ''}`} />
       </div>
 
       <div className="drawer-body">
@@ -217,12 +242,12 @@ export default function CreateEvent() {
                 <div className="drawer-modal-preview-card">
                   <div className="d-flex align-items-center">
                     <img
-                      className="mr-3 rounded-circle"
+                      className="mr-3"
                       src={previewImageUrl || eventNormal}
-                      width="48"
-                      height="48"
+                      width="96"
+                      height="96"
                       alt=""
-                      style={{ objectFit: "cover" }}
+                      style={{ objectFit: "cover", borderRadius: 16, flexShrink: 0 }}
                     />
                     <div>
                       <h5 className="mb-1" style={{ fontSize: "16px" }}>
@@ -347,6 +372,41 @@ export default function CreateEvent() {
               </div>
             </>
           )}
+
+          {step === 5 && (
+            <>
+              <div className="col-12">
+                <div className="drawer-modal-preview-card">
+                  <div className="d-flex align-items-center" style={{ gap: "14px" }}>
+                    <div className="form-check form-switch mb-0 flex-shrink-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="usePoapImage"
+                        aria-label="Use a different image for the POAP"
+                        checked={usePoapImage}
+                        onChange={(event) => setUsePoapImage(event.target.checked)}
+                      />
+                    </div>
+                    <div>
+                      <span className="d-block font-weight-semibold">
+                        {usePoapImage ? "Different POAP Image" : "Same as Event Image"}
+                      </span>
+                      <small className="form-text text-muted d-block mt-1">
+                        {usePoapImage
+                          ? "Choose the image attendees will see on the POAP they claim, separate from the event's own listing image."
+                          : "The claimed POAP will display the same image as the event listing."}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {usePoapImage && (
+                <EventImageField values={poapImageValues} onChange={setPoapImageValues} circular />
+              )}
+            </>
+          )}
         </form>
       </div>
 
@@ -365,7 +425,7 @@ export default function CreateEvent() {
           <div className="d-flex gap-2 w-100">
             <Button
               type="button"
-              className="btn btn-outline-secondary"
+              className="btn btn-card-detail-action"
               onClick={() => setStep(1)}
             >
               Back
@@ -383,7 +443,7 @@ export default function CreateEvent() {
           <div className="d-flex gap-2 w-100">
             <Button
               type="button"
-              className="btn btn-outline-secondary"
+              className="btn btn-card-detail-action"
               onClick={() => setStep(2)}
             >
               Back
@@ -402,8 +462,26 @@ export default function CreateEvent() {
           <div className="d-flex gap-2 w-100">
             <Button
               type="button"
-              className="btn btn-outline-secondary"
+              className="btn btn-card-detail-action"
               onClick={() => setStep(3)}
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              className="btn btn-gradient flex-grow-1"
+              onClick={() => setStep(5)}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+        {step === 5 && (
+          <div className="d-flex gap-2 w-100">
+            <Button
+              type="button"
+              className="btn btn-card-detail-action"
+              onClick={() => setStep(4)}
               disabled={loading}
             >
               Back
@@ -412,7 +490,7 @@ export default function CreateEvent() {
               type="submit"
               className="btn btn-gradient flex-grow-1"
               onClick={handleSubmit}
-              disabled={loading || !isStep3Valid()}
+              disabled={loading || !isStep3Valid() || !isStep5Valid()}
             >
               {loading ? "Creating Event…" : "Create Event"}
             </Button>

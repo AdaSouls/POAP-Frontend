@@ -25,7 +25,7 @@ function isValidImageFile(file) {
 // crop/pin anything to IPFS (see cropImage.js, which also downscales and compresses the final
 // crop so IPFS never gets an unnecessarily large file, regardless of how big the original upload
 // was).
-export default function EventImageField({ values, onChange }) {
+export default function EventImageField({ values, onChange, circular = false }) {
   const { imageFile } = values;
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -101,7 +101,8 @@ export default function EventImageField({ values, onChange }) {
             crop={crop}
             zoom={zoom}
             aspect={1}
-            cropShape="round"
+            cropShape={circular ? "round" : "rect"}
+            style={circular ? undefined : { cropAreaStyle: { borderRadius: 16 } }}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={handleCropComplete}

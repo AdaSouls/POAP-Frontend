@@ -52,7 +52,7 @@ export default function RevealPrivateInfo() {
     setLoading(true);
     setRevealedNotes(null);
     try {
-      loadingFunction("Revealing Private Info", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Revealing Private Info", `Please confirm the transaction in your ${midnight.provider.wallet} wallet…`, "");
       const eventIdBytes = Uint8Array.from(Buffer.from(trimmedEventId, "hex"));
       const valueBytes = Uint8Array.from(Buffer.from(trimmedValue, "hex"));
       const randBytes = Uint8Array.from(Buffer.from(trimmedRand, "hex"));

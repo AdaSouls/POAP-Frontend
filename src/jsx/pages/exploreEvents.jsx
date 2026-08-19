@@ -91,9 +91,10 @@ const ExploreEvents = () => {
     }
   }, [otherEvents, expandedId]);
 
-  const visibleEvents = expandedId
-    ? otherEvents.filter((e) => e.eventId === expandedId)
-    : otherEvents;
+  const expandedEvent = useMemo(
+    () => otherEvents.find((e) => e.eventId === expandedId) || null,
+    [otherEvents, expandedId],
+  );
 
   return (
     <Layout activeMenu={3}>
@@ -122,7 +123,7 @@ const ExploreEvents = () => {
             </div>
           ) : otherEvents.length > 0 ? (
             <AnimatePresence mode="popLayout">
-              {visibleEvents.map((event) => (
+              {otherEvents.map((event) => (
                 <EventCard
                   key={event.eventId}
                   event={event}
@@ -148,6 +149,22 @@ const ExploreEvents = () => {
             </div>
           )}
         </div>
+
+        {/* Floating expanded card — a separate overlay instance, not part of the grid above, so
+            the grid never reflows when one event expands (see eventCard.jsx's own comment). */}
+        <AnimatePresence>
+          {expandedEvent && (
+            <EventCard
+              key={`${expandedEvent.eventId}-overlay`}
+              event={expandedEvent}
+              isExpanded
+              overlay
+              onCollapse={() => setExpandedId(null)}
+              variant="explore"
+              onClaim={handleClaim}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </Layout>
   );

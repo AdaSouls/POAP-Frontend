@@ -516,6 +516,33 @@ h1, h2, h3, h4, h5, h6,
   position: static;
 }
 
+/* eventCard.jsx's expanded overlay (see that file's own comment for why this replaced in-place
+   expansion): a fixed, full-viewport, flex-centered layer above everything else in the app
+   (highest z-index in the codebase — drawer is 22, filter popover 30, tooltip 40) so the card can
+   float above the grid regardless of scroll position. Deliberately no background/blur/dimming of
+   its own — the grid behind stays exactly as-is, in place and fully visible, only the expanding
+   card itself changes. Still catches clicks on the empty area around the card to close it (see
+   eventCard.jsx's onClick, which checks e.target === e.currentTarget so clicks on the card itself
+   don't bubble into a close). */
+.event-card-overlay-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* The floating card itself — capped width/height (viewport minus the scrim's own padding) with
+   its own scroll, since the expanded detail content (organizer/tx/private-info/POAPs list) can
+   run taller than the viewport on a small window. */
+.event-card-overlay-card {
+  width: min(1100px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+}
+
 /* All badges (page-header counters, card status/attribute badges — Active/Expired, Soulbound,
    Verified, Burned, Declared, "Pending your claim", etc.) are full pill shape site-wide. */
 .badge {

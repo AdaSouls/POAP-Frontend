@@ -35,7 +35,7 @@ const Overview = () => {
                 </div>
               ) : (
                 <div className="alert alert-warning d-flex justify-content-between align-items-center">
-                  <span>Connect your Lace wallet to get started.</span>
+                  <span>Connect your wallet to get started.</span>
                   <button type="button" className="btn btn-gradient btn-sm" onClick={showMidnightWallet}>
                     Connect Wallet
                   </button>
@@ -54,7 +54,7 @@ const Overview = () => {
                   <div className="step-number">1</div>
                   <h5>Connect your wallet</h5>
                   <p className="text-muted small">
-                    Link your Lace wallet — your identity on Midnight, derived locally, never
+                    Link your wallet — your identity on Midnight, derived locally, never
                     shared.
                   </p>
                 </div>

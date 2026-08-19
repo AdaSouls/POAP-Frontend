@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, ImageOff, Info, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
@@ -18,14 +18,22 @@ const truncateHex = (hex) => {
   return `${hex.slice(0, 8)}…${hex.slice(-6)}`;
 };
 
-// Same collapsed/expanded dual-mode pattern as poapCard.jsx — same component instance either way
-// (parent keeps it mounted across expand/collapse), forwardRef for AnimatePresence's
-// mode="popLayout", layout on wrapper+card+icon, borderRadius/boxShadow set via style so
-// framer-motion's layout FLIP auto-corrects them, and text hidden synchronously on click (fading
-// out before the resize starts, back in only once onLayoutAnimationComplete fires).
+// Expand/collapse no longer morphs one element in place — expanding an event renders a SECOND,
+// separate <EventCard overlay isExpanded> instance (see myEvents.jsx/exploreEvents.jsx), floating
+// above the grid via position:fixed, while this grid instance turns into an invisible same-size
+// placeholder ("ghost") so the grid never reflows and the vacated slot stays reserved. The two
+// instances hand off smoothly via a shared layoutId on both the card and its image thumbnail
+// (same mechanism, just extended from only the thumbnail to the whole card) — framer-motion
+// animates the FLIP between wherever the old (unmounting) element was and wherever the new
+// (mounting) one is, regardless of where each lives in the DOM. Only ONE of the two ever carries
+// a given layoutId at a time (the ghost carries none), which is what that mechanism requires.
+// Siblings never blur individually — the overlay's own scrim (.event-card-overlay-scrim) carries
+// a backdrop-filter blur, which blurs whatever is visually behind it (the grid) as one continuous
+// glass layer, same as the app's other glass surfaces (drawer, filter popover).
 const EventCard = forwardRef(({
   event,
   isExpanded = false,
+  overlay = false,
   onExpand = () => {},
   onCollapse = () => {},
   variant = "manage",
@@ -46,6 +54,10 @@ const EventCard = forwardRef(({
   // "something failed." showBrokenImage is only the genuine no-image/failed-load case, once
   // loading has actually finished one way or the other.
   const showBrokenImage = !metadataLoading && (!metadata?.imageUrl || imgLoadError);
+  // The per-token POAP grid below prefers poapImageUrl (fallback imageUrl) — broken only if
+  // neither is present, so an event that skipped its own cover image but did set a POAP image
+  // doesn't show a false broken-image icon on every token.
+  const showBrokenPoapImage = !metadataLoading && ((!metadata?.poapImageUrl && !metadata?.imageUrl) || imgLoadError);
   const { midnight: { provider } } = useDrawer();
   const { isAdmin } = useUserRoles();
   const dispatch = useDrawerDispatch();
@@ -80,7 +92,7 @@ const EventCard = forwardRef(({
   const [revealing, setRevealing] = useState(false);
 
   useEffect(() => {
-    if (!isExpanded || !privateDraft || !provider) return undefined;
+    if (!overlay || !privateDraft || !provider) return undefined;
     let cancelled = false;
     setRevealStatus("checking");
     provider.service
@@ -110,13 +122,13 @@ const EventCard = forwardRef(({
     return () => {
       cancelled = true;
     };
-  }, [isExpanded, privateDraft, provider, event.eventId]);
+  }, [overlay, privateDraft, provider, event.eventId]);
 
   const handleReveal = async () => {
     if (!privateDraft || !provider) return;
     setRevealing(true);
     try {
-      loadingFunction("Revealing Private Info", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Revealing Private Info", `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
       const eventIdBytes = Uint8Array.from(Buffer.from(event.eventId, "hex"));
       const valueBytes = Uint8Array.from(Buffer.from(privateDraft.valueHex, "hex"));
       const randBytes = Uint8Array.from(Buffer.from(privateDraft.randHex, "hex"));
@@ -149,40 +161,17 @@ const EventCard = forwardRef(({
   const available = event.maxSupply > 0 ? Math.max(0, event.maxSupply - event.minted) : undefined;
   const progressPercentage = event.maxSupply > 0 ? Math.min((event.minted / event.maxSupply) * 100, 100) : 0;
 
-  const TEXT_FADE_MS = 150;
-  const [showText, setShowText] = useState(true);
-  const textStyle = { opacity: showText ? 1 : 0, transition: `opacity ${TEXT_FADE_MS}ms ease` };
-  const pendingActionRef = useRef(null);
+  const cardLayoutId = `event-card-${event.eventId}`;
+  const thumbLayoutId = `event-thumb-${event.eventId}`;
 
-  useEffect(() => {
-    return () => {
-      if (pendingActionRef.current) clearTimeout(pendingActionRef.current);
-    };
-  }, []);
-
-  const handleExpand = () => {
-    setShowText(false);
-    pendingActionRef.current = setTimeout(() => {
-      pendingActionRef.current = null;
-      onExpand();
-    }, TEXT_FADE_MS);
-  };
-
-  const handleCollapse = () => {
-    setShowText(false);
-    pendingActionRef.current = setTimeout(() => {
-      pendingActionRef.current = null;
-      onCollapse();
-    }, TEXT_FADE_MS);
-  };
-
-  // Fetched only once expanded — getAllEvents() (the page's own poll, event.* here) doesn't
-  // include liveTokens, only GET /api/events/:id does.
+  // Fetched only for the overlay instance — getAllEvents() (the page's own poll, event.* here)
+  // doesn't include liveTokens, only GET /api/events/:id does, and the ghost placeholder never
+  // shows this content so has no reason to fetch it too.
   const [eventDetail, setEventDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    if (!isExpanded) return undefined;
+    if (!overlay) return undefined;
     let cancelled = false;
     setDetailLoading(true);
     getEvent(event.eventId)
@@ -198,7 +187,7 @@ const EventCard = forwardRef(({
     return () => {
       cancelled = true;
     };
-  }, [isExpanded, event.eventId]);
+  }, [overlay, event.eventId]);
 
   // The by-event token list only covers each token's *first* claim (see indexer.service.ts /
   // GET /api/events/:id/tokens comment) — matches eventDetail.liveTokens (non-burned first
@@ -207,7 +196,7 @@ const EventCard = forwardRef(({
   const [tokensLoading, setTokensLoading] = useState(false);
 
   useEffect(() => {
-    if (!isExpanded) return undefined;
+    if (!overlay) return undefined;
     let cancelled = false;
     setTokensLoading(true);
     getTokensByEvent(event.eventId)
@@ -223,156 +212,41 @@ const EventCard = forwardRef(({
     return () => {
       cancelled = true;
     };
-  }, [isExpanded, event.eventId]);
+  }, [overlay, event.eventId]);
 
-  return (
-    <motion.div
-      ref={ref}
-      layout
-      className={isExpanded ? "col-12 mb-3" : "col-xxl-6 col-lg-6 col-md-12 mb-3"}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ layout: { duration: 0.3, ease: "easeInOut" }, duration: 0.2, ease: "easeInOut" }}
-    >
-      {/* .card-hover-group is a plain, padding-free wrapper — see poapCard.jsx's identical
-          comment for why position:relative can't just live on the outer Bootstrap column
-          (its own gutter padding made the peek wider than the card). Static sibling, not a
-          child of the card that moves. */}
-      <div className="card-hover-group">
-        {!isExpanded && <div className="card-hover-peek" />}
-        <motion.div
-        layout
-        className={`card card-event card-classic card-outline-only${isExpanded ? " card-detail-expanded" : ""}`}
-        style={{
-          cursor: isExpanded ? "default" : "pointer",
-          borderRadius: 16,
-          border: "none",
-          boxShadow: "inset 0 0 0 1px var(--glass-border)",
-          position: "relative",
-          zIndex: 1,
+  // ── Floating expanded overlay ─────────────────────────────────────────────
+  if (overlay) {
+    return (
+      <motion.div
+        className="event-card-overlay-scrim"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onCollapse();
         }}
-        whileHover={!isExpanded ? { y: -2 } : undefined}
-        whileTap={!isExpanded ? { scale: 0.99 } : undefined}
-        transition={{ layout: { duration: 0.3, ease: "easeInOut" }, duration: 0.2, ease: "easeInOut" }}
-        onClick={!isExpanded ? handleExpand : undefined}
-        onLayoutAnimationComplete={() => setShowText(true)}
       >
-        <div className="card-body card-outline-only-body card-media-body">
-
-          {!isExpanded ? (
-            // Collapsed grid tile: same square-not-circle, full-height thumbnail treatment as
-            // poapCard.jsx's own collapsed tile — see .card-media-row/.card-media-thumb-wrap in
-            // theme-dark-glass.css.
-            <div className="d-flex align-items-stretch card-media-row">
-              <motion.div layout className="card-media-thumb-wrap" style={textStyle}>
-                {metadataLoading ? (
-                  <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-                ) : showBrokenImage ? (
-                  <ImageOff size={22} className="card-media-thumb-broken-icon" />
-                ) : (
-                  <img
-                    className="card-media-thumb-photo"
-                    src={metadata.imageUrl}
-                    alt=""
-                    onError={() => setImgLoadError(true)}
-                  />
-                )}
-              </motion.div>
-              <div className="card-media-content" style={textStyle}>
-                <div className="d-flex align-items-start justify-content-between mb-1">
-                  {metadataLoading ? (
-                    <div className="skeleton-block" style={{ height: "15px", width: "60%" }} />
-                  ) : (
-                    <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
-                      {metadata?.name || `Event ${truncateHex(event.eventId)}`}
-                    </h4>
-                  )}
-                  <span
-                    className={`${statusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
-                    style={{ fontSize: "10px", padding: "2px 8px" }}
-                  >
-                    {status}
-                  </span>
-                </div>
-                {metadataLoading ? (
-                  <div className="skeleton-block mb-2" style={{ height: "11px", width: "85%" }} />
-                ) : (
-                  metadata?.description && (
-                    <p
-                      className="text-muted small mb-2"
-                      style={{
-                        fontSize: "11px",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {metadata.description}
-                    </p>
-                  )
-                )}
-
-                <ul className="list-unstyled mb-2 mt-2" style={{ fontSize: "12px" }}>
-                  <li className="d-flex align-items-center mb-1">
-                    <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
-                    <span className="text-muted small">
-                      Organizer: <span className="text-white">{truncateHex(event.issuerPk)}</span>
-                    </span>
-                    <span className="mx-2 text-muted">·</span>
-                    <Calendar size={14} className="mr-1" />
-                    <span className="text-muted small">
-                      {event.expiration > 0 ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : "No expiry"}
-                    </span>
-                  </li>
-                  <li className="d-flex align-items-center">
-                    <Info size={14} className="mr-2" style={{ width: "18px" }} />
-                    <span className="text-muted small">{event.isPublicMint ? "Public mint" : "Organizer-minted"}</span>
-                  </li>
-                </ul>
-
-                <div className="d-flex justify-content-between align-items-center mt-auto">
-                  <small className="text-muted" style={{ fontSize: "11px" }}>
-                    Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
-                    {available !== undefined && (
-                      <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
-                    )}
-                  </small>
-                  {status !== "active" ? (
-                    <span className="btn btn-white btn-small disabled" style={{ fontSize: "11px", padding: "3px 10px" }}>
-                      {status === "expired" ? "Expired" : status === "full" ? "Sold Out" : "Inactive"}
-                    </span>
-                  ) : variant === "explore" ? (
-                    <button
-                      type="button"
-                      className="btn btn-white btn-small"
-                      style={{ fontSize: "11px", padding: "3px 10px" }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClaim(event);
-                      }}
-                    >
-                      Subscribe
-                    </button>
-                  ) : canMintForEvent ? (
-                    <button
-                      type="button"
-                      className="btn btn-white btn-small"
-                      style={{ fontSize: "11px", padding: "3px 10px" }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openMintDrawer();
-                      }}
-                    >
-                      Mint POAP
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="row" style={textStyle}>
+        <motion.div
+          ref={ref}
+          layout
+          layoutId={cardLayoutId}
+          className="card card-event card-classic card-outline-only card-detail-expanded event-card-overlay-card"
+          style={{
+            borderRadius: 16,
+            border: "none",
+            boxShadow: "inset 0 0 0 1px var(--glass-border), 0 24px 60px rgba(0, 0, 0, 0.45)",
+            position: "relative",
+          }}
+          transition={{ layout: { duration: 0.3, ease: "easeInOut" } }}
+        >
+          <div className="card-body card-outline-only-body card-media-body">
+            <motion.div
+              className="row"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2, delay: 0.25 }}
+            >
               {/* Left column: identity (image + status/name/description stacked beside it), then a
                   divider, then quick facts (organizer/expiration/public-mint/minted-available),
                   then a second divider, then raw blockchain detail — mirrors the collapsed tile's
@@ -381,7 +255,7 @@ const EventCard = forwardRef(({
                   vertical gap, so the whole column reads as evenly-spaced blocks. */}
               <div className="col-md-7">
                 <div className="d-flex align-items-start">
-                  <motion.div layout className="card-media-thumb-wrap mr-3">
+                  <motion.div layout layoutId={thumbLayoutId} className="card-media-thumb-wrap mr-3">
                     {metadataLoading ? (
                       <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
                     ) : showBrokenImage ? (
@@ -519,7 +393,10 @@ const EventCard = forwardRef(({
                   icons (same treatment as the event image, just at .card-media-thumb-small-wrap's
                   size — every token from this event shares the event's own metadataURI/image,
                   there's no separate per-token image in this data model). */}
-              <div className="col-md-5" style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px" }}>
+              <div
+                className="col-md-5"
+                style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px" }}
+              >
                 <div className="d-flex align-items-center justify-content-between mb-3" style={{ position: "relative", minHeight: "30px" }}>
                   <div>
                     {canMintForEvent && (
@@ -560,7 +437,7 @@ const EventCard = forwardRef(({
                   <button
                     type="button"
                     className="card-expand-close-btn card-expand-close-btn-inline"
-                    onClick={handleCollapse}
+                    onClick={onCollapse}
                     aria-label="Collapse event details"
                   >
                     <X size={16} />
@@ -582,10 +459,10 @@ const EventCard = forwardRef(({
                         <div className="card-media-thumb-small-wrap" style={{ position: "relative" }}>
                           {metadataLoading ? (
                             <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-                          ) : showBrokenImage ? (
+                          ) : showBrokenPoapImage ? (
                             <ImageOff size={14} className="card-media-thumb-broken-icon" />
                           ) : (
-                            <img className="card-media-thumb-photo" src={metadata.imageUrl} alt="" />
+                            <img className="card-media-thumb-photo" src={metadata.poapImageUrl || metadata.imageUrl} alt="" />
                           )}
                           {token.isBurned && (
                             <span
@@ -603,24 +480,175 @@ const EventCard = forwardRef(({
                   <p className="text-muted small text-center mt-4">No POAPs minted for this event yet.</p>
                 )}
               </div>
+            </motion.div>
+          </div>
+
+          {event.maxSupply > 0 && (
+            <div className="card-event-minted-bar">
+              <div
+                className="card-event-minted-bar-fill"
+                role="progressbar"
+                style={{ width: `${progressPercentage}%` }}
+                aria-valuenow={progressPercentage}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
             </div>
           )}
-        </div>
+        </motion.div>
+      </motion.div>
+    );
+  }
 
-        {/* Minted bar — the one element that sits flush against the card's own bottom edge,
-            outside card-body's padding, instead of just being "near the bottom" inside it. */}
-        {event.maxSupply > 0 && (
-          <div className="card-event-minted-bar">
-            <div
-              className="card-event-minted-bar-fill"
-              role="progressbar"
-              style={{ width: `${progressPercentage}%` }}
-              aria-valuenow={progressPercentage}
-              aria-valuemin="0"
-              aria-valuemax="100"
-            ></div>
+  // ── Grid tile (always collapsed markup) ───────────────────────────────────
+  // isExpanded here means "this event is currently the floating overlay elsewhere" — this
+  // instance becomes an invisible same-size placeholder (no layoutId: the overlay owns it now)
+  // so the grid keeps its layout and the vacated slot stays reserved, instead of reflowing.
+  return (
+    <motion.div
+      ref={ref}
+      layout
+      className="col-xxl-6 col-lg-6 col-md-12 mb-3"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ layout: { duration: 0.3, ease: "easeInOut" }, duration: 0.2, ease: "easeInOut" }}
+    >
+      {/* .card-hover-group is a plain, padding-free wrapper — see poapCard.jsx's identical
+          comment for why position:relative can't just live on the outer Bootstrap column
+          (its own gutter padding made the peek wider than the card). Static sibling, not a
+          child of the card that moves. */}
+      <div className="card-hover-group" style={isExpanded ? { visibility: "hidden" } : undefined} aria-hidden={isExpanded || undefined}>
+        {!isExpanded && <div className="card-hover-peek" />}
+        <motion.div
+          layout
+          layoutId={isExpanded ? undefined : cardLayoutId}
+          className="card card-event card-classic card-outline-only"
+          style={{
+            cursor: "pointer",
+            borderRadius: 16,
+            border: "none",
+            boxShadow: "inset 0 0 0 1px var(--glass-border)",
+            position: "relative",
+            zIndex: 1,
+          }}
+          whileHover={!isExpanded ? { y: -2 } : undefined}
+          whileTap={!isExpanded ? { scale: 0.99 } : undefined}
+          transition={{ layout: { duration: 0.3, ease: "easeInOut" }, duration: 0.2, ease: "easeInOut" }}
+          onClick={!isExpanded ? onExpand : undefined}
+        >
+          <div className="card-body card-outline-only-body card-media-body">
+            {/* Collapsed grid tile: same square-not-circle, full-height thumbnail treatment as
+                poapCard.jsx's own collapsed tile — see .card-media-row/.card-media-thumb-wrap in
+                theme-dark-glass.css. */}
+            <div className="d-flex align-items-stretch card-media-row">
+              <motion.div layout layoutId={isExpanded ? undefined : thumbLayoutId} className="card-media-thumb-wrap">
+                {metadataLoading ? (
+                  <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                ) : showBrokenImage ? (
+                  <ImageOff size={22} className="card-media-thumb-broken-icon" />
+                ) : (
+                  <img
+                    className="card-media-thumb-photo"
+                    src={metadata.imageUrl}
+                    alt=""
+                    onError={() => setImgLoadError(true)}
+                  />
+                )}
+              </motion.div>
+              <div className="card-media-content">
+                <div className="d-flex align-items-start justify-content-between mb-1">
+                  {metadataLoading ? (
+                    <div className="skeleton-block" style={{ height: "15px", width: "60%" }} />
+                  ) : (
+                    <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
+                      {metadata?.name || `Event ${truncateHex(event.eventId)}`}
+                    </h4>
+                  )}
+                  <span
+                    className={`${statusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
+                    style={{ fontSize: "10px", padding: "2px 8px" }}
+                  >
+                    {status}
+                  </span>
+                </div>
+                <ul
+                  className="list-unstyled mb-2 mt-2 d-flex flex-column justify-content-center flex-grow-1"
+                  style={{ fontSize: "12px" }}
+                >
+                  <li className="d-flex align-items-center mb-1">
+                    <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
+                    <span className="text-muted small">
+                      Organizer: <span className="text-white">{truncateHex(event.issuerPk)}</span>
+                    </span>
+                  </li>
+                  <li className="d-flex align-items-center mb-1">
+                    <Calendar size={14} className="mr-2" style={{ flexShrink: 0, width: "14px" }} />
+                    <span className="text-muted small">
+                      {event.expiration > 0 ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : "No expiry"}
+                    </span>
+                  </li>
+                  <li className="d-flex align-items-center">
+                    <Info size={14} className="mr-2" style={{ flexShrink: 0, width: "14px" }} />
+                    <span className="text-muted small">{event.isPublicMint ? "Public mint" : "Organizer-minted"}</span>
+                  </li>
+                </ul>
+
+                <div className="d-flex justify-content-between align-items-center mt-auto">
+                  <small className="text-muted" style={{ fontSize: "11px" }}>
+                    Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
+                    {available !== undefined && (
+                      <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
+                    )}
+                  </small>
+                  {status !== "active" ? (
+                    <span className="btn btn-white btn-small disabled" style={{ fontSize: "11px", padding: "3px 10px" }}>
+                      {status === "expired" ? "Expired" : status === "full" ? "Sold Out" : "Inactive"}
+                    </span>
+                  ) : variant === "explore" ? (
+                    <button
+                      type="button"
+                      className="btn btn-white btn-small"
+                      style={{ fontSize: "11px", padding: "3px 10px" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClaim(event);
+                      }}
+                    >
+                      Subscribe
+                    </button>
+                  ) : canMintForEvent ? (
+                    <button
+                      type="button"
+                      className="btn btn-white btn-small"
+                      style={{ fontSize: "11px", padding: "3px 10px" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMintDrawer();
+                      }}
+                    >
+                      Mint POAP
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Minted bar — the one element that sits flush against the card's own bottom edge,
+              outside card-body's padding, instead of just being "near the bottom" inside it. */}
+          {event.maxSupply > 0 && (
+            <div className="card-event-minted-bar">
+              <div
+                className="card-event-minted-bar-fill"
+                role="progressbar"
+                style={{ width: `${progressPercentage}%` }}
+                aria-valuenow={progressPercentage}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
+            </div>
+          )}
         </motion.div>
       </div>
     </motion.div>

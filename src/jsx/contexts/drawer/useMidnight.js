@@ -12,7 +12,7 @@ const CONNECT_TIMEOUT_MS = 90_000;
 export class ConnectTimeoutError extends Error {
   constructor() {
     super(
-      "Connecting timed out. This usually means your Lace wallet doesn't have DUST registered/accrued yet — delegate your NIGHT for DUST generation in Lace, wait for it to accrue, then try again."
+      "Connecting timed out. This usually means your wallet doesn't have DUST registered/accrued yet — delegate your NIGHT for DUST generation in your wallet, wait for it to accrue, then try again."
     );
     this.name = "ConnectTimeoutError";
   }

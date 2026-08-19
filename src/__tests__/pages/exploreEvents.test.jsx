@@ -59,7 +59,7 @@ describe('ExploreEvents page', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'CREATE_POAP', payload: mockEvents[1] });
   });
 
-  it('hides sibling cards when one is expanded, and restores them on collapse', async () => {
+  it('keeps sibling cards visible when one is expanded, and after it collapses again', async () => {
     const twoOtherEvents = [
       ...mockEvents,
       { eventId: 'ff'.repeat(32), issuerPk: otherPk, maxSupply: 0, minted: 0, expiration: 0, isActive: true, isPublicMint: true, createdBlock: 4 },
@@ -76,9 +76,13 @@ describe('ExploreEvents page', () => {
     const firstCard = screen.getAllByText(/Event cccccccc/i)[0].closest('.card');
     await userEvent.click(firstCard);
 
+    // eventCard.jsx delays onExpand/onCollapse by TEXT_FADE_MS (text fades out before the resize
+    // starts) — longer than waitFor's default 1000ms timeout, so it needs raising here.
     await waitFor(() => {
-      expect(screen.queryByText(/Event ffffffff/i)).not.toBeInTheDocument();
-    });
+      expect(screen.getByRole('button', { name: /collapse event details/i })).toBeInTheDocument();
+    }, { timeout: 2000 });
+    // The sibling never left the DOM — only the clicked card resized into its expanded layout.
+    expect(screen.getAllByText(/Event ffffffff/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
 
     await userEvent.click(screen.getByRole('button', { name: /collapse event details/i }));
@@ -86,6 +90,6 @@ describe('ExploreEvents page', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Event ffffffff/i).length).toBeGreaterThan(0);
-    });
+    }, { timeout: 2000 });
   });
 });

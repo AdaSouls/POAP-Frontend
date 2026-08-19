@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X, Calendar, Ticket, ImageOff, Lock, Repeat } from 'lucide-react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { loadingFunction, errorFunction, succesfullBlockchainCreation } from '../../toasts/sweetAlerts';
-import eventNormal from '../../../images/svg/event-normal.svg';
 import eventOwnerIcon from '../../../icons/svg/collection-owner.svg';
+import { useEventMetadata } from '../../hooks/useEventMetadata';
 
 // Claiming a POAP on Midnight is a single self-service call — claim(eventId, isSoulbound) mints a
 // brand-new token scoped to (holder, event); calling it again for the same event the same wallet
 // already claimed reverts on-chain ("Wallet already claimed this event"), so there's no separate
 // "recipient address" concept here (that's mintTo(), an organizer-only push-mint — a different,
-// admin-facing action not covered by this view). Event data comes from the on-chain-only Midnight
-// indexer API, so there's no title/description/image to show — see indexer.service.ts.
+// admin-facing action not covered by this view). Name/image come from the event's own metadataURI
+// (see useEventMetadata) — the indexer API itself only has the on-chain fields.
 // Always opened from an event card's own "Subscribe" action (exploreEvents.jsx),
 // which dispatches CREATE_POAP with that event as the payload — there's no standalone entry point
 // into this drawer anymore, so selectedEvent comes from claimEvent alone, no event picker needed.
@@ -20,10 +20,16 @@ export default function CreatePoap() {
   const [isSoulbound, setIsSoulbound] = useState(false);
   // Step 1: event preview (read-only). Step 2: soulbound choice + confirm/submit.
   const [step, setStep] = useState(1);
+  const [imgLoadError, setImgLoadError] = useState(false);
 
   const { claimEvent: selectedEvent, midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
   const navigate = useNavigate();
+  const { metadata, loading: metadataLoading } = useEventMetadata(selectedEvent?.metadataURI);
+  const showBrokenEventImage = !metadataLoading && (!metadata?.imageUrl || imgLoadError);
+  // Falls back to imageUrl when the organizer didn't set a distinct POAP image — broken only if
+  // neither is present.
+  const showBrokenPoapImage = !metadataLoading && ((!metadata?.poapImageUrl && !metadata?.imageUrl) || imgLoadError);
 
   const closeDrawer = () => {
     dispatch({ type: 'CLOSE_DRAWER' });
@@ -44,7 +50,7 @@ export default function CreatePoap() {
     e.preventDefault();
 
     if (!provider) {
-      errorFunction("Wallet Required", "Please connect your Lace wallet first.", "");
+      errorFunction("Wallet Required", "Please connect your wallet first.", "");
       return;
     }
     if (!selectedEvent) {
@@ -58,7 +64,7 @@ export default function CreatePoap() {
 
     setLoading(true);
     try {
-      loadingFunction("Subscribing", "Please confirm the transaction in your Lace wallet…", "");
+      loadingFunction("Subscribing", `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
       const { txHash } = await provider.service.claim(eventIdBytes, isSoulbound);
 
@@ -75,6 +81,93 @@ export default function CreatePoap() {
 
   const eventStatusLabel = (evt) =>
     mintable ? 'Claimable' : isExpired(evt) ? 'Expired' : isFull(evt) ? 'Full' : 'Inactive';
+
+  // Same card in both steps (step 2 is a confirmation, not a different event) — only the
+  // thumbnail differs: step 1 shows the event's own listing image (square, rounded corners, same
+  // .card-media-thumb-wrap treatment as eventCard.jsx's cards); step 2 shows what the claimed
+  // token itself will display (poapImage, falling back to the event image if the organizer didn't
+  // set a distinct one) in a same-size but fully-round container, so the two read as visually
+  // distinct: "the event" vs. "the POAP you're about to receive."
+  const renderEventPreviewCard = (variant) => {
+    const isPoap = variant === "poap";
+    const imageUrl = isPoap ? metadata?.poapImageUrl || metadata?.imageUrl : metadata?.imageUrl;
+    const showBroken = isPoap ? showBrokenPoapImage : showBrokenEventImage;
+    return (
+    <div className="drawer-modal-preview-card" style={{ position: "relative" }}>
+      <div className={`d-flex align-items-${isPoap ? "center" : "start"}`} style={{ gap: "14px" }}>
+        <div className="card-media-thumb-wrap" style={{ flexShrink: 0, borderRadius: isPoap ? "50%" : undefined }}>
+          {metadataLoading ? (
+            <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+          ) : showBroken ? (
+            <ImageOff size={22} className="card-media-thumb-broken-icon" />
+          ) : (
+            <img
+              className="card-media-thumb-photo"
+              src={imageUrl}
+              alt=""
+              onError={() => setImgLoadError(true)}
+            />
+          )}
+        </div>
+        <div className="flex-grow-1" style={{ minWidth: 0, paddingTop: isPoap ? 0 : "6px", paddingRight: isPoap ? "70px" : 0 }}>
+          <div className={isPoap ? undefined : "d-flex align-items-start justify-content-between"} style={{ gap: "8px" }}>
+            {metadataLoading ? (
+              <div className="skeleton-block" style={{ height: "16px", width: "60%" }} />
+            ) : (
+              <h5 className="mb-1" style={{ fontSize: '16px', wordBreak: 'break-word' }}>
+                {isPoap && "You'll receive a POAP for "}
+                {metadata?.name || `Event ${truncateHex(selectedEvent.eventId)}`}
+              </h5>
+            )}
+            {!isPoap && (
+              <span className={`badge ${mintable ? 'bg-success' : 'bg-danger'} flex-shrink-0`}>
+                {eventStatusLabel(selectedEvent)}
+              </span>
+            )}
+          </div>
+          {isPoap ? null : (
+            <ul className="list-unstyled mb-0 small mt-3">
+              <li className="d-flex align-items-center mb-1">
+                <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
+                Organizer: {truncateHex(selectedEvent.issuerPk)}
+              </li>
+              <li className="d-flex align-items-center mb-1">
+                <Ticket size={14} className="mr-2" style={{ flexShrink: 0 }} />
+                Supply: {selectedEvent.minted}/{selectedEvent.maxSupply || 'unlimited'}
+              </li>
+              <li className="d-flex align-items-center">
+                <Calendar size={14} className="mr-2" style={{ flexShrink: 0 }} />
+                {selectedEvent.expiration > 0
+                  ? `Expires: ${new Date(selectedEvent.expiration * 1000).toLocaleDateString()}`
+                  : 'No expiry'}
+              </li>
+            </ul>
+          )}
+        </div>
+      </div>
+      {isPoap && !metadataLoading && (
+        // Pinned top-right of the card, independent of the vertically-centered text block below it.
+        <span
+          className={`badge ${mintable ? 'bg-success' : 'bg-danger'}`}
+          style={{ position: "absolute", top: "16px", right: "16px" }}
+        >
+          {eventStatusLabel(selectedEvent)}
+        </span>
+      )}
+      {isPoap && (
+        // Pinned bottom-right, out of the vertically-centered text block above — a quiet summary
+        // of the switch below rather than another line competing with the title for space.
+        <span
+          className="d-flex align-items-center small text-muted"
+          style={{ position: "absolute", bottom: "12px", right: "16px", gap: "6px" }}
+        >
+          {isSoulbound ? <Lock size={14} /> : <Repeat size={14} />}
+          {isSoulbound ? 'Soulbound — non-transferable' : 'Transferable'}
+        </span>
+      )}
+    </div>
+    );
+  };
 
   return (
     <div className="d-flex flex-column w-100 drawer-modal-inner">
@@ -101,33 +194,7 @@ export default function CreatePoap() {
           {step === 1 && (
             <>
               {selectedEvent ? (
-                <div className="col-12">
-                  <div className="drawer-modal-preview-card">
-                    <div className="d-flex align-items-center mb-3">
-                      <img className="mr-3 rounded-circle" src={eventNormal} width="48" height="48" alt="" />
-                      <div>
-                        <h5 className="mb-1" style={{ fontSize: '16px' }}>Event {truncateHex(selectedEvent.eventId)}</h5>
-                        <span className={`badge ${mintable ? 'bg-success' : 'bg-danger'}`}>
-                          {eventStatusLabel(selectedEvent)}
-                        </span>
-                      </div>
-                    </div>
-                    <ul className="list-unstyled mb-0 small">
-                      <li className="d-flex align-items-center mb-2">
-                        <img className="mr-2" src={eventOwnerIcon} width="16" height="16" alt="" />
-                        Organizer: {truncateHex(selectedEvent.issuerPk)}
-                      </li>
-                      <li className="mb-2">
-                        Supply: {selectedEvent.minted}/{selectedEvent.maxSupply || 'unlimited'}
-                      </li>
-                      <li className="mb-2">
-                        {selectedEvent.expiration > 0
-                          ? `Expires: ${new Date(selectedEvent.expiration * 1000).toLocaleDateString()}`
-                          : 'No expiry'}
-                      </li>
-                    </ul>
-                  </div>
-                </div>
+                <div className="col-12 mb-3">{renderEventPreviewCard("event")}</div>
               ) : (
                 <div className="col-12">
                   <p className="text-muted small mb-0">No event selected.</p>
@@ -138,24 +205,25 @@ export default function CreatePoap() {
 
           {step === 2 && selectedEvent && (
             <>
-              <div className="col-12">
-                <div className="drawer-modal-preview-card">
-                  <h5 className="mb-1" style={{ fontSize: '16px' }}>Event {truncateHex(selectedEvent.eventId)}</h5>
-                  <p className="small text-muted mb-0">Confirm your claim for this event.</p>
-                </div>
-              </div>
+              <div className="col-12 mb-3">{renderEventPreviewCard("poap")}</div>
 
-              <div className="col-12 form-check form-switch mt-3">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="isSoulbound"
-                  checked={isSoulbound}
-                  onChange={(e) => setIsSoulbound(e.target.checked)}
-                />
-                <label className="form-check-label" htmlFor="isSoulbound">
-                  Soulbound (non-transferable)
-                </label>
+              <div className="col-12 mt-3 mb-3">
+                <div className="drawer-modal-preview-card">
+                  <div className="d-flex align-items-center" style={{ gap: "14px" }}>
+                    <div className="form-check form-switch mb-0 flex-shrink-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="isSoulbound"
+                        checked={isSoulbound}
+                        onChange={(e) => setIsSoulbound(e.target.checked)}
+                      />
+                    </div>
+                    <label className="form-check-label mb-0" htmlFor="isSoulbound">
+                      Soulbound (non-transferable)
+                    </label>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -176,7 +244,7 @@ export default function CreatePoap() {
           <div className="d-flex gap-2 w-100">
             <button
               type="button"
-              className="btn btn-outline-secondary"
+              className="btn btn-card-detail-action"
               onClick={() => setStep(1)}
               disabled={loading}
             >

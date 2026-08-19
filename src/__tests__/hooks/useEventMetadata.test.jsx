@@ -1,5 +1,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useEventMetadata } from '../../jsx/hooks/useEventMetadata';
+import { getPublicGatewayDomain } from '../../services/ipfs.service';
+
+jest.mock('../../services/ipfs.service', () => ({
+  getPublicGatewayDomain: jest.fn(),
+}));
 
 function mockFetchOnce(response) {
   global.fetch = jest.fn().mockResolvedValue(response);
@@ -36,22 +41,37 @@ describe('useEventMetadata Hook', () => {
     expect(result.current.metadata.imageUrl).toBe('https://example.com/img.png');
   });
 
-  it('resolves an ipfs:// metadataURI through the ipfs.io gateway', async () => {
+  // Runs before any test below resolves the dedicated-gateway domain successfully — the module
+  // caches a successful resolution forever (by design, see useEventMetadata.js), so this has to be
+  // the first test to touch an ipfs:// URI, otherwise there'd be nothing left to fail.
+  it('falls back to the shared Pinata gateway if the local server is unreachable', async () => {
+    getPublicGatewayDomain.mockRejectedValueOnce(new Error('local server down'));
+    mockFetchOnce(jsonResponse({ name: 'IPFS Event' }));
+
+    const { result } = renderHook(() => useEventMetadata('ipfs://bafyFallbackCID/meta.json'));
+
+    await waitFor(() => expect(result.current.metadata).not.toBeNull());
+    expect(global.fetch).toHaveBeenCalledWith('https://gateway.pinata.cloud/ipfs/bafyFallbackCID/meta.json');
+  });
+
+  it('resolves an ipfs:// metadataURI through this account\'s dedicated Pinata gateway', async () => {
+    getPublicGatewayDomain.mockResolvedValue('testgw');
     mockFetchOnce(jsonResponse({ name: 'IPFS Event' }));
 
     const { result } = renderHook(() => useEventMetadata('ipfs://bafyCID/meta.json'));
 
     await waitFor(() => expect(result.current.metadata).not.toBeNull());
-    expect(global.fetch).toHaveBeenCalledWith('https://ipfs.io/ipfs/bafyCID/meta.json');
+    expect(global.fetch).toHaveBeenCalledWith('https://testgw.mypinata.cloud/ipfs/bafyCID/meta.json');
   });
 
   it('resolves an ipfs:// image field inside the fetched JSON through the gateway too', async () => {
+    getPublicGatewayDomain.mockResolvedValue('testgw');
     mockFetchOnce(jsonResponse({ name: 'IPFS Event', image: 'ipfs://bafyImageCID' }));
 
     const { result } = renderHook(() => useEventMetadata('https://example.com/meta-with-ipfs-image.json'));
 
     await waitFor(() => expect(result.current.metadata).not.toBeNull());
-    expect(result.current.metadata.imageUrl).toBe('https://ipfs.io/ipfs/bafyImageCID');
+    expect(result.current.metadata.imageUrl).toBe('https://testgw.mypinata.cloud/ipfs/bafyImageCID');
   });
 
   it('resolves to null metadata on a non-OK response, without throwing', async () => {

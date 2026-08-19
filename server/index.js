@@ -139,6 +139,21 @@ async function getGatewayDomain() {
   return domain;
 }
 
+// Lets the frontend read PUBLIC metadata/images through this account's own dedicated gateway
+// instead of the shared gateway.pinata.cloud one — the shared gateway 404s on recently-pinned
+// content (propagation lag) and rate-limits (429) under normal browsing, while the dedicated
+// gateway serves this account's own pins immediately and isn't shared with other Pinata users.
+// No secret in the response, just the domain string, so this route needs no auth.
+app.get('/api/ipfs/gateway-domain', async (req, res) => {
+  try {
+    const domain = await getGatewayDomain();
+    res.json({ domain });
+  } catch (error) {
+    console.error('[ipfs-server] gateway-domain failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Given the 32-byte `value` a client already has (either because it's the organizer who computed
 // it at createEvent time, or because it read it off the public ledger's eventRevealedMetadata
 // after a reveal — see contract.service.ts), mints a short-lived signed URL for the matching

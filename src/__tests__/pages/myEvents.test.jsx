@@ -99,7 +99,7 @@ describe('MyEvents page', () => {
     });
   });
 
-  it('hides sibling cards when one is expanded, and restores them on collapse', async () => {
+  it('keeps sibling cards visible when one is expanded, and after it collapses again', async () => {
     renderWithProviders(<EventsPage />);
 
     await waitFor(() => {
@@ -110,11 +110,13 @@ describe('MyEvents page', () => {
     const firstCard = screen.getAllByText(/Event aaaaaaaa/i)[0].closest('.card');
     await userEvent.click(firstCard);
 
-    // The click-to-expand is deliberately delayed (text fades out before the resize starts), so
-    // the sibling leaves the DOM asynchronously too.
+    // The click-to-expand is deliberately delayed (text fades out before the resize starts — see
+    // eventCard.jsx's TEXT_FADE_MS), longer than waitFor's default 1000ms timeout.
     await waitFor(() => {
-      expect(screen.queryByText(/Event cccccccc/i)).not.toBeInTheDocument();
-    });
+      expect(screen.getByRole('button', { name: /collapse event details/i })).toBeInTheDocument();
+    }, { timeout: 2000 });
+    // The sibling never left the DOM — only the clicked card resized into its expanded layout.
+    expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
 
     await userEvent.click(screen.getByRole('button', { name: /collapse event details/i }));
@@ -122,6 +124,6 @@ describe('MyEvents page', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
-    });
+    }, { timeout: 2000 });
   });
 });

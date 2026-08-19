@@ -43,6 +43,20 @@ export async function uploadPrivateJSONToIPFS(metadata: Record<string, unknown>)
     return parseUri(response);
 }
 
+// This Pinata account's own dedicated gateway domain (e.g. "abc123.mypinata.cloud") — reads for
+// content pinned to this account go through it instead of the shared gateway.pinata.cloud, which
+// 404s on freshly-pinned content (propagation lag) and rate-limits (429) under normal use. See
+// useEventMetadata.js, the only current caller.
+export async function getPublicGatewayDomain(): Promise<string> {
+    const response = await fetch(`${IPFS_API_URL}/api/ipfs/gateway-domain`);
+    if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to get gateway domain: ${response.statusText}`);
+    }
+    const { domain } = await response.json();
+    return domain;
+}
+
 // valueHex is the same 32-byte "value" committed via computePrivateMetadataCommit — either freshly
 // computed by the organizer at creation time, or read back off the public ledger's
 // eventRevealedMetadata after a reveal. Knowing it is the only authorization needed; the server

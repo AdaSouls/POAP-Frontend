@@ -104,7 +104,6 @@ const MySubscriptions = () => {
   }, [myPoaps, expandedId]);
 
   const filteredPoaps = useMemo(() => applyPoapFilters(myPoaps, filters), [myPoaps, filters]);
-  const visiblePoaps = expandedId ? filteredPoaps.filter((p) => String(p.tokenId) === expandedId) : filteredPoaps;
 
   return (
     <Layout activeMenu={3}>
@@ -148,7 +147,7 @@ const MySubscriptions = () => {
             <>
               {provider && filteredPoaps.length > 0 && (
                 <AnimatePresence mode="popLayout">
-                  {visiblePoaps.map((poap) => (
+                  {filteredPoaps.map((poap) => (
                     <PoapCard
                       key={poap.tokenId}
                       poap={poap}
