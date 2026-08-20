@@ -175,6 +175,47 @@ export function getCategoryLabel(categoryKey) {
   return getCategoryConfig(categoryKey)?.label || null;
 }
 
+// { action, loading, done } for the subscriber-facing self-claim flow — the action button
+// (eventCard.jsx) and the claim drawer's title/submit/toasts (createPoap.jsx) all read off this
+// same triple so they never drift out of sync with each other. "Subscribe"/"Subscribing"/
+// "Subscribed" is the default for everything except the two cases with a more specific real-world
+// verb: following a person/brand/community (subscription category, free_follow relationship) and
+// attending an in-person/hybrid event. modality/relationship are optional taxonomy fields, so a
+// legacy event or one where the organizer skipped that question falls back to the generic triple.
+export function getClaimActionLabel(metadata) {
+  if (metadata?.category === "subscription" && metadata?.relationship === "free_follow") {
+    return { action: "Follow", loading: "Following", done: "Following" };
+  }
+  if (metadata?.category === "event" && (metadata?.modality === "in_person" || metadata?.modality === "hybrid")) {
+    return { action: "Attend", loading: "Attending", done: "Attended" };
+  }
+  return { action: "Subscribe", loading: "Subscribing", done: "Subscribed" };
+}
+
+// Breaks the category's taxonomy fields (e.g. "event" → orgType/modality/purpose/eventType) back
+// into label+display-value pairs — used by eventCard.jsx's expanded-card quick-facts block and
+// createPoap.jsx's claim-drawer info block, so both read the same organizer-answered context the
+// same way. The flattened form is what serializeTaxonomyValues (below) wrote into metadata at
+// creation time. "Other" values show the organizer's own free text instead of the literal "other"
+// option label. Legacy events without a category, or without a category recognized by the current
+// EVENT_CATEGORIES config, simply have nothing to show — same "tolerate absence" approach used
+// throughout this metadata layer.
+export function getTaxonomyEntries(categoryKey, metadata) {
+  const category = getCategoryConfig(categoryKey);
+  if (!category || !metadata) return [];
+  return Object.entries(category.taxonomy)
+    .map(([field, def]) => {
+      const value = metadata[field];
+      if (!value) return null;
+      const displayValue =
+        value === "other"
+          ? metadata[`${field}Other`] || "Other"
+          : def.options.find((option) => option.value === value)?.label || value;
+      return { field, label: def.label, value: displayValue };
+    })
+    .filter(Boolean);
+}
+
 // Whether the "Organization profile" step's ADDRESS sub-fields should show for the given category
 // + the taxonomy values picked so far (the step itself, and its Organizer Name field, are always
 // shown — see createEvent.jsx). Taxonomy fields are optional, so an unanswered gate field defaults

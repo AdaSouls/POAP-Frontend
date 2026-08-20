@@ -8,6 +8,7 @@ import EventFilters from "../components/EventFilters";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
 import { getAllEvents } from "../../midnight/indexer.service";
+import { getMyTokens } from "../../midnight/my-tokens";
 import { getEventStatus } from "../../utils/poapHelpers";
 
 const REFRESH_INTERVAL_MS = 5000;
@@ -83,6 +84,43 @@ const ExploreEvents = () => {
     return filteredEvents.filter((e) => e.isPublicMint && e.issuerPk !== provider.address);
   }, [filteredEvents, provider]);
 
+  // Which of these events the connected wallet already holds a (non-burned) token for — computed
+  // once for the whole list (deduped by issuer, see getMyTokens) rather than per-card, so both the
+  // collapsed tile and expanded card can show "Followed"/"Attended"/"Subscribed" instead of the
+  // plain event status, and the claim button can be disabled, without every card in the grid firing
+  // its own holder-pk-derivation + indexer round trip. subscriptionsLoading only ever flips
+  // true→false once (first load), same pattern as `loading` above — later polls refresh myTokens
+  // silently in the background instead of flashing every card back to "unknown" every 5s.
+  const [myTokens, setMyTokens] = useState([]);
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!provider || otherEvents.length === 0) {
+      setMyTokens([]);
+      setSubscriptionsLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    getMyTokens(provider.service, otherEvents, {})
+      .then((tokens) => {
+        if (!cancelled) setMyTokens(tokens);
+      })
+      .catch((error) => {
+        console.error("Error checking existing subscriptions:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setSubscriptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [provider, otherEvents]);
+
+  const mySubscribedEventIds = useMemo(
+    () => new Set(myTokens.filter((token) => !token.isBurned).map((token) => token.firstEventId)),
+    [myTokens],
+  );
+
   // If the expanded event drops out of the (polled/filtered) list, don't leave the grid stuck
   // showing zero cards — fall back to the full grid instead.
   useEffect(() => {
@@ -111,7 +149,7 @@ const ExploreEvents = () => {
               </span>
             </div>
             <div className="inner-header-row-right">
-              <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
+              <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} role="subscriber" />
             </div>
           </div>
         </div>
@@ -136,6 +174,8 @@ const ExploreEvents = () => {
                   onCollapse={() => setExpandedId(null)}
                   variant="explore"
                   onClaim={handleClaim}
+                  isSubscribed={mySubscribedEventIds.has(event.eventId)}
+                  subscriptionLoading={subscriptionsLoading}
                 />
               ))}
             </AnimatePresence>

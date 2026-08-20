@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Calendar, Ticket, ImageOff, Lock, Repeat } from 'lucide-react';
+import { X, Award, Calendar, Ticket, ImageOff, Lock, Repeat } from 'lucide-react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { loadingFunction, errorFunction, succesfullBlockchainCreation } from '../../toasts/sweetAlerts';
 import eventOwnerIcon from '../../../icons/svg/collection-owner.svg';
 import { useEventMetadata } from '../../hooks/useEventMetadata';
+import Tooltip from '../../components/Tooltip';
+import { getClaimActionLabel, getTaxonomyEntries } from '../../constants/eventCategories';
 
 // Claiming a POAP on Midnight is a single self-service call — claim(eventId, isSoulbound) mints a
 // brand-new token scoped to (holder, event); calling it again for the same event the same wallet
@@ -26,6 +28,8 @@ export default function CreatePoap() {
   const dispatch = useDrawerDispatch();
   const navigate = useNavigate();
   const { metadata, loading: metadataLoading } = useEventMetadata(selectedEvent?.metadataURI);
+  const claimLabel = getClaimActionLabel(metadata);
+  const taxonomyEntries = getTaxonomyEntries(metadata?.category, metadata);
   const showBrokenEventImage = !metadataLoading && (!metadata?.imageUrl || imgLoadError);
   // Falls back to imageUrl when the organizer didn't set a distinct POAP image — broken only if
   // neither is present.
@@ -64,16 +68,16 @@ export default function CreatePoap() {
 
     setLoading(true);
     try {
-      loadingFunction("Subscribing", `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
+      loadingFunction(claimLabel.loading, `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
       const { txHash } = await provider.service.claim(eventIdBytes, isSoulbound);
 
-      succesfullBlockchainCreation("Subscribed Successfully", `Transaction: ${txHash}`, "");
+      succesfullBlockchainCreation(`${claimLabel.done} Successfully`, `Transaction: ${txHash}`, "");
       closeDrawer();
       navigate("/my-subscriptions");
     } catch (error) {
       console.error("Error subscribing:", error);
-      errorFunction("Error", error.message || "Failed to subscribe. Please try again.", "");
+      errorFunction("Error", error.message || `Failed to ${claimLabel.action.toLowerCase()}. Please try again.`, "");
     } finally {
       setLoading(false);
     }
@@ -99,7 +103,9 @@ export default function CreatePoap() {
           {metadataLoading ? (
             <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
           ) : showBroken ? (
-            <ImageOff size={22} className="card-media-thumb-broken-icon" />
+            isPoap
+              ? <Award size={22} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
+              : <ImageOff size={22} className="card-media-thumb-broken-icon" />
           ) : (
             <img
               className="card-media-thumb-photo"
@@ -127,10 +133,12 @@ export default function CreatePoap() {
           </div>
           {isPoap ? null : (
             <ul className="list-unstyled mb-0 small mt-3">
-              <li className="d-flex align-items-center mb-1">
-                <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
-                Organizer: {truncateHex(selectedEvent.issuerPk)}
-              </li>
+              <Tooltip label={selectedEvent.issuerPk} placement="top">
+                <li className="d-flex align-items-center mb-1">
+                  <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
+                  Organizer: {metadata?.organization?.name || truncateHex(selectedEvent.issuerPk)}
+                </li>
+              </Tooltip>
               <li className="d-flex align-items-center mb-1">
                 <Ticket size={14} className="mr-2" style={{ flexShrink: 0 }} />
                 Supply: {selectedEvent.minted}/{selectedEvent.maxSupply || 'unlimited'}
@@ -180,7 +188,7 @@ export default function CreatePoap() {
           <X size={15} />
         </button>
         <h4 className="text-center w-100 m-0 font-weight-semibold">
-          Subscribe
+          {claimLabel.action}
         </h4>
       </div>
 
@@ -194,7 +202,25 @@ export default function CreatePoap() {
           {step === 1 && (
             <>
               {selectedEvent ? (
-                <div className="col-12 mb-3">{renderEventPreviewCard("event")}</div>
+                <>
+                  <div className="col-12 mb-3">{renderEventPreviewCard("event")}</div>
+                  {taxonomyEntries.length > 0 && (
+                    <div className="col-12 mb-3">
+                      <div className="drawer-modal-preview-card">
+                        <p className="text-muted small mb-2">About this organizer</p>
+                        <ul className="list-unstyled mb-0 small">
+                          {taxonomyEntries.map((entry) => (
+                            <li className="mb-1" key={entry.field}>
+                              <span className="text-muted">
+                                {entry.label}: <span className="text-white">{entry.value}</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="col-12">
                   <p className="text-muted small mb-0">No event selected.</p>
@@ -256,7 +282,7 @@ export default function CreatePoap() {
               onClick={handleSubmit}
               disabled={loading || !selectedEvent || !mintable}
             >
-              {loading ? 'Subscribing…' : 'Subscribe'}
+              {loading ? `${claimLabel.loading}…` : claimLabel.action}
             </button>
           </div>
         )}

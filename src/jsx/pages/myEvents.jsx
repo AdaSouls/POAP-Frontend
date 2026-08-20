@@ -129,7 +129,7 @@ const MyEvents = () => {
                   </button>
                 </Tooltip>
               )}
-              <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />
+              <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} role="organizer" />
             </div>
           </div>
         </div>

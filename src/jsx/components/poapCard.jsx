@@ -1,10 +1,11 @@
 import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ImageOff, X } from "lucide-react";
+import { ArrowLeftRight, Award, X } from "lucide-react";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
+import { getClaimActionLabel } from "../constants/eventCategories";
 import {
   getTokenVisibility,
   setTokenVisibility,
@@ -40,6 +41,17 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   const [shareCopied, setShareCopied] = useState(false);
   const { metadata, loading: metadataLoading } = useEventMetadata(poap.tokenMetadataURI || poap.metadataURI);
   const poapImageUrl = metadata?.poapImageUrl || metadata?.imageUrl;
+  // The parent event's own image, independent of whichever metadata resolved above — for a
+  // self-claimed token these are the same URI, but an organizer's push-mint (mintTo) carries a
+  // personalized tokenMetadataURI, so "which event is this from" still needs the event's own
+  // metadataURI specifically (see IndexedToken's own comment in indexer.service.ts). Shares
+  // useEventMetadata's cache, so this is a no-op fetch whenever the two URIs are equal.
+  const { metadata: eventMetadata } = useEventMetadata(poap.metadataURI);
+  const claimLabel = getClaimActionLabel(metadata);
+  // Which of the two stacked thumb-stack images (POAP medallion / event badge) is currently on
+  // top — purely a local display toggle, position of either element never changes, see
+  // .event-in-front in theme-dark-glass.css.
+  const [eventInFront, setEventInFront] = useState(false);
   // Same broken/loading treatment as eventCard.jsx's own cards — never a stale/placeholder image,
   // ever, while the real one isn't confirmed available.
   const [imgLoadError, setImgLoadError] = useState(false);
@@ -94,8 +106,11 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   // indexer by holder pk). So the only real states here are "still owned" vs. "burned" — same
   // top-right badge slot/style as eventCard.jsx's own status badge, instead of Burned living down
   // in the row with Soulbound.
+  // "Active" said nothing about how you got this POAP — same category-aware verb the explore-events
+  // grid uses once claimed (Followed/Attended/Subscribed, see getClaimActionLabel), since every card
+  // on this page is by definition already-held (no "Claimable" state exists here).
   const poapStatusBadgeClass = poap.isBurned ? "badge bg-secondary" : "badge status-badge-active";
-  const poapStatusLabel = poap.isBurned ? "Burned" : "Active";
+  const poapStatusLabel = poap.isBurned ? "Burned" : claimLabel.done;
 
   return (
     <motion.div
@@ -142,21 +157,48 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
             <div className="d-flex align-items-stretch card-media-row">
               {/* The image is never part of textStyle's fade — only text fades out before the
                   resize and back in after, the image stays visible throughout (and stays the same
-                  size/crop as the collapsed tile in the expanded branch below, not a smaller one). */}
-              <motion.div layout className="card-media-thumb-wrap" style={{ borderRadius: "50%", overflow: "hidden" }}>
-                {metadataLoading ? (
-                  <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-                ) : showBrokenImage ? (
-                  <ImageOff size={22} className="card-media-thumb-broken-icon" />
-                ) : (
-                  <img
-                    className="card-media-thumb-photo"
-                    src={poapImageUrl}
-                    alt=""
-                    onError={() => setImgLoadError(true)}
-                  />
+                  size/crop as the collapsed tile in the expanded branch below, not a smaller one).
+                  poap-media-thumb-stack wraps the round POAP thumb together with a small square
+                  "which event is this" badge pinned behind it, top-left-aligned to the same origin —
+                  see .poap-event-badge in theme-dark-glass.css for the positioning/z-index. */}
+              <div className={`poap-media-thumb-stack${eventInFront ? " event-in-front" : ""}`}>
+                {eventMetadata?.imageUrl && (
+                  <div className={`poap-event-badge${eventInFront ? " front-shadow" : ""}`}>
+                    <img className="poap-event-badge-photo" src={eventMetadata.imageUrl} alt="" />
+                  </div>
                 )}
-              </motion.div>
+                <motion.div
+                  layout
+                  className={`card-media-thumb-wrap${eventInFront ? "" : " front-shadow"}`}
+                  style={{ borderRadius: "50%", overflow: "hidden" }}
+                >
+                  {metadataLoading ? (
+                    <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                  ) : showBrokenImage ? (
+                    <Award size={48} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
+                  ) : (
+                    <img
+                      className="card-media-thumb-photo"
+                      src={poapImageUrl}
+                      alt=""
+                      onError={() => setImgLoadError(true)}
+                    />
+                  )}
+                </motion.div>
+                {eventMetadata?.imageUrl && (
+                  <button
+                    type="button"
+                    className="poap-thumb-swap-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEventInFront((current) => !current);
+                    }}
+                    aria-label={eventInFront ? "Bring the POAP image to the front" : "Bring the event image to the front"}
+                  >
+                    <ArrowLeftRight size={12} />
+                  </button>
+                )}
+              </div>
               <div className="card-media-content" style={textStyle}>
                 <div className="d-flex align-items-start justify-content-between mb-1">
                   <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
@@ -181,7 +223,10 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                   </div>
                 )}
 
-                <ul className="list-unstyled mb-2" style={{ fontSize: "12px" }}>
+                <ul
+                  className="list-unstyled mb-2 d-flex flex-column justify-content-center flex-grow-1"
+                  style={{ fontSize: "12px" }}
+                >
                   <li className="d-flex align-items-center mb-1">
                     <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
                     <span className="text-muted small">
@@ -206,7 +251,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                 {metadataLoading ? (
                   <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
                 ) : showBrokenImage ? (
-                  <ImageOff size={14} className="card-media-thumb-broken-icon" />
+                  <Award size={14} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
                 ) : (
                   <img
                     className="card-media-thumb-photo"

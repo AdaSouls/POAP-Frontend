@@ -1,42 +1,20 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Chart from "react-apexcharts";
-import { Calendar, Check, Copy, Hash, ImageOff, Info, X } from "lucide-react";
+import { Award, Calendar, Check, Copy, ImageOff, Info, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import Tooltip from "./Tooltip";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
-import { getEventStatus } from "../../utils/poapHelpers";
-import { getEvent, getTokensByEvent, getTokensByOwner } from "../../midnight/indexer.service";
+import { getEventStatus, getEventStatusLabel } from "../../utils/poapHelpers";
+import { getEvent, getTokensByEvent } from "../../midnight/indexer.service";
 import { getPrivateEventDraft } from "../../midnight/private-event-metadata";
 import { getPrivateContentSignedUrl } from "../../services/ipfs.service";
 import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../toasts/sweetAlerts";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
-import { getCategoryConfig } from "../constants/eventCategories";
-
-// Breaks the category's taxonomy fields (e.g. "event" → orgType/modality/purpose/eventType) back
-// into label+display-value pairs for the expanded card's quick-facts block — the flattened form
-// serializeTaxonomyValues (eventCategories.js) wrote into metadata at creation time. "Other" values
-// show the organizer's own free text instead of the literal "other" option label. Legacy events
-// without a category, or without a category recognized by the current EVENT_CATEGORIES config,
-// simply have nothing to show — same "tolerate absence" approach as the rest of this file.
-function getTaxonomyEntries(categoryKey, metadata) {
-  const category = getCategoryConfig(categoryKey);
-  if (!category || !metadata) return [];
-  return Object.entries(category.taxonomy)
-    .map(([field, def]) => {
-      const value = metadata[field];
-      if (!value) return null;
-      const displayValue =
-        value === "other"
-          ? metadata[`${field}Other`] || "Other"
-          : def.options.find((option) => option.value === value)?.label || value;
-      return { field, label: def.label, value: displayValue };
-    })
-    .filter(Boolean);
-}
+import { getClaimActionLabel, getTaxonomyEntries } from "../constants/eventCategories";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -61,9 +39,21 @@ const EventCard = forwardRef(({
   onCollapse = () => {},
   variant = "manage",
   onClaim = () => {},
+  isSubscribed = false,
+  subscriptionLoading = false,
 }, ref) => {
   const status = getEventStatus(event);
   const { metadata, loading: metadataLoading } = useEventMetadata(event.metadataURI);
+  const claimLabel = getClaimActionLabel(metadata);
+  // A subscriber who already holds this event's POAP sees that fact instead of the plain
+  // active/full/etc. status — "Followed"/"Attended"/"Subscribed" (whichever verb this event's
+  // category uses, see getClaimActionLabel) reads as "you're done here", which the event's own
+  // active/full state doesn't communicate on its own. isSubscribed comes from the calling page
+  // (exploreEvents.jsx), computed once for the whole list rather than per-card.
+  const alreadyHeld = variant === "explore" && isSubscribed;
+  const statusLabel = alreadyHeld
+    ? claimLabel.done
+    : getEventStatusLabel(status, variant === "explore" ? "subscriber" : "organizer");
   const taxonomyEntries = useMemo(
     () => getTaxonomyEntries(metadata?.category, metadata),
     [metadata],
@@ -184,12 +174,14 @@ const EventCard = forwardRef(({
     dispatch({ type: "CREATE_MINT", payload: event });
   };
 
-  const statusBadgeClass = {
-    active: "badge status-badge-active",
-    expired: "badge bg-danger",
-    full: "badge bg-warning",
-    inactive: "badge bg-secondary",
-  }[status];
+  const statusBadgeClass = alreadyHeld
+    ? "badge status-badge-active"
+    : {
+        active: "badge status-badge-active",
+        expired: "badge bg-danger",
+        full: "badge bg-warning",
+        inactive: "badge bg-secondary",
+      }[status];
 
   const available = event.maxSupply > 0 ? Math.max(0, event.maxSupply - event.minted) : undefined;
   const progressPercentage = event.maxSupply > 0 ? Math.min((event.minted / event.maxSupply) * 100, 100) : 0;
@@ -271,38 +263,6 @@ const EventCard = forwardRef(({
       cancelled = true;
     };
   }, [isExpanded, variant, event.eventId]);
-
-  // Whether the connected wallet already holds a (non-burned) token for this event — same
-  // holder-pk derivation my-tokens.ts uses for "My Subscriptions", just scoped to one event/issuer
-  // instead of the whole list, so the subscriber-facing preview card can say "Subscribed" and the
-  // Subscribe action can be disabled instead of reverting on-chain ("Wallet already claimed this
-  // event") on a second attempt.
-  const [subscriptionCheck, setSubscriptionCheck] = useState({ loading: false, subscribed: false });
-
-  useEffect(() => {
-    if (!isExpanded || variant !== "explore" || !provider) {
-      setSubscriptionCheck({ loading: false, subscribed: false });
-      return undefined;
-    }
-    let cancelled = false;
-    setSubscriptionCheck({ loading: true, subscribed: false });
-    const issuerIdBytes = Uint8Array.from(Buffer.from(event.issuerPk, "hex"));
-    provider.service
-      .getHolderPkHex(issuerIdBytes)
-      .then((holderPkHex) => getTokensByOwner(holderPkHex))
-      .then((tokens) => {
-        if (cancelled) return;
-        const subscribed = tokens.some((token) => token.firstEventId === event.eventId && !token.isBurned);
-        setSubscriptionCheck({ loading: false, subscribed });
-      })
-      .catch((error) => {
-        console.error("Error checking existing subscription:", error);
-        if (!cancelled) setSubscriptionCheck({ loading: false, subscribed: false });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isExpanded, variant, provider, event.issuerPk, event.eventId]);
 
   // Text reflows (wrapping, line-count changes) as the card's width/height FLIP-animates, which
   // looks janky since framer-motion only interpolates the box, not text layout — same problem and
@@ -396,10 +356,10 @@ const EventCard = forwardRef(({
                       </h4>
                     )}
                     <span
-                      className={`${statusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
+                      className={`${statusBadgeClass} flex-shrink-0 ml-2`}
                       style={{ fontSize: "10px", padding: "2px 8px" }}
                     >
-                      {status}
+                      {statusLabel}
                     </span>
                   </div>
                   <ul
@@ -467,10 +427,10 @@ const EventCard = forwardRef(({
                     <div style={{ flex: 1, minWidth: 0, ...textStyle }}>
                       <div className="d-flex align-items-center justify-content-between">
                         <span
-                          className={`${statusBadgeClass} text-capitalize`}
+                          className={statusBadgeClass}
                           style={{ fontSize: "11px", padding: "3px 10px" }}
                         >
-                          {status}
+                          {statusLabel}
                         </span>
                         <CategoryBadge category={metadata?.category} />
                       </div>
@@ -528,7 +488,7 @@ const EventCard = forwardRef(({
                         </li>
                         <li className="d-flex align-items-center">
                           <span className="quick-fact-icon">
-                            <Hash size={14} />
+                            <Ticket size={14} />
                           </span>
                           <span className="text-muted small">
                             Minted:{" "}<span className="text-white">{event.minted}/{event.maxSupply || "∞"}</span>
@@ -551,8 +511,9 @@ const EventCard = forwardRef(({
                         <ul className="list-unstyled mb-0" style={{ fontSize: "12px" }}>
                           {taxonomyEntries.map((entry) => (
                             <li className="d-flex align-items-center mb-2" key={entry.field}>
-                              <span className="text-muted small">{entry.label}:{" "}</span>
-                              <span className="text-white small">{entry.value}</span>
+                              <span className="text-muted small">
+                                {entry.label}: <span className="text-white">{entry.value}</span>
+                              </span>
                             </li>
                           ))}
                         </ul>
@@ -642,30 +603,7 @@ const EventCard = forwardRef(({
                   className="col-md-5"
                   style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px", ...textStyle }}
                 >
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div>
-                      {canMintForEvent && (
-                        <button
-                          type="button"
-                          className="btn btn-card-detail-action btn-sm"
-                          onClick={openMintDrawer}
-                        >
-                          Mint POAP
-                        </button>
-                      )}
-
-                      {variant === "explore" && (
-                        <button
-                          type="button"
-                          className="btn btn-card-detail-action btn-sm"
-                          onClick={() => onClaim(event)}
-                          disabled={status !== "active" || subscriptionCheck.subscribed || subscriptionCheck.loading}
-                        >
-                          {subscriptionCheck.subscribed ? "Subscribed" : "Subscribe"}
-                        </button>
-                      )}
-                    </div>
-
+                  <div className="d-flex align-items-center justify-content-end mb-3">
                     <button
                       type="button"
                       className="card-expand-close-btn card-expand-close-btn-inline"
@@ -681,16 +619,16 @@ const EventCard = forwardRef(({
                       {/* Every self-claimed token inherits the event's own image, so there's no point
                           showing a grid of identical icons here — a subscriber cares about "what will
                           I get", not "how many are there". One preview card answers that, and doubles
-                          as the already-subscribed indicator (see subscriptionCheck above). */}
+                          as the already-held indicator (isSubscribed, from the calling page). */}
                       <PoapPreviewCard
                         loading={metadataLoading}
                         broken={showBrokenImage}
                         imageUrl={metadata?.poapImageUrl || metadata?.imageUrl}
-                        title={subscriptionCheck.subscribed ? "Subscribed" : metadata?.name || "This event's POAP"}
+                        title={isSubscribed ? claimLabel.done : metadata?.name || "This event's POAP"}
                         subtitle={
-                          subscriptionCheck.subscribed
+                          isSubscribed
                             ? "You already hold this POAP."
-                            : "This is the POAP you'll receive if you subscribe."
+                            : `This is the POAP you'll receive if you ${claimLabel.action.toLowerCase()}.`
                         }
                       />
 
@@ -746,6 +684,31 @@ const EventCard = forwardRef(({
                       )}
                     </>
                   )}
+
+                  {(canMintForEvent || variant === "explore") && (
+                    <div className="card-detail-actions">
+                      {canMintForEvent && (
+                        <button
+                          type="button"
+                          className="btn btn-card-detail-action btn-card-detail-action-role btn-sm"
+                          onClick={openMintDrawer}
+                        >
+                          Mint POAP
+                        </button>
+                      )}
+
+                      {variant === "explore" && (
+                        <button
+                          type="button"
+                          className="btn btn-card-detail-action btn-card-detail-action-role btn-sm"
+                          onClick={() => onClaim(event)}
+                          disabled={status !== "active" || isSubscribed || subscriptionLoading}
+                        >
+                          {isSubscribed ? claimLabel.done : claimLabel.action}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -783,7 +746,7 @@ function PoapPreviewCard({ loading, broken, imageUrl, title, subtitle }) {
         {loading ? (
           <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
         ) : broken ? (
-          <ImageOff size={20} className="card-media-thumb-broken-icon" />
+          <Award size={20} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
         ) : (
           <img className="card-media-thumb-photo" src={imageUrl} alt="" />
         )}
@@ -805,30 +768,34 @@ function PoapPreviewCard({ loading, broken, imageUrl, title, subtitle }) {
 // what it copies even once the hex wraps across multiple lines.
 function BlockchainField({ label, value, onCopy, copied, hint, copyAriaLabel }) {
   if (!value) return null;
+  const copyButton = onCopy && (
+    <button
+      type="button"
+      className="btn btn-card-detail-action btn-sm blockchain-field-copy"
+      onClick={(e) => {
+        e.stopPropagation();
+        onCopy();
+      }}
+      aria-label={copied ? "Copied" : copyAriaLabel || `Copy ${label}`}
+    >
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </button>
+  );
   return (
     <div className="blockchain-field">
       <div className="blockchain-field-row">
         <p className="blockchain-field-value">
           <span className="blockchain-field-label">{label}:</span> {value}
         </p>
-        {onCopy && (
-          <button
-            type="button"
-            className="btn btn-card-detail-action btn-sm blockchain-field-copy"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCopy();
-            }}
-            aria-label={copied ? "Copied" : copyAriaLabel || `Copy ${label}`}
-          >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-          </button>
-        )}
+        {/* When there's a hint, the copy button lives there instead (see below) — right-margined
+            in that same box rather than sitting next to the raw hex up here. */}
+        {!hint && copyButton}
       </div>
       {hint && (
         <div className="info-hint-card">
           <Info size={18} />
           <p>{hint}</p>
+          {copyButton}
         </div>
       )}
     </div>
@@ -858,7 +825,7 @@ function PoapGridThumb({ token, eventMetadata, eventMetadataLoading, label }) {
         {loading ? (
           <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
         ) : showBroken ? (
-          <ImageOff size={14} className="card-media-thumb-broken-icon" />
+          <Award size={14} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
         ) : (
           <img className="card-media-thumb-photo" src={imageUrl} alt="" />
         )}

@@ -44,16 +44,18 @@ describe('PoapCard Component', () => {
     expect(screen.getByText(/Burned/i)).toBeInTheDocument();
   });
 
-  it('shows an Active status badge (top-right, like eventCard.jsx) when not burned', () => {
+  it('shows a category-aware "done" status badge (top-right, like eventCard.jsx) when not burned', () => {
     renderWithProviders(<PoapCard poap={mockPoap} />);
-    expect(screen.getByText(/^Active$/i)).toBeInTheDocument();
+    // No category/modality/relationship on mockPoap's metadata, so getClaimActionLabel falls back
+    // to the generic "Subscribed" — see eventCategories.js.
+    expect(screen.getByText(/^Subscribed$/i)).toBeInTheDocument();
     expect(screen.queryByText(/^Burned$/i)).not.toBeInTheDocument();
   });
 
-  it('shows a Burned status badge instead of Active once burned — no separate "pending"/claim state exists', () => {
+  it('shows a Burned status badge instead of the done-state one once burned — no separate "pending"/claim state exists', () => {
     renderWithProviders(<PoapCard poap={{ ...mockPoap, isBurned: true }} />);
     expect(screen.getByText(/^Burned$/i)).toBeInTheDocument();
-    expect(screen.queryByText(/^Active$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Subscribed$/i)).not.toBeInTheDocument();
   });
 
   it('calls onExpand when the card is clicked', async () => {

@@ -216,6 +216,117 @@ body {
   color: var(--text-on-glass-muted);
 }
 
+/* The no-image POAP glyph (Award, see eventCard.jsx/poapCard.jsx/createPoap.jsx) specifically gets
+   the current page's role color instead of the plain muted gray every other broken-image icon
+   uses (event images stay muted — this is POAP-image contexts only) — --role-accent cascades down
+   from the .role-organizer/.role-subscriber wrapper each role's pages carry. Falls back to the
+   plain muted color on the rare surface that isn't role-scoped. */
+.card-media-thumb-broken-icon-role {
+  color: var(--role-accent, var(--text-on-glass-muted));
+}
+
+/* poapCard.jsx's collapsed tile only (for now): the round POAP thumb sits in front of a small
+   square "which event is this from" badge, top-left-aligned to the exact same origin as the thumb
+   itself. Since the thumb is a CIRCLE inscribed in its own square box, it never covers that box's
+   corners at all — the badge's corner always shows straight through, sharp, unobstructed (no
+   blur/glass treatment — tried it more than once, see this file's own history/git log, never read
+   well). .front-shadow (added to whichever of the two is currently on top) is what actually sells
+   "in front of" — a small dark drop-shadow, not z-index alone. .event-in-front (toggled by
+   .poap-thumb-swap-btn — position never changes, only stacking order + which one carries
+   .front-shadow) swaps which of the two is on top. */
+.poap-media-thumb-stack {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.poap-media-thumb-stack .card-media-thumb-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+/* filter (not backdrop-filter) blurs this element's own entire rendered output — background,
+   border, and the photo inside — as one flattened unit, unlike backdrop-filter (which blurs
+   whatever's behind an element, not the element itself) or a filter on just the <img> (which
+   would leave this div's own border/background crisp). Only applied while this sits behind the
+   POAP thumb (the default state) — swapped to front, it's meant to read sharp; see
+   .event-in-front below turning it off. */
+.poap-event-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  filter: blur(3px);
+}
+
+.poap-event-badge-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Small dark lift on whichever image is currently in front — box-shadow, not part of the photo
+   itself, so it doesn't move/toggle with anything but this one class. Kept under 18px (blur radius
+   12px) on purpose: the thumb stack sits exactly 18px from the card's own edges
+   (.card-outline-only-body.card-media-body's padding), and .card-outline-only itself clips
+   overflow — a wider shadow got silently cut off on the top/left sides (less room before hitting
+   that edge) while showing fully on the bottom/right (open card content beyond), reading as an
+   uneven shadow even though the box-shadow declaration itself has no directional offset. */
+.front-shadow {
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+}
+
+.poap-media-thumb-stack.event-in-front .card-media-thumb-wrap {
+  z-index: 0;
+  /* Symmetric with .poap-event-badge above — whichever of the two is behind gets blurred, not just
+     the badge specifically. */
+  filter: blur(3px);
+}
+
+.poap-media-thumb-stack.event-in-front .poap-event-badge {
+  z-index: 2;
+  filter: none;
+}
+
+/* Bottom-left toggle that swaps which of the two stacked images (POAP medallion / event badge)
+   sits in front — see .event-in-front above. Highest z-index in the stack regardless of which
+   layer is currently on top. */
+.poap-thumb-swap-btn {
+  position: absolute;
+  bottom: -4px;
+  left: -4px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--glass-bg-hover);
+  border: 1px solid var(--glass-border);
+  color: var(--text-on-glass);
+  box-shadow: var(--glass-shadow);
+}
+
+.poap-thumb-swap-btn:hover {
+  background: var(--role-accent, var(--accent-blue));
+  border-color: var(--role-accent, var(--accent-blue));
+  color: var(--text-on-solid);
+}
+
+/* Browser's default focus ring shows as a stray white outline once you've clicked the button —
+   same suppression as .card-expand-close-btn:focus above, for the same reason (the hover/press
+   state already gives clear visual feedback without it). */
+.poap-thumb-swap-btn:focus {
+  outline: none;
+}
+
 /* Loading skeleton — eventCard.jsx's collapsed/expanded image, name, and description while
    useEventMetadata() is still fetching from IPFS (can take a real few seconds, especially right
    after a fresh createEvent upload). Pulses between the existing --glass-bg-hover tone and half
@@ -804,6 +915,7 @@ select option,
 }
 
 .info-hint-card p {
+  flex: 1;
   margin: 0;
   font-size: 11px;
   line-height: 1.4;
@@ -831,6 +943,26 @@ select option,
 
 .btn-card-detail-action:disabled {
   opacity: 0.5;
+}
+
+/* Border tinted with whichever role (--role-accent, from the .role-organizer/.role-subscriber
+   ancestor — myEvents.jsx/organizerDashboard.jsx vs. exploreEvents.jsx/mySubscriptions.jsx) the
+   surrounding page is currently in, same variable .badge-count-outline/.btn-role-cta already use
+   elsewhere. Only the border — background/hover stay the plain glass treatment above. */
+.btn-card-detail-action-role {
+  border-color: var(--role-accent, var(--glass-border));
+}
+
+/* Mint/Subscribe action row in the expanded card's right column — pinned to that column's
+   bottom-right corner, same 12px offset on both axes as .card-expand-close-btn's top-right
+   placement, so the padding-from-edge reads as identical top-to-bottom and side-to-side.
+   .card-detail-expanded .card-outline-only-body (above) is the position:relative anchor. */
+.card-detail-actions {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
 }
 
 /* Drawer — singleton chrome, gets the real blur. drawer.jsx computes a `drawer-glass`/

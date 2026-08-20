@@ -24,3 +24,17 @@ export function getEventStatus(event) {
   if (isFull) return "full";
   return "active";
 }
+
+// Display text for a getEventStatus() value — the underlying status value (used for filtering/
+// sorting/badge color) never changes by role, only how it reads. "active"/"full" are the only
+// two that differ: an organizer thinks in terms of the event's own lifecycle ("Active", "Full"),
+// while a subscriber cares about whether they can act on it right now ("Claimable", "Sold out").
+// expired/inactive already read the same to either audience.
+const STATUS_LABELS = {
+  organizer: { active: "Active", full: "Full", expired: "Expired", inactive: "Inactive" },
+  subscriber: { active: "Claimable", full: "Sold out", expired: "Expired", inactive: "Inactive" },
+};
+
+export function getEventStatusLabel(status, role) {
+  return (STATUS_LABELS[role] || STATUS_LABELS.organizer)[status] || status;
+}

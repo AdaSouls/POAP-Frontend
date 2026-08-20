@@ -55,7 +55,13 @@ export default function SelectDropdown({
     const handleKeyDown = (event) => {
       if (event.key === "Escape") setOpen(false);
     };
-    const handleReposition = () => setOpen(false);
+    const handleReposition = (event) => {
+      // Scroll events don't bubble, so a capture-phase window listener also fires for scrolling
+      // inside the menu's own option list — ignore those, only close for scroll elsewhere on the
+      // page (which would leave the menu's portal-positioned coordinates stale).
+      if (menuRef.current && menuRef.current.contains(event.target)) return;
+      setOpen(false);
+    };
 
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);

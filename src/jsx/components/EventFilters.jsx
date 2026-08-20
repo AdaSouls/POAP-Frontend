@@ -2,13 +2,14 @@ import React from "react";
 import { X } from "lucide-react";
 import FilterPopover from "./FilterPopover";
 import SelectDropdown from "./SelectDropdown";
+import { getEventStatusLabel } from "../../utils/poapHelpers";
 
-const STATUS_OPTIONS = [
+const buildStatusOptions = (role) => [
   { value: "", label: "All Statuses" },
-  { value: "active", label: "Active" },
-  { value: "expired", label: "Expired" },
-  { value: "full", label: "Full" },
-  { value: "inactive", label: "Inactive" },
+  { value: "active", label: getEventStatusLabel("active", role) },
+  { value: "expired", label: getEventStatusLabel("expired", role) },
+  { value: "full", label: getEventStatusLabel("full", role) },
+  { value: "inactive", label: getEventStatusLabel("inactive", role) },
 ];
 
 const SORT_BY_OPTIONS = [
@@ -30,10 +31,11 @@ const ORDER_OPTIONS = [
 // Rendered as the single-column content of a FilterPopover (icon button + portal popover, same
 // glass surface as the wallet-connect popup) — this component owns just the fields, not any
 // card/expand chrome of its own anymore.
-const EventFilters = ({ filters, onFilterChange, onReset }) => {
+const EventFilters = ({ filters, onFilterChange, onReset, role = "organizer" }) => {
   const handleFilterChange = (key, value) => {
     onFilterChange({ ...filters, [key]: value });
   };
+  const statusOptions = buildStatusOptions(role);
 
   const hasActiveFilters = Object.values(filters || {}).some(
     (value) => value !== undefined && value !== null && value !== ""
@@ -81,7 +83,7 @@ const EventFilters = ({ filters, onFilterChange, onReset }) => {
           size="sm"
           value={filters.status || ""}
           onChange={(value) => handleFilterChange("status", value || undefined)}
-          options={STATUS_OPTIONS}
+          options={statusOptions}
         />
       </div>
 
