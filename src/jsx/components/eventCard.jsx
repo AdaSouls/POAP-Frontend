@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Chart from "react-apexcharts";
-import { Award, Calendar, ImageOff, Info, Ticket, X } from "lucide-react";
+import { Award, Calendar, Database, ImageOff, Info, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
@@ -13,7 +13,6 @@ import { getPrivateContentSignedUrl } from "../../services/ipfs.service";
 import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../toasts/sweetAlerts";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
-import BlockchainField from "./BlockchainField";
 import { getClaimActionLabel, getSubscriberListLabel, getTaxonomyEntries } from "../constants/eventCategories";
 
 const truncateHex = (hex) => {
@@ -71,16 +70,6 @@ const EventCard = forwardRef(({
   // "something failed." showBrokenImage is only the genuine no-image/failed-load case, once
   // loading has actually finished one way or the other.
   const showBrokenImage = !metadataLoading && (!metadata?.imageUrl || imgLoadError);
-  // Generalized copy-button state for the expanded card's blockchain-data block (Event ID /
-  // Organizer / Block / Tx) — keyed by field name rather than one bool per field, so adding a copy
-  // button to any of them doesn't need its own piece of state. The Organizer one is the field a
-  // subscriber actually needs, to generate their own holder key (see getHolderKey.jsx).
-  const [copiedField, setCopiedField] = useState(null);
-  const copyField = (field, value) => {
-    navigator.clipboard?.writeText(value);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField((current) => (current === field ? null : current)), 2000);
-  };
   const { midnight: { provider } } = useDrawer();
   const { isAdmin } = useUserRoles();
   const dispatch = useDrawerDispatch();
@@ -177,6 +166,35 @@ const EventCard = forwardRef(({
   const subscriberListLabel = getSubscriberListLabel(metadata);
   const openSubscribersDrawer = () => {
     dispatch({ type: "SHOW_SUBSCRIBERS", payload: { event, tokens: eventTokens, label: subscriberListLabel } });
+  };
+
+  // Raw blockchain data lives behind this popup now, not inline — see BlockchainInfoModal.jsx.
+  // deactivatedBlock only exists once the event's been deactivated, contractAddress is the same
+  // constant for every event/token so it's added here rather than being part of any event.* data.
+  const openBlockchainInfoDrawer = () => {
+    const fields = [
+      { key: "eventId", label: "Event ID", value: event.eventId },
+      {
+        key: "organizer",
+        label: "Organizer",
+        value: event.issuerPk,
+        copyable: true,
+        copyAriaLabel: "Copy organizer key",
+        hint: "Share this with a subscriber so they can generate their own key for you (My Subscriptions → Get My Key).",
+      },
+      { key: "block", label: "Block", value: event.createdBlock ?? "N/A" },
+      { key: "tx", label: "Tx", value: event.createdTx },
+    ];
+    if (!event.isActive && event.deactivatedBlock) {
+      fields.push({ key: "deactivatedBlock", label: "Deactivated At Block", value: event.deactivatedBlock });
+    }
+    fields.push({
+      key: "contractAddress",
+      label: "Contract Address",
+      value: process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS,
+      copyable: true,
+    });
+    dispatch({ type: "SHOW_BLOCKCHAIN_INFO", payload: { title: "Blockchain Info", fields } });
   };
 
   const statusBadgeClass = alreadyHeld
@@ -330,105 +348,100 @@ const EventCard = forwardRef(({
           onLayoutAnimationComplete={() => setShowText(true)}
         >
           <div className="card-body card-outline-only-body card-media-body">
-            {!isExpanded ? (
-              /* Collapsed grid tile: same square-not-circle, full-height thumbnail treatment as
-                 poapCard.jsx's own collapsed tile — see .card-media-row/.card-media-thumb-wrap in
-                 theme-dark-glass.css. */
-              <div className="d-flex align-items-stretch card-media-row">
-                {/* The image is never part of textStyle's fade — only text fades out before the
-                    resize and back in after; the image stays visible throughout. */}
-                <motion.div layout className="card-media-thumb-wrap">
-                  {metadataLoading ? (
-                    <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-                  ) : showBrokenImage ? (
-                    <ImageOff size={22} className="card-media-thumb-broken-icon" />
-                  ) : (
-                    <img
-                      className="card-media-thumb-photo"
-                      src={metadata.imageUrl}
-                      alt=""
-                      onError={() => setImgLoadError(true)}
-                    />
-                  )}
-                </motion.div>
-                <div className="card-media-content" style={textStyle}>
-                  <div className="d-flex align-items-start justify-content-between mb-1">
-                    {metadataLoading ? (
-                      <div className="skeleton-block" style={{ height: "15px", width: "60%" }} />
-                    ) : (
-                      <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
-                        {metadata?.name || `Event ${truncateHex(event.eventId)}`}
-                      </h4>
-                    )}
-                    <span
-                      className={`${statusBadgeClass} flex-shrink-0 ml-2`}
-                      style={{ fontSize: "10px", padding: "2px 8px" }}
-                    >
-                      {statusLabel}
-                    </span>
-                  </div>
-                  <ul
-                    className="list-unstyled mb-2 mt-2 d-flex flex-column justify-content-center flex-grow-1"
-                    style={{ fontSize: "12px" }}
+            {/* The thumb — and its whole ancestor chain up to here — is rendered unconditionally
+                below, never inside an `isExpanded ? A : B` branch. Only className/style toggle per
+                state; the actual elements (including the motion.div thumb itself) stay mounted
+                continuously across expand/collapse. That's what framer-motion's `layout` FLIP
+                actually needs: a real before/after measurement of the SAME node. Two entirely
+                different subtrees for collapsed vs. expanded (the previous shape of this branch)
+                meant the thumb unmounted and a fresh one mounted in the other branch every time —
+                a freshly mounted node has no "before" to interpolate from, so it just snapped
+                straight to its final CSS position instead of animating there, and since the
+                collapsed → expanded move is diagonal (both axes change at once), that snap looked
+                like an L-shaped hop — one axis resolving via instant layout reflow, the other via
+                the card's own resize — with the image effectively disappearing from view for a
+                moment in between. */}
+            <div className={isExpanded ? "row" : undefined}>
+              <div className={isExpanded ? "col-md-7" : undefined}>
+                <div className={isExpanded ? "d-flex align-items-start" : "d-flex align-items-stretch card-media-row"}>
+                  {/* The image is never part of textStyle's fade — only text fades out before the
+                      resize and back in after; the image stays visible throughout. */}
+                  {/* Explicit layout transition, slightly slower than the card's own (0.3s) —
+                      without this the thumb used framer-motion's default spring, which finished
+                      before the card's own resize tween did, so the image briefly overshot the
+                      card's still-mid-resize bounds and poked out past its edge. */}
+                  <motion.div
+                    layout
+                    transition={{ layout: { duration: 0.45, ease: "easeInOut" } }}
+                    className={isExpanded ? "card-media-thumb-wrap mr-3" : "card-media-thumb-wrap"}
                   >
-                    <li className="d-flex align-items-center mb-1">
-                      <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
-                      <span className="text-muted small">
-                        Organizer: <span className="text-white">{metadata?.organization?.name || truncateHex(event.issuerPk)}</span>
-                      </span>
-                    </li>
-                    <li className="d-flex align-items-center mb-1">
-                      <Calendar size={14} className="mr-2" style={{ flexShrink: 0, width: "14px" }} />
-                      <span className="text-muted small">
-                        {event.expiration > 0 ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : "No expiry"}
-                      </span>
-                    </li>
-                    <li className="d-flex align-items-center">
-                      <Info size={14} className="mr-2" style={{ flexShrink: 0, width: "14px" }} />
-                      <span className="text-muted small">{event.isPublicMint ? "Public mint" : "Organizer-minted"}</span>
-                    </li>
-                  </ul>
+                    {metadataLoading ? (
+                      <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                    ) : showBrokenImage ? (
+                      <ImageOff size={22} className="card-media-thumb-broken-icon" />
+                    ) : (
+                      <img
+                        className="card-media-thumb-photo"
+                        src={metadata.imageUrl}
+                        alt=""
+                        onError={() => setImgLoadError(true)}
+                      />
+                    )}
+                  </motion.div>
 
-                  <div className="d-flex justify-content-between align-items-center mt-auto">
-                    <small className="text-muted" style={{ fontSize: "11px" }}>
-                      Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
-                      {available !== undefined && (
-                        <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
-                      )}
-                    </small>
-                    {/* Actions (Subscribe/Mint POAP) live only in the expanded card now — the
-                        collapsed tile is click-to-expand, not a place to act from. This slot,
-                        previously the action button, instead shows the category badge. */}
-                    <CategoryBadge category={metadata?.category} />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Expanded detail: left column is identity (image + status/category/name/description
-                 stacked beside it), then a divider, then quick facts (organizer/expiration/public-
-                 mint/minted-available) beside a taxonomy breakdown column, then optional channels/
-                 organization block, then raw blockchain detail. Right column is a small inline
-                 header (mint/subscribe action, collapse button) followed by the POAP preview/stats.
-                 textStyle fades the TEXT out before the resize and back in after (TEXT_FADE_MS
-                 above) — applied to each text container individually, deliberately never to the
-                 thumbnail itself or its wrapping row, so the image stays visible throughout. */
-              <div className="row">
-                <div className="col-md-7">
-                  <div className="d-flex align-items-start">
-                    <motion.div layout className="card-media-thumb-wrap mr-3">
-                      {metadataLoading ? (
-                        <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-                      ) : showBrokenImage ? (
-                        <ImageOff size={22} className="card-media-thumb-broken-icon" />
-                      ) : (
-                        <img
-                          className="card-media-thumb-photo"
-                          src={metadata.imageUrl}
-                          alt=""
-                          onError={() => setImgLoadError(true)}
-                        />
-                      )}
-                    </motion.div>
+                  {!isExpanded ? (
+                    <div className="card-media-content" style={textStyle}>
+                      <div className="d-flex align-items-start justify-content-between mb-1">
+                        {metadataLoading ? (
+                          <div className="skeleton-block" style={{ height: "15px", width: "60%" }} />
+                        ) : (
+                          <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
+                            {metadata?.name || `Event ${truncateHex(event.eventId)}`}
+                          </h4>
+                        )}
+                        <span
+                          className={`${statusBadgeClass} flex-shrink-0 ml-2`}
+                          style={{ fontSize: "10px", padding: "2px 8px" }}
+                        >
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <ul
+                        className="list-unstyled mb-2 mt-2 d-flex flex-column justify-content-center flex-grow-1"
+                        style={{ fontSize: "12px" }}
+                      >
+                        <li className="d-flex align-items-center mb-1">
+                          <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
+                          <span className="text-muted small">
+                            Organizer: <span className="text-white">{metadata?.organization?.name || truncateHex(event.issuerPk)}</span>
+                          </span>
+                        </li>
+                        <li className="d-flex align-items-center mb-1">
+                          <Calendar size={14} className="mr-2" style={{ flexShrink: 0, width: "14px" }} />
+                          <span className="text-muted small">
+                            {event.expiration > 0 ? formatDateToDDMMYYYY(new Date(event.expiration * 1000)) : "No expiry"}
+                          </span>
+                        </li>
+                        <li className="d-flex align-items-center">
+                          <Info size={14} className="mr-2" style={{ flexShrink: 0, width: "14px" }} />
+                          <span className="text-muted small">{event.isPublicMint ? "Public mint" : "Organizer-minted"}</span>
+                        </li>
+                      </ul>
+
+                      <div className="d-flex justify-content-between align-items-center mt-auto">
+                        <small className="text-muted" style={{ fontSize: "11px" }}>
+                          Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
+                          {available !== undefined && (
+                            <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
+                          )}
+                        </small>
+                        {/* Actions (Subscribe/Mint POAP) live only in the expanded card now — the
+                            collapsed tile is click-to-expand, not a place to act from. This slot,
+                            previously the action button, instead shows the category badge. */}
+                        <CategoryBadge category={metadata?.category} />
+                      </div>
+                    </div>
+                  ) : (
                     <div style={{ flex: 1, minWidth: 0, ...textStyle }}>
                       <div className="d-flex align-items-center justify-content-between">
                         <span
@@ -461,8 +474,14 @@ const EventCard = forwardRef(({
                         <p className="text-muted small mb-0 mt-1">{metadata.notes}</p>
                       )}
                     </div>
-                  </div>
+                  )}
+                </div>
 
+                {isExpanded && (
+                  /* Quick facts (organizer/expiration/public-mint/minted-available) beside a
+                     taxonomy breakdown column, then optional channels/organization block, then raw
+                     blockchain detail. textStyle fades this whole block out before the resize and
+                     back in after (TEXT_FADE_MS above), separately from the header row above. */
                   <div style={textStyle}>
                   <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
 
@@ -557,17 +576,14 @@ const EventCard = forwardRef(({
 
                   <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
 
-                  <BlockchainField label="Event ID" value={event.eventId} />
-                  <BlockchainField
-                    label="Organizer"
-                    value={event.issuerPk}
-                    copied={copiedField === "organizer"}
-                    onCopy={() => copyField("organizer", event.issuerPk)}
-                    copyAriaLabel="Copy organizer key"
-                    hint="Share this with a subscriber so they can generate their own key for you (My Subscriptions → Get My Key)."
-                  />
-                  <BlockchainField label="Block" value={event.createdBlock ?? "N/A"} />
-                  <BlockchainField label="Tx" value={event.createdTx} />
+                  <button
+                    type="button"
+                    className="btn btn-card-detail-action btn-sm"
+                    onClick={openBlockchainInfoDrawer}
+                  >
+                    <Database size={14} className="mr-2" />
+                    View Blockchain Info
+                  </button>
 
                   {privateDraft && (
                     <div className="mt-3">
@@ -602,8 +618,10 @@ const EventCard = forwardRef(({
                     </p>
                   )}
                   </div>
-                </div>
+                )}
+              </div>
 
+              {isExpanded && (
                 <div
                   className="col-md-5"
                   style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px", ...textStyle }}
@@ -663,7 +681,17 @@ const EventCard = forwardRef(({
                         </span>
                       </div>
 
-                      {statsSegments.length > 0 && (
+                      {/* Gated on showText (not just statsSegments), unlike everything else in
+                          this column — ApexCharts' initial SVG render is heavy enough that
+                          mounting it the instant isExpanded flips true (same frame the thumb's
+                          layout animation starts) competed with that animation for the browser's
+                          frame budget and made the thumb's move look rushed/choppier specifically
+                          on this variant="manage" page (myEvents.jsx), the only one with this
+                          chart at all. Deferring its mount until after the resize+fade sequence
+                          finishes (showText flips true in onLayoutAnimationComplete, same as the
+                          rest of the fade-back-in) keeps that work off the animation's critical
+                          path instead of just re-tuning the duration further. */}
+                      {showText && statsSegments.length > 0 && (
                         <div className="mt-3">
                           <p className="small text-muted mb-2">Token breakdown</p>
                           <Chart options={statsChartOptions} series={statsChartSeries} type="donut" height={180} />
@@ -711,8 +739,8 @@ const EventCard = forwardRef(({
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Minted bar — the one element that sits flush against the card's own bottom edge,

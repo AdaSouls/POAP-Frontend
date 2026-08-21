@@ -675,9 +675,55 @@ select option,
    belonging to the role you're viewing it under. Every other status (expired/full/inactive/burned)
    keeps its own fixed semantic color — only the positive/default state is role-tinted. Falls back
    to the same green Bootstrap's bg-success used if rendered with no role ancestor. */
-.status-badge-active {
-  background: var(--role-accent, #2ecc71);
-  color: var(--text-on-solid);
+.card-event .status-badge-active,
+.card-poap .status-badge-active {
+  background: transparent;
+  border: 1px solid var(--role-accent, #2ecc71);
+  color: var(--role-accent, #2ecc71);
+}
+
+/* Every other status/semantic badge on event/POAP cards (collapsed + expanded, including the
+   embedded event-preview mini-card inside an expanded poapCard.jsx) — same outline treatment as
+   .status-badge-active above: colored border, transparent fill, text in that same color, instead
+   of the solid Bootstrap .bg-* fills (colors copied 1:1 from style.css's .bg-danger/.bg-warning/
+   .bg-secondary/.bg-info/.bg-success so the semantic hue is unchanged, only fill vs. outline).
+   Scoped to .card-event/.card-poap specifically (not a global .badge override) so unrelated badges
+   elsewhere (subscribersList.jsx's popup, sharedCollection.jsx's public share page) are unaffected.
+   !important on background only, to beat style.css's own !important fills — border/color don't
+   need it since the scoped selector already outweighs .badge's/.bg-*'s lower specificity. */
+.card-event .badge.bg-danger,
+.card-poap .badge.bg-danger {
+  background: transparent !important;
+  border: 1px solid #f46a6a;
+  color: #f46a6a;
+}
+
+.card-event .badge.bg-warning,
+.card-poap .badge.bg-warning {
+  background: transparent !important;
+  border: 1px solid #f1b44c;
+  color: #f1b44c;
+}
+
+.card-event .badge.bg-secondary,
+.card-poap .badge.bg-secondary {
+  background: transparent !important;
+  border: 1px solid #74788d;
+  color: #74788d;
+}
+
+.card-event .badge.bg-info,
+.card-poap .badge.bg-info {
+  background: transparent !important;
+  border: 1px solid #50a5f1;
+  color: #50a5f1;
+}
+
+.card-event .badge.bg-success,
+.card-poap .badge.bg-success {
+  background: transparent !important;
+  border: 1px solid #34c38f;
+  color: #34c38f;
 }
 
 .category-badge-icon {
@@ -806,17 +852,79 @@ select option,
    like that event's own collapsed eventCard.jsx tile, just narrower) — same flat glass-block
    treatment as .poap-preview-card/.drawer-modal-preview-card, so every nested "card" in this
    sidebar reads as the same visual family. */
+/* Uniform 16px padding (was 14px/16px split) so the thumb's inset below/above ends up identical
+   to its inset on the left, per explicit request — the thumb now stretches to fill exactly the
+   space that padding leaves, so an uneven split would otherwise show up as an off-center image. */
 .poap-event-info-card {
-  padding: 14px 16px;
+  padding: 16px;
   border-radius: 14px;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
 }
 
+/* Fixed square — explicitly NOT derived from the row's height (two things tried and rejected
+   before this: aspect-ratio + align-self:stretch fed back into itself and ballooned to dominate
+   the whole card; height:auto + align-self:stretch alone stayed square-ISH only by coincidence, at
+   the mercy of however tall the text column happened to be, i.e. a rectangle most of the time).
+   Both dimensions static guarantees square regardless of text content height. Centered (not
+   stretched) in the row so it doesn't force the card's own height either — the card still sizes
+   off the text column (title/organizer/expiration/minted, ~76px tall in practice), and 76px here
+   is sized to match that so the centering gap above/below the square collapses to ~0, leaving only
+   the card's own uniform 16px padding — the same as the left margin. If the text column's actual
+   height differs from this estimate the top/bottom gap will be off by that delta; bump this value
+   to close it further. */
 .poap-event-info-card .card-media-thumb-wrap {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 85px;
+  height: 85px;
+  align-self: center;
+  border-radius: 10px;
+}
+
+/* CategoryBadge.jsx pinned to poapCard.jsx's expanded left column's own top-right corner (that
+   column carries position:relative for this) — a corner ribbon independent of the thumb's height,
+   rather than a flex sibling that would otherwise sit vertically centered against the 140px thumb.
+   right/top offsets (not flush 0/0) so it doesn't sit glued to the column-divider border or the
+   column's literal edge. The header row reserves matching paddingRight (inline, poapCard.jsx) so
+   the truncating name never renders underneath it. */
+.poap-detail-category-badge-corner {
+  position: absolute;
+  top: 0;
+  right: 20px;
+}
+
+/* poapCard.jsx's expanded left column: the "done" status badge (Received/Attended/Active/Burned)
+   sits inside the same box the name below it vertically centers against (.card-media-content,
+   stretched to the thumb's 140px height) — position:absolute keeps it at its natural pill size
+   (the parent's default flex-column stretch would otherwise force it to the box's full width) and
+   pins it to that box's own top-left, i.e. flush with the thumb's top edge, independent of
+   whatever height the centered name below ends up needing. */
+.poap-detail-status-badge-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Share This Token's visibility toggle (poapCard.jsx) — plain Bootstrap .form-check.form-switch
+   floats the input and lets the label follow as normal text flow, which reads misaligned against a
+   4em-wide switch (label sits low, glued to it with no gap). Flex row instead: switch and label
+   vertically centered on the same line, with a real gap between them. Scoped to this specific row
+   (not a global .form-switch override) since other forms in the app (createEvent.jsx/createPoap.jsx/
+   createSoul.jsx) use the same Bootstrap classes with their own already-working layout. */
+.share-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 0;
+}
+
+.share-toggle-row .form-check-input {
+  float: none;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.share-toggle-row .form-check-label {
+  margin: 0;
 }
 
 /* Small info-icon callout — used for the "share this with a subscriber" hint under the Organizer

@@ -37,6 +37,7 @@ export function DrawerProvider({ children }) {
     getHolderKey: false,
     revealPrivateInfo: false,
     showSubscribers: false,
+    showBlockchainInfo: false,
     open: false,
     poapEvents: [],
     poapCollection: [],
@@ -129,6 +130,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true,
       };
     case 'SHOW_MIDNIGHT_WALLET':
@@ -148,6 +150,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true
       };
     case 'CREATE_SOUL':
@@ -167,6 +170,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true
       };
     case 'CREATE_SOUL_TOKEN':
@@ -186,6 +190,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true,
         collection: action.payload
       };
@@ -206,6 +211,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true, 
         items: action.payload
       };
@@ -226,6 +232,7 @@ function drawerReducer(state, action) {
           getHolderKey: false,
           revealPrivateInfo: false,
           showSubscribers: false,
+        showBlockchainInfo: false,
           open: true,
           token: action.payload
         };
@@ -246,6 +253,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true,
         mintEvent: action.payload
       };
@@ -266,6 +274,7 @@ function drawerReducer(state, action) {
         getHolderKey: true,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true
       };
     case 'REVEAL_PRIVATE_INFO':
@@ -285,6 +294,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: true,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true
       };
     case 'SHOW_SUBSCRIBERS':
@@ -304,8 +314,30 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: true,
+        showBlockchainInfo: false,
         open: true,
         subscribers: action.payload
+      };
+    case 'SHOW_BLOCKCHAIN_INFO':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showMidnightWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: false,
+        createOwner: false,
+        checkCollection: false,
+        viewToken: false,
+        createMint: false,
+        getHolderKey: false,
+        revealPrivateInfo: false,
+        showSubscribers: false,
+        showBlockchainInfo: true,
+        open: true,
+        blockchainInfo: action.payload
       };
     case 'CLOSE_DRAWER':
       return {
@@ -324,6 +356,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: false
       };
     case 'CREATE_POAP':
@@ -343,6 +376,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true,
         claimEvent: action.payload
       };
@@ -363,6 +397,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true
       };
     case 'CREATE_ISSUER':
@@ -382,6 +417,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true
       };
     case 'CREATE_OWNER':
@@ -401,6 +437,7 @@ function drawerReducer(state, action) {
         getHolderKey: false,
         revealPrivateInfo: false,
         showSubscribers: false,
+        showBlockchainInfo: false,
         open: true
       };
     case 'UPDATE_EVENTS':

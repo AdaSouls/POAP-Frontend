@@ -14,6 +14,7 @@ import MintPoap from './views/mintPoap.jsx';
 import GetHolderKey from './views/getHolderKey.jsx';
 import RevealPrivateInfo from './views/revealPrivateInfo.jsx';
 import SubscribersList from './views/subscribersList.jsx';
+import BlockchainInfoModal from './views/blockchainInfoModal.jsx';
 
 export const Drawer = () => {
 
@@ -73,6 +74,10 @@ export const Drawer = () => {
       return <SubscribersList />;
     }
 
+    if (state?.showBlockchainInfo === true) {
+      return <BlockchainInfoModal />;
+    }
+
   };
 
   // Key names an active flag rather than any content from the view itself, so AnimatePresence
@@ -81,7 +86,7 @@ export const Drawer = () => {
   const activeViewKey = [
     'showCardanoWallet', 'showMidnightWallet', 'createSoul', 'createSoulToken', 'createPoap',
     'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint', 'getHolderKey',
-    'revealPrivateInfo', 'showSubscribers',
+    'revealPrivateInfo', 'showSubscribers', 'showBlockchainInfo',
   ].find((flag) => state?.[flag] === true) || 'none';
 
   // CLOSE_DRAWER flips every view flag to false in the same dispatch as `open: false` (see the
@@ -117,7 +122,7 @@ export const Drawer = () => {
   // panel).
   const MODAL_VIEWS = [
     'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
-    'revealPrivateInfo', 'showSubscribers',
+    'revealPrivateInfo', 'showSubscribers', 'showBlockchainInfo',
   ];
   const isModalView = MODAL_VIEWS.includes(chromeViewKey);
   const drawerLayout = isModalView ? 'drawer-modal' : 'drawer-cart';

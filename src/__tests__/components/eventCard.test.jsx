@@ -127,20 +127,21 @@ describe('EventCard Component', () => {
   // isExpanded resizes this same card instance in place (see eventCard.jsx's own top-of-file
   // comment) — no separate floating overlay, no ghost placeholder left behind in the grid.
   describe('expanded card', () => {
-    it('shows the full (untruncated) event id and issuer', () => {
-      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
-      expect(screen.getByText(mockEvent.eventId)).toBeInTheDocument();
-      expect(screen.getByText(mockEvent.issuerPk)).toBeInTheDocument();
-    });
+    it('dispatches SHOW_BLOCKCHAIN_INFO with the full (untruncated) event id and issuer when View Blockchain Info is clicked', async () => {
+      const dispatch = jest.fn();
+      renderWithProviders(<EventCard event={mockEvent} isExpanded />, { drawerDispatch: dispatch });
 
-    it('copies the organizer key when its copy button is clicked', async () => {
-      navigator.clipboard.writeText.mockClear();
-      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      await userEvent.click(screen.getByRole('button', { name: /view blockchain info/i }));
 
-      await userEvent.click(screen.getByRole('button', { name: /copy organizer key/i }));
-
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockEvent.issuerPk);
-      expect(screen.getByRole('button', { name: /^copied$/i })).toBeInTheDocument();
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_BLOCKCHAIN_INFO',
+        payload: expect.objectContaining({
+          fields: expect.arrayContaining([
+            expect.objectContaining({ key: 'eventId', value: mockEvent.eventId }),
+            expect.objectContaining({ key: 'organizer', value: mockEvent.issuerPk, copyable: true }),
+          ]),
+        }),
+      });
     });
 
     it('fetches and shows the live token count for this event', async () => {
@@ -465,17 +466,27 @@ describe('EventCard Component', () => {
       expect(await screen.findByText(/bbbbbbbb…bbbbbb/)).toBeInTheDocument();
     });
 
-    it('still shows the full raw organizer key in the expanded card\'s blockchain-data block, even with an organizer name set', async () => {
+    it('still dispatches the full raw organizer key via View Blockchain Info, even with an organizer name set', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({ name: 'DevCon 2026', organization: { name: 'AdaSouls Inc.' } }),
       });
       const eventWithMetadata = { ...mockEvent, metadataURI: 'https://example.com/meta-org-name-expanded.json' };
+      const dispatch = jest.fn();
 
-      renderWithProviders(<EventCard event={eventWithMetadata} isExpanded />);
+      renderWithProviders(<EventCard event={eventWithMetadata} isExpanded />, { drawerDispatch: dispatch });
 
       await screen.findByText('AdaSouls Inc.');
-      expect(screen.getByText(mockEvent.issuerPk)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /view blockchain info/i }));
+
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_BLOCKCHAIN_INFO',
+        payload: expect.objectContaining({
+          fields: expect.arrayContaining([
+            expect.objectContaining({ key: 'organizer', value: mockEvent.issuerPk }),
+          ]),
+        }),
+      });
     });
   });
 });

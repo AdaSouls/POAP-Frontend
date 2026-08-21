@@ -1,14 +1,12 @@
 import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Award, BadgeCheck, Calendar, ImageOff, X } from "lucide-react";
-import { useDrawer } from "../contexts/drawer/drawer.provider";
+import { Award, BadgeCheck, Calendar, Database, ImageOff, Info, Ticket, X } from "lucide-react";
+import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
-import BlockchainField from "./BlockchainField";
 import { getClaimActionLabel } from "../constants/eventCategories";
 import { getEvent } from "../../midnight/indexer.service";
-import { getEventStatus, getEventStatusLabel } from "../../utils/poapHelpers";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import {
   getTokenVisibility,
@@ -40,6 +38,7 @@ const truncateHex = (hex) => {
 // default timing) unless the ref is forwarded down to the actual motion.div.
 const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, onCollapse = () => {} }, ref) => {
   const { midnight } = useDrawer();
+  const dispatch = useDrawerDispatch();
 
   const [visible, setVisible] = useState(() => getTokenVisibility(poap.issuerPkHex, poap.tokenId));
   const [shareCopied, setShareCopied] = useState(false);
@@ -84,14 +83,6 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
       cancelled = true;
     };
   }, [isExpanded, poap.firstEventId]);
-  const eventStatus = eventDetail ? getEventStatus(eventDetail) : null;
-  const eventStatusLabel = eventStatus ? getEventStatusLabel(eventStatus) : null;
-  const eventStatusBadgeClass = {
-    active: "badge status-badge-active",
-    expired: "badge bg-danger",
-    full: "badge bg-warning",
-    inactive: "badge bg-secondary",
-  }[eventStatus];
   // Text reflows (wrapping, line-count changes) as the card's width/height FLIP-animates, which
   // looks janky since framer-motion only interpolates the box, not text layout. So the text gets
   // its own short fade, sequenced (not overlapping) with the resize: fade out first, THEN trigger
@@ -133,14 +124,36 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     setTimeout(() => setShareCopied(false), 2000);
   };
 
-  // Copy-button state for the expanded card's raw blockchain-data block (Token ID / Issuer /
-  // Event ID / Block / Tx) — keyed by field name, same pattern as eventCard.jsx's own
-  // copiedField/copyField, which BlockchainField (shared component) expects.
-  const [copiedField, setCopiedField] = useState(null);
-  const copyField = (field, value) => {
-    navigator.clipboard?.writeText(value);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField((current) => (current === field ? null : current)), 2000);
+  // Raw blockchain data (Token ID / Owner / Issuer / Event ID / Block / Tx / Burned Block / Burned
+  // Tx) lives behind this popup now, not inline — see BlockchainInfoModal.jsx. Burned fields only
+  // apply once poap.isBurned; contractAddress is the same constant for every token.
+  const openBlockchainInfoDrawer = () => {
+    const fields = [
+      { key: "tokenId", label: "Token ID", value: String(poap.tokenId) },
+      { key: "owner", label: "Owner", value: poap.ownerPk, copyable: true },
+      {
+        key: "issuer",
+        label: "Issuer",
+        value: poap.issuerPkHex,
+        copyable: true,
+        copyAriaLabel: "Copy organizer key",
+        hint: "Use this to generate your own key for this organizer (My Subscriptions → Get My Key).",
+      },
+      { key: "eventId", label: "Event ID", value: poap.firstEventId },
+      { key: "block", label: "Block", value: poap.mintedBlock ?? "N/A" },
+      { key: "tx", label: "Tx", value: poap.mintedTx, copyable: true },
+    ];
+    if (poap.isBurned) {
+      fields.push({ key: "burnedBlock", label: "Burned At Block", value: poap.burnedBlock ?? "N/A" });
+      fields.push({ key: "burnedTx", label: "Burned Tx", value: poap.burnedTx, copyable: true });
+    }
+    fields.push({
+      key: "contractAddress",
+      label: "Contract Address",
+      value: process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS,
+      copyable: true,
+    });
+    dispatch({ type: "SHOW_BLOCKCHAIN_INFO", payload: { title: "Blockchain Info", fields } });
   };
 
   // No "pending"/claim state exists for a POAP — mintTo() (organizer push-mint) and claim()
@@ -185,173 +198,177 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
         onLayoutAnimationComplete={() => setShowText(true)}
       >
         <div className="card-body card-outline-only-body card-media-body">
-          {!isExpanded ? (
-            <div className="d-flex align-items-stretch card-media-row">
-              {/* The image is never part of textStyle's fade — only text fades out before the
-                  resize and back in after, the image stays visible throughout (and stays the same
-                  size/crop as the collapsed tile in the expanded branch below, not a smaller one). */}
-              <motion.div
-                layout
-                className="card-media-thumb-wrap"
-                style={{ borderRadius: "50%", overflow: "hidden" }}
-              >
-                {metadataLoading ? (
-                  <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-                ) : showBrokenImage ? (
-                  <Award size={48} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
-                ) : (
-                  <img
-                    className="card-media-thumb-photo"
-                    src={poapImageUrl}
-                    alt=""
-                    onError={() => setImgLoadError(true)}
-                  />
-                )}
-              </motion.div>
-              <div className="card-media-content" style={textStyle}>
-                <div className="d-flex align-items-start justify-content-between mb-1">
-                  <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
-                    {metadata?.name || `POAP #${String(poap.tokenId)}`}
-                  </h4>
-                  <span
-                    className={`${poapStatusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
-                    style={{ fontSize: "10px", padding: "2px 8px" }}
-                  >
-                    {poapStatusLabel}
-                  </span>
-                </div>
-                {poap.isSoulbound && (
-                  <div className="d-flex align-items-center mb-2">
-                    <span
-                      className="badge bg-info mr-2"
-                      style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
-                      title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
-                    >
-                      Soulbound
-                    </span>
-                  </div>
-                )}
-
-                <ul
-                  className="list-unstyled mb-2 d-flex flex-column justify-content-center flex-grow-1"
-                  style={{ fontSize: "12px" }}
-                >
-                  <li className="d-flex align-items-center mb-1">
-                    <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
-                    <span className="text-muted small">
-                      Issuer: <span className="text-white">{metadata?.organization?.name || truncateHex(poap.issuerPkHex)}</span>
-                    </span>
-                  </li>
-                  <li className="d-flex align-items-center mb-1">
-                    <span className="text-muted small">
-                      Event: <span className="text-white">{truncateHex(poap.firstEventId)}</span>
-                    </span>
-                  </li>
-                </ul>
-
-                <div className="d-flex justify-content-end mt-auto">
+          {/* The thumb — and its whole ancestor chain up to here — is rendered unconditionally
+              below, never inside an `isExpanded ? A : B` branch. Only className/style toggle per
+              state; the actual elements (including the motion.div thumb itself) stay mounted
+              continuously across expand/collapse. That's what framer-motion's `layout` FLIP
+              actually needs: a real before/after measurement of the SAME node. The previous
+              version rendered two entirely different subtrees for collapsed vs. expanded (so the
+              thumb unmounted and a fresh one mounted in the other branch every time) — a freshly
+              mounted node has no "before" to interpolate from, so it just snapped straight to its
+              final CSS position instead of animating there, and since the collapsed → expanded
+              move is diagonal (both axis change at once), that snap looked like an L-shaped hop —
+              one axis resolving via instant layout reflow, the other via the card's own resize —
+              with the image effectively disappearing from view for a moment in between. */}
+          <div className={isExpanded ? "row" : undefined}>
+            <div className={isExpanded ? "col-md-8" : undefined} style={isExpanded ? { position: "relative" } : undefined}>
+              {isExpanded && (
+                /* Pinned to the column's own top-right corner (not just the header row) — a
+                    corner ribbon, independent of the thumb's height, rather than a flex sibling
+                    vertically centered against the 140px thumb. */
+                <div className="poap-detail-category-badge-corner" style={textStyle}>
                   <CategoryBadge category={metadata?.category} />
                 </div>
-              </div>
-            </div>
-          ) : (
-            /* Expanded detail: two columns, like eventCard.jsx's own expanded card — but inverted
-               proportions. eventCard gives its bigger column to TEXT and its smaller column to
-               actions. A POAP/credential card is the opposite: the image itself (especially a
-               push-minted credential's actual document — diploma, ticket, ID) IS the content, so
-               the LEFT column (2/3) keeps identity (same round POAP thumb + name as the collapsed
-               tile) up top, then the credential's document image (when there is one — plain
-               claimed/pushed POAPs never have one), then the raw blockchain data. The RIGHT column
-               (1/3) is a stack of three "cards": a verification seal, a preview of the parent
-               event (styled like that event's own collapsed tile), and the share controls. */
-            <div className="row">
-              <div className="col-md-8" style={textStyle}>
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <div className="d-flex align-items-center" style={{ minWidth: 0 }}>
-                    <motion.div
-                      layout
-                      className="card-media-thumb-wrap mr-3"
-                      style={{ borderRadius: "50%", overflow: "hidden" }}
+              )}
+              {/* align-items-stretch (not center) so .card-media-content below actually stretches
+                  to the thumb's full 140px height once expanded. The status badge is positioned
+                  absolute (top/left of that stretched box) so it keeps its natural pill size
+                  instead of being flex-stretched to the row's full width, and so it doesn't eat
+                  into the flow height the name below centers itself against. */}
+              <div
+                className={isExpanded ? "d-flex align-items-stretch mb-2" : "d-flex align-items-stretch card-media-row"}
+                style={isExpanded ? { paddingRight: 160 } : undefined}
+              >
+                {/* Explicit layout transition, slightly slower than the card's own (0.3s) —
+                    without this the thumb used framer-motion's default spring, which finished
+                    before the card's own resize tween did, so the image briefly overshot the
+                    card's still-mid-resize bounds and poked out past its edge. */}
+                <motion.div
+                  layout
+                  transition={{ layout: { duration: 0.45, ease: "easeInOut" } }}
+                  className={isExpanded ? "card-media-thumb-wrap mr-3" : "card-media-thumb-wrap"}
+                  style={{ borderRadius: "50%", overflow: "hidden" }}
+                >
+                  {metadataLoading ? (
+                    <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
+                  ) : showBrokenImage ? (
+                    <Award size={48} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
+                  ) : (
+                    <img
+                      className="card-media-thumb-photo"
+                      src={poapImageUrl}
+                      alt=""
+                      onError={() => setImgLoadError(true)}
+                    />
+                  )}
+                </motion.div>
+
+                {!isExpanded ? (
+                  <div className="card-media-content" style={textStyle}>
+                    <div className="d-flex align-items-start justify-content-between mb-1">
+                      <h4 className="mb-0" style={{ fontSize: "15px", fontWeight: "600" }}>
+                        {metadata?.name || `POAP #${String(poap.tokenId)}`}
+                      </h4>
+                      <span
+                        className={`${poapStatusBadgeClass} text-capitalize flex-shrink-0 ml-2`}
+                        style={{ fontSize: "10px", padding: "2px 8px" }}
+                      >
+                        {poapStatusLabel}
+                      </span>
+                    </div>
+                    {poap.isSoulbound && (
+                      <div className="d-flex align-items-center mb-2">
+                        <span
+                          className="badge bg-info mr-2"
+                          style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
+                          title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
+                        >
+                          Soulbound
+                        </span>
+                      </div>
+                    )}
+
+                    <ul
+                      className="list-unstyled mb-2 d-flex flex-column justify-content-center flex-grow-1"
+                      style={{ fontSize: "12px" }}
                     >
-                      {metadataLoading ? (
-                        <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-                      ) : showBrokenImage ? (
-                        <Award size={32} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
-                      ) : (
-                        <img
-                          className="card-media-thumb-photo"
-                          src={poapImageUrl}
-                          alt=""
-                          onError={() => setImgLoadError(true)}
-                        />
-                      )}
-                    </motion.div>
-                    <h4 className="mb-0 text-truncate" style={{ fontSize: "16px", fontWeight: "600" }}>
-                      {metadata?.name || `POAP #${String(poap.tokenId)}`}
-                    </h4>
+                      <li className="d-flex align-items-center mb-1">
+                        <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
+                        <span className="text-muted small">
+                          Issuer: <span className="text-white">{metadata?.organization?.name || truncateHex(poap.issuerPkHex)}</span>
+                        </span>
+                      </li>
+                      <li className="d-flex align-items-center mb-1">
+                        <span className="text-muted small">
+                          Event: <span className="text-white">{truncateHex(poap.firstEventId)}</span>
+                        </span>
+                      </li>
+                    </ul>
+
+                    <div className="d-flex justify-content-end mt-auto">
+                      <CategoryBadge category={metadata?.category} />
+                    </div>
                   </div>
-                  <div className="d-flex flex-column align-items-end flex-shrink-0" style={{ gap: 6, marginLeft: 12 }}>
+                ) : (
+                  <div className="card-media-content" style={{ position: "relative", ...textStyle }}>
                     <span
-                      className={`${poapStatusBadgeClass} text-capitalize`}
+                      className={`${poapStatusBadgeClass} text-capitalize poap-detail-status-badge-top`}
                       style={{ fontSize: "10px", padding: "2px 8px" }}
                     >
                       {poapStatusLabel}
                     </span>
-                    <CategoryBadge category={metadata?.category} />
-                  </div>
-                </div>
-
-                {poap.isSoulbound && (
-                  <div className="mb-2">
-                    <span
-                      className="badge bg-info"
-                      style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
-                      title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
-                    >
-                      Soulbound
-                    </span>
-                    <small className="text-muted d-block mt-1">
-                      Marked non-transferable by you at claim time — the contract does not enforce
-                      this restriction on-chain yet.
-                    </small>
-                  </div>
-                )}
-
-                <hr style={{ marginTop: "12px", marginBottom: "18px" }} />
-
-                {/* Only set on individually push-minted Credential tokens (see mintPoap.jsx) — the
-                    actual ticket/diploma/document content this credential represents. No container
-                    box on purpose (the document is the content, not a decorated tile) — just
-                    capped at a max height so a tall/portrait document can't stretch the whole
-                    expanded card, and centered in whatever space that leaves. */}
-                {metadata?.documentImageUrl && (
-                  <>
-                    <div className="d-flex align-items-center justify-content-center">
-                      <img className="poap-credential-document-image" src={metadata.documentImageUrl} alt="" />
+                    <div className="d-flex align-items-center h-100" style={{ minWidth: 0 }}>
+                      <h4 className="mb-0 text-truncate" style={{ fontSize: "16px", fontWeight: "600", minWidth: 0 }}>
+                        {metadata?.name || `POAP #${String(poap.tokenId)}`}
+                      </h4>
                     </div>
-                    <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
-                  </>
+                  </div>
                 )}
-
-                <BlockchainField label="Token ID" value={String(poap.tokenId)} />
-                <BlockchainField
-                  label="Issuer"
-                  value={poap.issuerPkHex}
-                  copied={copiedField === "issuer"}
-                  onCopy={() => copyField("issuer", poap.issuerPkHex)}
-                  copyAriaLabel="Copy organizer key"
-                  hint="Use this to generate your own key for this organizer (My Subscriptions → Get My Key)."
-                />
-                <BlockchainField label="Event ID" value={poap.firstEventId} />
-                <BlockchainField label="Block" value={poap.mintedBlock ?? "N/A"} />
-                <BlockchainField
-                  label="Tx"
-                  value={poap.mintedTx}
-                  copied={copiedField === "tx"}
-                  onCopy={() => copyField("tx", poap.mintedTx)}
-                />
               </div>
 
+              {isExpanded && (
+                <div style={textStyle}>
+                  {poap.isSoulbound && (
+                    <div className="mb-2">
+                      <span
+                        className="badge bg-info"
+                        style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
+                        title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
+                      >
+                        Soulbound
+                      </span>
+                      <small className="text-muted d-block mt-1">
+                        Marked non-transferable by you at claim time — the contract does not enforce
+                        this restriction on-chain yet.
+                      </small>
+                    </div>
+                  )}
+
+                  <hr style={{ marginTop: "12px", marginBottom: "18px" }} />
+
+                  {/* Only set on individually push-minted Credential tokens (see mintPoap.jsx) — the
+                      actual ticket/diploma/document content this credential represents. No container
+                      box on purpose (the document is the content, not a decorated tile) — just
+                      capped at a max height so a tall/portrait document can't stretch the whole
+                      expanded card, and centered in whatever space that leaves. */}
+                  {metadata?.documentImageUrl && (
+                    <>
+                      <div className="d-flex align-items-center justify-content-center">
+                        <img className="poap-credential-document-image" src={metadata.documentImageUrl} alt="" />
+                      </div>
+                      <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn btn-card-detail-action btn-sm"
+                    onClick={openBlockchainInfoDrawer}
+                  >
+                    <Database size={14} className="mr-2" />
+                    View Blockchain Info
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isExpanded && (
+              /* Right column (1/3): a stack of three "cards" — a verification seal, a preview of
+                 the parent event (styled like that event's own collapsed tile), and the share
+                 controls. The LEFT column (2/3, above) is the inverse of eventCard.jsx's own
+                 proportions — for a POAP/credential, the image itself (especially a push-minted
+                 credential's actual document) IS the content, so it keeps identity (thumb + name)
+                 up top, then the document image, then the raw blockchain data. */
               <div
                 className="col-md-4"
                 style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px", ...textStyle }}
@@ -409,21 +426,13 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                       )}
                     </div>
                     <div className="card-media-content">
-                      <div className="d-flex align-items-start justify-content-between mb-1">
+                      <div className="mb-1">
                         {eventMetadataLoading ? (
                           <div className="skeleton-block" style={{ height: "13px", width: "60%" }} />
                         ) : (
                           <h4 className="mb-0 text-truncate" style={{ fontSize: "13px", fontWeight: "600" }}>
                             {eventMetadata?.name || `Event ${truncateHex(poap.firstEventId)}`}
                           </h4>
-                        )}
-                        {eventStatusLabel && (
-                          <span
-                            className={`${eventStatusBadgeClass} flex-shrink-0 ml-2`}
-                            style={{ fontSize: "9px", padding: "2px 6px" }}
-                          >
-                            {eventStatusLabel}
-                          </span>
                         )}
                       </div>
                       <ul
@@ -454,12 +463,16 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                           </li>
                         )}
                       </ul>
+                      {/* No status/category badge here on purpose — both already live in the left
+                          column's own header (this is just a preview of the parent event, not a
+                          second place to repeat the same two badges). Ticket icon matches the same
+                          "Minted:" quick-fact row in eventCard.jsx's own expanded overlay. */}
                       {eventDetail && (
-                        <div className="d-flex justify-content-between align-items-center">
+                        <div className="d-flex align-items-center">
+                          <Ticket size={12} className="mr-2" style={{ flexShrink: 0 }} />
                           <small className="text-muted" style={{ fontSize: "10px" }}>
                             Minted: <strong className="text-white">{eventDetail.minted}/{eventDetail.maxSupply || "∞"}</strong>
                           </small>
-                          <CategoryBadge category={eventMetadata?.category} />
                         </div>
                       )}
                     </div>
@@ -468,8 +481,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
                 <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
 
-                <h4 className="mb-3" style={{ fontSize: "16px" }}>Share This Token</h4>
-                <div className="form-check form-switch mb-2">
+                <div className="form-check form-switch share-toggle-row mb-3">
                   <input
                     className="form-check-input"
                     type="checkbox"
@@ -481,17 +493,24 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     Include in "Share my collection" links
                   </label>
                 </div>
-                <button className="btn btn-card-detail-action btn-sm" onClick={copyShareLink} disabled={!midnight?.provider}>
+                <button
+                  className="btn btn-card-detail-action btn-sm d-block w-100"
+                  onClick={copyShareLink}
+                  disabled={!midnight?.provider}
+                >
                   {shareCopied ? "Link copied ✓" : "Copy share link"}
                 </button>
-                <small className="text-muted d-block mt-2">
-                  Builds a link from data available right now: the token/issuer info is looked up
-                  live from the public indexer — not something the link can prove on its own,
-                  unlike the ZK-verified tx hash above.
-                </small>
+                <div className="info-hint-card mt-2">
+                  <Info size={16} />
+                  <p>
+                    Builds a link from data available right now: the token/issuer info is looked up
+                    live from the public indexer — not something the link can prove on its own,
+                    unlike the ZK-verified tx hash above.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         </motion.div>
       </div>

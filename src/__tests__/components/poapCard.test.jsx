@@ -138,10 +138,21 @@ describe('PoapCard Component', () => {
       expect(screen.getByText(/not enforce this restriction on-chain/i)).toBeInTheDocument();
     });
 
-    it('shows the on-chain mint transaction as verified proof', () => {
-      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
+    it('shows the on-chain mint transaction as verified proof, and dispatches it as a copyable field via View Blockchain Info', async () => {
+      const dispatch = jest.fn();
+      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue, drawerDispatch: dispatch });
       expect(screen.getByText('Verified')).toBeInTheDocument();
-      expect(screen.getByText('tx-hash-42')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: /view blockchain info/i }));
+
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_BLOCKCHAIN_INFO',
+        payload: expect.objectContaining({
+          fields: expect.arrayContaining([
+            expect.objectContaining({ key: 'tx', value: 'tx-hash-42', copyable: true }),
+          ]),
+        }),
+      });
     });
 
     it('shows no proof message when the token has no mint tx yet', () => {
