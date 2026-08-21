@@ -199,9 +199,9 @@ body {
 }
 
 /* eventCard.jsx's real-photo state (metadataURI-driven, not the SVG placeholder above) — fills
-   .card-media-thumb-wrap/.card-media-thumb-small-wrap completely (their fixed size never changes
-   based on which state is showing) and crops via cover so any source aspect ratio still reads as a
-   clean fill, not letterboxed like the small centered icon above. */
+   .card-media-thumb-wrap completely (its fixed size never changes based on which state is
+   showing) and crops via cover so any source aspect ratio still reads as a clean fill, not
+   letterboxed like the small centered icon above. */
 .card-media-thumb-photo {
   width: 100%;
   height: 100%;
@@ -225,108 +225,6 @@ body {
   color: var(--role-accent, var(--text-on-glass-muted));
 }
 
-/* poapCard.jsx's collapsed tile only (for now): the round POAP thumb sits in front of a small
-   square "which event is this from" badge, top-left-aligned to the exact same origin as the thumb
-   itself. Since the thumb is a CIRCLE inscribed in its own square box, it never covers that box's
-   corners at all — the badge's corner always shows straight through, sharp, unobstructed (no
-   blur/glass treatment — tried it more than once, see this file's own history/git log, never read
-   well). .front-shadow (added to whichever of the two is currently on top) is what actually sells
-   "in front of" — a small dark drop-shadow, not z-index alone. .event-in-front (toggled by
-   .poap-thumb-swap-btn — position never changes, only stacking order + which one carries
-   .front-shadow) swaps which of the two is on top. */
-.poap-media-thumb-stack {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.poap-media-thumb-stack .card-media-thumb-wrap {
-  position: relative;
-  z-index: 1;
-}
-
-/* filter (not backdrop-filter) blurs this element's own entire rendered output — background,
-   border, and the photo inside — as one flattened unit, unlike backdrop-filter (which blurs
-   whatever's behind an element, not the element itself) or a filter on just the <img> (which
-   would leave this div's own border/background crisp). Only applied while this sits behind the
-   POAP thumb (the default state) — swapped to front, it's meant to read sharp; see
-   .event-in-front below turning it off. */
-.poap-event-badge {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-  filter: blur(3px);
-}
-
-.poap-event-badge-photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Small dark lift on whichever image is currently in front — box-shadow, not part of the photo
-   itself, so it doesn't move/toggle with anything but this one class. Kept under 18px (blur radius
-   12px) on purpose: the thumb stack sits exactly 18px from the card's own edges
-   (.card-outline-only-body.card-media-body's padding), and .card-outline-only itself clips
-   overflow — a wider shadow got silently cut off on the top/left sides (less room before hitting
-   that edge) while showing fully on the bottom/right (open card content beyond), reading as an
-   uneven shadow even though the box-shadow declaration itself has no directional offset. */
-.front-shadow {
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
-}
-
-.poap-media-thumb-stack.event-in-front .card-media-thumb-wrap {
-  z-index: 0;
-  /* Symmetric with .poap-event-badge above — whichever of the two is behind gets blurred, not just
-     the badge specifically. */
-  filter: blur(3px);
-}
-
-.poap-media-thumb-stack.event-in-front .poap-event-badge {
-  z-index: 2;
-  filter: none;
-}
-
-/* Bottom-left toggle that swaps which of the two stacked images (POAP medallion / event badge)
-   sits in front — see .event-in-front above. Highest z-index in the stack regardless of which
-   layer is currently on top. */
-.poap-thumb-swap-btn {
-  position: absolute;
-  bottom: -4px;
-  left: -4px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--glass-bg-hover);
-  border: 1px solid var(--glass-border);
-  color: var(--text-on-glass);
-  box-shadow: var(--glass-shadow);
-}
-
-.poap-thumb-swap-btn:hover {
-  background: var(--role-accent, var(--accent-blue));
-  border-color: var(--role-accent, var(--accent-blue));
-  color: var(--text-on-solid);
-}
-
-/* Browser's default focus ring shows as a stray white outline once you've clicked the button —
-   same suppression as .card-expand-close-btn:focus above, for the same reason (the hover/press
-   state already gives clear visual feedback without it). */
-.poap-thumb-swap-btn:focus {
-  outline: none;
-}
-
 /* Loading skeleton — eventCard.jsx's collapsed/expanded image, name, and description while
    useEventMetadata() is still fetching from IPFS (can take a real few seconds, especially right
    after a fresh createEvent upload). Pulses between the existing --glass-bg-hover tone and half
@@ -348,26 +246,6 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-}
-
-/* Expanded detail view's own thumbnail spot — same square-not-circle treatment as the collapsed
-   tile above, just at the original small top-of-card size instead of the full-height one. */
-.card-media-thumb-small-wrap {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.card-media-thumb-small-wrap img {
-  width: 60%;
-  height: 60%;
-  object-fit: contain;
 }
 
 /* Hover on POAP/event/pending cards: original small upward y-translate
@@ -702,10 +580,9 @@ select option,
   outline: none;
 }
 
-/* eventCard.jsx's expanded right column hosts this button inline, as the last item of its own
-   small header row (mint/subscribe action, close button) instead of floating over the whole card
-   — poapCard.jsx keeps the plain absolutely-positioned version above, this modifier only cancels
-   the positioning when both classes are present. */
+/* Both eventCard.jsx and poapCard.jsx's expanded sidebar columns host this button inline, as the
+   first item of their own small header row, instead of floating absolutely over the whole card —
+   this modifier only cancels the positioning when both classes are present. */
 .card-expand-close-btn.card-expand-close-btn-inline {
   position: static;
 }
@@ -893,6 +770,53 @@ select option,
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* poapCard.jsx's expanded card, left column: a push-minted Credential's actual document (diploma,
+   ticket, ID — see mintPoap.jsx). Deliberately no container box (background/border) — the document
+   IS the content, not a decorated tile — just capped at a sane max height so a tall/portrait
+   document can't stretch the whole expanded card, and contain-fit (never cropped) so it stays
+   fully legible regardless of its own aspect ratio. Centered by the plain flex row wrapping it. */
+.poap-credential-document-image {
+  max-width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  display: block;
+}
+
+/* poapCard.jsx's expanded card, right column: the verification "seal" — a bigger, more deliberate
+   treatment than a plain badge (green-tinted glass, not the neutral tone every other nested card
+   here uses) since this one thing is meant to read as proof-of-authenticity at a glance, like a
+   wax seal or certification mark, not just another status label. */
+.poap-verified-seal-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(52, 195, 143, 0.08);
+  border: 1px solid rgba(52, 195, 143, 0.35);
+}
+
+.poap-verified-seal-icon {
+  color: #34c38f;
+}
+
+/* poapCard.jsx's expanded card, right column: wraps the embedded "parent event" preview (styled
+   like that event's own collapsed eventCard.jsx tile, just narrower) — same flat glass-block
+   treatment as .poap-preview-card/.drawer-modal-preview-card, so every nested "card" in this
+   sidebar reads as the same visual family. */
+.poap-event-info-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+}
+
+.poap-event-info-card .card-media-thumb-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
 }
 
 /* Small info-icon callout — used for the "share this with a subscriber" hint under the Organizer
@@ -1446,6 +1370,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .drawer-modal-preview-card {
   padding: 16px;
   border-radius: 14px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+}
+
+/* eventCard.jsx's "View Subscribers/Attendees/Followers" popup (subscribersList.jsx) — one row
+   per token, same flat glass-block treatment as .drawer-modal-preview-card above but stacked with
+   a gap instead of a single block, since the row count is unbounded (scrolls inside the modal's
+   own drawer-body instead of growing the popup itself). */
+.subscribers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.subscribers-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
   background: var(--glass-bg-light);
   border: 1px solid var(--glass-border);
 }

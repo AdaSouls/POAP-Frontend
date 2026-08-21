@@ -1,10 +1,9 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Chart from "react-apexcharts";
-import { Award, Calendar, Check, Copy, ImageOff, Info, Ticket, X } from "lucide-react";
+import { Award, Calendar, ImageOff, Info, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
-import Tooltip from "./Tooltip";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import { getEventStatus, getEventStatusLabel } from "../../utils/poapHelpers";
@@ -14,7 +13,8 @@ import { getPrivateContentSignedUrl } from "../../services/ipfs.service";
 import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../toasts/sweetAlerts";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
-import { getClaimActionLabel, getTaxonomyEntries } from "../constants/eventCategories";
+import BlockchainField from "./BlockchainField";
+import { getClaimActionLabel, getSubscriberListLabel, getTaxonomyEntries } from "../constants/eventCategories";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -172,6 +172,11 @@ const EventCard = forwardRef(({
 
   const openMintDrawer = () => {
     dispatch({ type: "CREATE_MINT", payload: event });
+  };
+
+  const subscriberListLabel = getSubscriberListLabel(metadata);
+  const openSubscribersDrawer = () => {
+    dispatch({ type: "SHOW_SUBSCRIBERS", payload: { event, tokens: eventTokens, label: subscriberListLabel } });
   };
 
   const statusBadgeClass = alreadyHeld
@@ -669,17 +674,13 @@ const EventCard = forwardRef(({
                         <p className="text-muted small mt-3">Loading…</p>
                       ) : (
                         eventTokens.length > 0 && (
-                          <div className="d-flex flex-wrap mt-3" style={{ gap: "8px", maxHeight: 220, overflowY: "auto" }}>
-                            {eventTokens.map((token) => (
-                              <PoapGridThumb
-                                key={token.tokenId}
-                                token={token}
-                                eventMetadata={metadata}
-                                eventMetadataLoading={metadataLoading}
-                                label={metadata?.name || `Event ${truncateHex(event.eventId)}`}
-                              />
-                            ))}
-                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-card-detail-action btn-sm mt-3"
+                            onClick={openSubscribersDrawer}
+                          >
+                            View {subscriberListLabel} ({eventTokens.length})
+                          </button>
                         )
                       )}
                     </>
@@ -759,87 +760,5 @@ function PoapPreviewCard({ loading, broken, imageUrl, title, subtitle }) {
   );
 }
 
-// One label+value row in the expanded card's raw blockchain-data block (Event ID / Organizer /
-// Block / Tx). Renders nothing for a missing value so callers don't need their own conditional
-// (see the Tx field, which isn't always present). The label carries the visual weight (bold,
-// uppercase, small) so it reads as the primary cue and the hex value as supporting detail —
-// previously reversed. The copy button (when supplied) sits directly in the row next to the value
-// instead of pinned to the far edge of a flex-grow paragraph, so it stays visually attached to
-// what it copies even once the hex wraps across multiple lines.
-function BlockchainField({ label, value, onCopy, copied, hint, copyAriaLabel }) {
-  if (!value) return null;
-  const copyButton = onCopy && (
-    <button
-      type="button"
-      className="btn btn-card-detail-action btn-sm blockchain-field-copy"
-      onClick={(e) => {
-        e.stopPropagation();
-        onCopy();
-      }}
-      aria-label={copied ? "Copied" : copyAriaLabel || `Copy ${label}`}
-    >
-      {copied ? <Check size={14} /> : <Copy size={14} />}
-    </button>
-  );
-  return (
-    <div className="blockchain-field">
-      <div className="blockchain-field-row">
-        <p className="blockchain-field-value">
-          <span className="blockchain-field-label">{label}:</span> {value}
-        </p>
-        {/* When there's a hint, the copy button lives there instead (see below) — right-margined
-            in that same box rather than sitting next to the raw hex up here. */}
-        {!hint && copyButton}
-      </div>
-      {hint && (
-        <div className="info-hint-card">
-          <Info size={18} />
-          <p>{hint}</p>
-          {copyButton}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// One grid icon in the expanded card's POAP list. Self-claimed tokens inherit the event's own
-// metadataURI verbatim (claim() hardcodes this — see poap.compact), so their tokenMetadataURI
-// resolves to the exact same JSON as `eventMetadata` and this just re-hits useEventMetadata's own
-// cache (no extra network cost). Individually push-minted Credential tokens (mintPoap.jsx) carry a
-// genuinely different tokenMetadataURI per recipient — this is what makes their icons diverge from
-// the event's own image, which the single shared `metadata` in the parent could never show.
-function PoapGridThumb({ token, eventMetadata, eventMetadataLoading, label }) {
-  const hasOwnMetadata = Boolean(token.tokenMetadataURI);
-  const { metadata: tokenMetadata, loading: tokenLoading } = useEventMetadata(
-    hasOwnMetadata ? token.tokenMetadataURI : undefined
-  );
-  const loading = hasOwnMetadata ? tokenLoading : eventMetadataLoading;
-  const imageUrl = hasOwnMetadata
-    ? tokenMetadata?.poapImageUrl || tokenMetadata?.imageUrl || tokenMetadata?.documentImageUrl
-    : eventMetadata?.poapImageUrl || eventMetadata?.imageUrl;
-  const showBroken = !loading && !imageUrl;
-
-  return (
-    <Tooltip label={label}>
-      <div className="card-media-thumb-small-wrap" style={{ position: "relative" }}>
-        {loading ? (
-          <div className="skeleton-block" style={{ width: "100%", height: "100%" }} />
-        ) : showBroken ? (
-          <Award size={14} className="card-media-thumb-broken-icon card-media-thumb-broken-icon-role" />
-        ) : (
-          <img className="card-media-thumb-photo" src={imageUrl} alt="" />
-        )}
-        {token.isBurned && (
-          <span
-            className="badge bg-secondary"
-            style={{ position: "absolute", bottom: -6, right: -6, fontSize: "8px", padding: "1px 4px" }}
-          >
-            Burned
-          </span>
-        )}
-      </div>
-    </Tooltip>
-  );
-}
 
 export default EventCard;

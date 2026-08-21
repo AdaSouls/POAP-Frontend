@@ -150,43 +150,28 @@ describe('EventCard Component', () => {
       expect(await screen.findByText(/7 minted/i)).toBeInTheDocument();
     });
 
-    it('shows no grid icons when no tokens have been minted for this event', async () => {
-      const { container } = renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+    it('does not show a View Subscribers button when no tokens have been minted for this event', async () => {
+      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
       await waitFor(() => expect(getTokensByEvent).toHaveBeenCalledWith(mockEvent.eventId));
-      await waitFor(() => expect(screen.getByText(/7 minted/i)).toBeInTheDocument());
-      expect(container.querySelectorAll('.card-media-thumb-small-wrap')).toHaveLength(0);
+      expect(await screen.findByText(/7 minted/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /view subscribers/i })).not.toBeInTheDocument();
     });
 
-    it('renders one icon per token, with a Burned badge on burned ones', async () => {
-      getTokensByEvent.mockResolvedValue([
+    it('shows a "View Subscribers (N)" button once tokens have been minted, and dispatches SHOW_SUBSCRIBERS with the event + token list on click', async () => {
+      const dispatch = jest.fn();
+      const tokens = [
         { tokenId: 1, ownerPk: 'cc'.repeat(32), isBurned: false },
         { tokenId: 2, ownerPk: 'dd'.repeat(32), isBurned: true },
-      ]);
-      const { container } = renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      ];
+      getTokensByEvent.mockResolvedValue(tokens);
+      renderWithProviders(<EventCard event={mockEvent} isExpanded />, { drawerDispatch: dispatch });
 
-      await waitFor(() => {
-        expect(container.querySelectorAll('.card-media-thumb-small-wrap')).toHaveLength(2);
-      });
-      expect(screen.getByText(/burned/i)).toBeInTheDocument();
-    });
+      const button = await screen.findByRole('button', { name: /view subscribers \(2\)/i });
+      await userEvent.click(button);
 
-    it('shows a push-minted token\'s own icon instead of the event\'s image, when it has one', async () => {
-      global.fetch = jest.fn().mockImplementation((url) => {
-        if (url === 'https://example.com/token-icon.json') {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ image: 'https://example.com/credential-icon.png' }),
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      });
-      getTokensByEvent.mockResolvedValue([
-        { tokenId: 1, ownerPk: 'cc'.repeat(32), isBurned: false, tokenMetadataURI: 'https://example.com/token-icon.json' },
-      ]);
-      const { container } = renderWithProviders(<EventCard event={mockEvent} isExpanded />);
-
-      await waitFor(() => {
-        expect(container.querySelector('img[src="https://example.com/credential-icon.png"]')).toBeInTheDocument();
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_SUBSCRIBERS',
+        payload: { event: mockEvent, tokens, label: 'Subscribers' },
       });
     });
 

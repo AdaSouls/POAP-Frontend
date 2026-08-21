@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MySubscriptions from '../../jsx/pages/mySubscriptions';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
-import { getTokensByOwner } from '../../midnight/indexer.service';
+import { getEvent, getTokensByOwner } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
 
@@ -48,6 +48,23 @@ function mockToken(overrides = {}) {
 describe('MySubscriptions page', () => {
   beforeEach(() => {
     getTokensByOwner.mockReset();
+    // poapCard.jsx's expanded card fetches the live parent event via getEvent(poap.firstEventId)
+    // for its embedded "event info" preview — needs to resolve to an actual promise (not
+    // automock's default undefined) for every test that expands a card.
+    getEvent.mockResolvedValue({
+      eventId: 'cc'.repeat(32),
+      issuerPk: ISSUER_PK,
+      maxSupply: 0,
+      expiration: 0,
+      isActive: true,
+      isPublicMint: true,
+      metadataURI: null,
+      minted: 1,
+      createdBlock: null,
+      createdTx: null,
+      deactivatedBlock: null,
+      liveTokens: 1,
+    });
   });
 
   it('renders the inner nav (page title dropped — the main nav already shows the active page)', () => {

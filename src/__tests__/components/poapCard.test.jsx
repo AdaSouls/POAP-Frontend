@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event';
 import PoapCard from '../../jsx/components/poapCard';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { getTokenVisibility } from '../../midnight/collection-share';
+import { getEvent } from '../../midnight/indexer.service';
+
+jest.mock('../../midnight/indexer.service');
 
 describe('PoapCard Component', () => {
   const mockPoap = {
@@ -17,6 +20,27 @@ describe('PoapCard Component', () => {
     mintedTx: null,
     mintedBlock: null,
   };
+
+  // The expanded card's embedded "event info" preview (poapCard.jsx) fetches the live event via
+  // getEvent(poap.firstEventId) — every test that renders isExpanded needs this to resolve to an
+  // actual promise, not automock's default `undefined`, or the component's own .then/.catch chain
+  // throws. Individual tests override this where the specific event fields matter.
+  beforeEach(() => {
+    getEvent.mockResolvedValue({
+      eventId: mockPoap.firstEventId,
+      issuerPk: mockPoap.issuerPkHex,
+      maxSupply: 0,
+      expiration: 0,
+      isActive: true,
+      isPublicMint: true,
+      metadataURI: null,
+      minted: 1,
+      createdBlock: null,
+      createdTx: null,
+      deactivatedBlock: null,
+      liveTokens: 1,
+    });
+  });
 
   it('renders the token id', () => {
     renderWithProviders(<PoapCard poap={mockPoap} />);
@@ -116,7 +140,7 @@ describe('PoapCard Component', () => {
 
     it('shows the on-chain mint transaction as verified proof', () => {
       renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
-      expect(screen.getByText('Verified ✓')).toBeInTheDocument();
+      expect(screen.getByText('Verified')).toBeInTheDocument();
       expect(screen.getByText('tx-hash-42')).toBeInTheDocument();
     });
 
@@ -199,8 +223,12 @@ describe('PoapCard Component', () => {
       );
 
       await waitFor(() => {
-        expect(container.querySelector('img[src="https://example.com/diploma.png"]')).toBeInTheDocument();
+        expect(container.querySelector('.poap-credential-document-image')).toBeInTheDocument();
       });
+      expect(container.querySelector('.poap-credential-document-image')).toHaveAttribute(
+        'src',
+        'https://example.com/diploma.png'
+      );
     });
 
     it('shows no document-image block for a token with no documentImage (self-claimed)', async () => {
@@ -219,8 +247,8 @@ describe('PoapCard Component', () => {
       await waitFor(() => {
         expect(container.querySelector('img[src="https://example.com/img.png"]')).toBeInTheDocument();
       });
-      // Only the small circular icon should render — no second, full-size document-image block.
-      expect(container.querySelectorAll('img')).toHaveLength(1);
+      // No separate document-image block at all when the token has no documentImageUrl of its own.
+      expect(container.querySelector('.poap-credential-document-image')).not.toBeInTheDocument();
     });
 
     it("shows the organizer's display name instead of the raw issuer key when set", async () => {

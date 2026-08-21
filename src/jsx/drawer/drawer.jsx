@@ -13,6 +13,7 @@ import CreateIssuer from './views/createIssuer.jsx';
 import MintPoap from './views/mintPoap.jsx';
 import GetHolderKey from './views/getHolderKey.jsx';
 import RevealPrivateInfo from './views/revealPrivateInfo.jsx';
+import SubscribersList from './views/subscribersList.jsx';
 
 export const Drawer = () => {
 
@@ -68,6 +69,10 @@ export const Drawer = () => {
       return <RevealPrivateInfo />;
     }
 
+    if (state?.showSubscribers === true) {
+      return <SubscribersList />;
+    }
+
   };
 
   // Key names an active flag rather than any content from the view itself, so AnimatePresence
@@ -76,7 +81,7 @@ export const Drawer = () => {
   const activeViewKey = [
     'showCardanoWallet', 'showMidnightWallet', 'createSoul', 'createSoulToken', 'createPoap',
     'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint', 'getHolderKey',
-    'revealPrivateInfo',
+    'revealPrivateInfo', 'showSubscribers',
   ].find((flag) => state?.[flag] === true) || 'none';
 
   // CLOSE_DRAWER flips every view flag to false in the same dispatch as `open: false` (see the
@@ -112,14 +117,15 @@ export const Drawer = () => {
   // panel).
   const MODAL_VIEWS = [
     'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
-    'revealPrivateInfo',
+    'revealPrivateInfo', 'showSubscribers',
   ];
   const isModalView = MODAL_VIEWS.includes(chromeViewKey);
   const drawerLayout = isModalView ? 'drawer-modal' : 'drawer-cart';
 
   // createEvent's metadata step (name/description/image dropzone/crop) needs real horizontal room
-  // for a 2-column layout — every other modal view stays at the shared narrow width.
-  const isWideModalView = chromeViewKey === 'createEvent';
+  // for a 2-column layout, and showSubscribers lists one row per holder — both stay cramped at the
+  // shared narrow modal width, unlike every other (short-form) modal view.
+  const isWideModalView = chromeViewKey === 'createEvent' || chromeViewKey === 'showSubscribers';
 
   // Translucent/glass form-control treatment (see .drawer-modal-glass-form in
   // theme-dark-glass.css) instead of the default solid --solid-bg fill — explicitly requested for

@@ -178,11 +178,24 @@ export function getCategoryLabel(categoryKey) {
 // { action, loading, done } for the subscriber-facing self-claim flow — the action button
 // (eventCard.jsx) and the claim drawer's title/submit/toasts (createPoap.jsx) all read off this
 // same triple so they never drift out of sync with each other. "Subscribe"/"Subscribing"/
-// "Subscribed" is the default for everything except the two cases with a more specific real-world
-// verb: following a person/brand/community (subscription category, free_follow relationship) and
-// attending an in-person/hybrid event. modality/relationship are optional taxonomy fields, so a
-// legacy event or one where the organizer skipped that question falls back to the generic triple.
+// "Subscribed" is the default for everything except the cases with a more specific real-world
+// verb: following a person/brand/community (subscription category, free_follow relationship),
+// attending an in-person/hybrid event, and a Credential. modality/relationship are optional
+// taxonomy fields, so a legacy event or one where the organizer skipped that question falls back
+// to the generic triple.
+//
+// Credential is a special case: EVENT_CATEGORIES.credential.isPublicMint is always false, and
+// exploreEvents.jsx filters its own listing to `e.isPublicMint` only — so a Credential token can
+// never be self-claimed, it only ever arrives via an organizer's mintTo() push-mint (see
+// poapCard.jsx's own "no claim-origin flag exists" comment). "Subscribed"/"Attended" both imply an
+// action the holder took; a holder didn't subscribe to or attend a document/ticket/diploma someone
+// issued *to* them, so this gets its own verb regardless of any modality/relationship taxonomy —
+// action/loading are never actually shown for this category (no self-claim UI ever renders for a
+// non-public-mint event), only `done` matters here.
 export function getClaimActionLabel(metadata) {
+  if (metadata?.category === "credential") {
+    return { action: "Claim", loading: "Claiming", done: "Received" };
+  }
   if (metadata?.category === "subscription" && metadata?.relationship === "free_follow") {
     return { action: "Follow", loading: "Following", done: "Following" };
   }
@@ -190,6 +203,23 @@ export function getClaimActionLabel(metadata) {
     return { action: "Attend", loading: "Attending", done: "Attended" };
   }
   return { action: "Subscribe", loading: "Subscribing", done: "Subscribed" };
+}
+
+// Plural noun for "the people who hold this event's POAP" — same category rules as
+// getClaimActionLabel above (kept as a separate function since a verb triple and a plural noun
+// don't share a shape), used by eventCard.jsx's "View <label>" button on the organizer's expanded
+// card.
+export function getSubscriberListLabel(metadata) {
+  if (metadata?.category === "credential") {
+    return "Recipients";
+  }
+  if (metadata?.category === "subscription" && metadata?.relationship === "free_follow") {
+    return "Followers";
+  }
+  if (metadata?.category === "event" && (metadata?.modality === "in_person" || metadata?.modality === "hybrid")) {
+    return "Attendees";
+  }
+  return "Subscribers";
 }
 
 // Breaks the category's taxonomy fields (e.g. "event" → orgType/modality/purpose/eventType) back
