@@ -78,15 +78,23 @@ function useMidnight() {
     setConnecting(true);
     setError(null);
     try {
-      // TEMPORARY (2026-08-13): timeout wrapper removed so a hang surfaces whatever real
-      // error/rejection Lace eventually produces (or truly hangs, observable via devtools)
-      // instead of being masked by ConnectTimeoutError after 90s — restore withTimeout() around
-      // both calls below once the actual DUST/connect error is diagnosed.
+      // Restored 2026-08-30 — the DUST/connect hang this was disabled to diagnose (2026-08-13) is
+      // now understood: Lace's balanceUnsealedTransaction hangs indefinitely instead of erroring
+      // when DUST isn't registered/accrued yet, so an unbounded await here left the UI spinning
+      // forever with no feedback. Wrapping the whole connect+resolve sequence surfaces
+      // ConnectTimeoutError's actionable message instead.
       console.log('[useMidnight.connect] PoapContractService.connect()…');
-      const service = await PoapContractService.connect(CONTRACT_ADDRESS, wallet);
-      console.log('[useMidnight.connect] PoapContractService.connect() resolved, resolving caller pk…');
-      const addressHex = await resolveCallerPkHex(service);
-      console.log('[useMidnight.connect] resolveCallerPkHex() resolved:', addressHex);
+      const { service, addressHex } = await withTimeout(
+        (async () => {
+          const service = await PoapContractService.connect(CONTRACT_ADDRESS, wallet);
+          console.log('[useMidnight.connect] PoapContractService.connect() resolved, resolving caller pk…');
+          const addressHex = await resolveCallerPkHex(service);
+          console.log('[useMidnight.connect] resolveCallerPkHex() resolved:', addressHex);
+          return { service, addressHex };
+        })(),
+        CONNECT_TIMEOUT_MS,
+        () => new ConnectTimeoutError(),
+      );
 
       const newProviderState = {
         service,

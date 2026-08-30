@@ -57,8 +57,9 @@ export default function CreateSoul() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Create collection SC
-    const validators = readValidators();
+    // Create collection SC — throws if the compiled validators are missing, so this doubles as a
+    // precondition check even though the returned scripts aren't used at this call site.
+    readValidators();
 
     const addr = wallet.address;
     const ownerDetails = wallet.utils.getAddressDetails(addr);

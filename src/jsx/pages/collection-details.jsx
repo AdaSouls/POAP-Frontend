@@ -1,5 +1,7 @@
 import { Link, useParams } from "react-router-dom";
-import { ChevronLeft, Check, X, Trash2 } from "lucide-react";
+// Trash2 is used below (burn-token icon) inside a deeply nested `&&`-guarded JSX block that
+// eslint-plugin-react's usage tracking misses — hence the disable on the same line.
+import { ChevronLeft, Check, X, Trash2 } from "lucide-react"; // eslint-disable-line no-unused-vars
 import { get, updateToken } from "../../services/collection.service";
 import Layout from "../layout/layout";
 import { useEffect, useState } from "react";
@@ -54,7 +56,7 @@ const Collection = () => {
         setCollection(updatedCollection);
 
         await txSigned.submit();
-        const success = await provider.awaitTx(txId);
+        await provider.awaitTx(txId);
     }
 
     useEffect(() => {
