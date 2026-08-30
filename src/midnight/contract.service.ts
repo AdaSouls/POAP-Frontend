@@ -31,7 +31,10 @@ export type PoapState = {
   privateState: PoapPrivateState;
 };
 
-const compiledPoapContract = CompiledContract.make<Contract<PoapPrivateState>>('PoapContract', Contract).pipe(
+// Exported for admin-deploy.service.ts's deployContract() call — same compiled contract, no
+// witness-binding difference between connecting to an existing deployment and deploying a new one
+// (createWitnesses() reads secretKey from the private-state context either way, not a closure).
+export const compiledPoapContract = CompiledContract.make<Contract<PoapPrivateState>>('PoapContract', Contract).pipe(
   CompiledContract.withWitnesses(createWitnesses()),
 );
 

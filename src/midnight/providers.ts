@@ -19,6 +19,16 @@ export const POAP_ZK_CONFIG_BASE_PATH = '/midnight/poap';
 // the network it was actually deployed to). See docs/environment.md in ../POAP-Midnight and
 // deploy.ts's envConfig/TARGET_NETWORK for the backend-side counterpart of this same switch.
 const NETWORK_ID = process.env.REACT_APP_MIDNIGHT_NETWORK_ID || 'undeployed';
+// The proof server is local for every network, always — confirmed 2026-08-29/30 two ways:
+// (1) docs.midnight.network/guides/networks-and-environments states it explicitly ("stays local
+// for every network... it handles your private data"), and (2) empirically: Lace's
+// getConfiguration().proverServerUri and its non-deprecated replacement getProvingProvider() BOTH
+// still end up calling the REMOTE https://proof-server.preprod.midnight.network/prove from this
+// page's own JS context (confirmed via the browser network tab), which that endpoint rejects with
+// a CORS 403 — it isn't meant to be hit directly from an arbitrary DApp's browser tab. The local
+// one (docker compose -f devnet.yml up -d proof-server from ../POAP-Midnight) does allow CORS
+// (verified: OPTIONS /prove reflects Access-Control-Allow-Origin for this dev server's origin).
+const PROOF_SERVER_URL = process.env.REACT_APP_MIDNIGHT_PROOF_SERVER_URL || 'http://localhost:6300';
 const WALLET_POLL_INTERVAL_MS = 100;
 const WALLET_DISCOVERY_TIMEOUT_MS = 5_000;
 const WALLET_ENABLE_TIMEOUT_MS = 30_000;
@@ -126,15 +136,26 @@ export type WalletConnection = {
 // they represent (connector rejects the authorization request, wallet is locked) are generic to
 // any dapp-connector-api-compliant wallet, so they're reused as-is for 1am too.
 export async function connectToWallet(api: InitialAPI): Promise<WalletConnection> {
+  return connectToWalletForNetwork(api, NETWORK_ID);
+}
+
+// Same as connectToWallet, but with the network hint passed in instead of read from the app-wide
+// REACT_APP_MIDNIGHT_NETWORK_ID build-time env var — for admin-deploy.service.ts, where the admin
+// picks the target network on the page itself (it must match whatever network Lace is actually
+// configured for right then, which need not be this app's own configured network at all — e.g.
+// deploying a fresh contract to preprod from a build whose REACT_APP_MIDNIGHT_NETWORK_ID is still
+// 'undeployed'). Lace rejects connect() outright with LaceNotAuthorizedError if the hinted network
+// doesn't match its own current one — confirmed 2026-08-29 — so getting this value right matters.
+export async function connectToWalletForNetwork(api: InitialAPI, networkId: string): Promise<WalletConnection> {
   // midnight-js-contracts reads this global on every circuit call (createUnprovenCallTx etc.) —
   // must be set before any wallet/contract operation, not just before connecting.
-  setNetworkId(NETWORK_ID);
-  console.log('[connectToWallet] connecting to', api.name, api.rdns);
+  setNetworkId(networkId);
+  console.log('[connectToWallet] connecting to', api.name, api.rdns, 'on', networkId);
 
   let connectedApi: ConnectedAPI;
   try {
     console.log('[connectToWallet] calling api.connect()…');
-    const connectPromise = api.connect(NETWORK_ID);
+    const connectPromise = api.connect(networkId);
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('timed out waiting for wallet authorization')), WALLET_ENABLE_TIMEOUT_MS),
     );
@@ -233,7 +254,7 @@ export async function buildProviders(connection: WalletConnection) {
       },
     },
     zkConfigProvider,
-    proofProvider: httpClientProofProvider(config.proverServerUri!, zkConfigProvider),
+    proofProvider: httpClientProofProvider(PROOF_SERVER_URL, zkConfigProvider),
     publicDataProvider: {
       ...rawPublicDataProvider,
       async watchForTxData(...args: Parameters<typeof rawPublicDataProvider.watchForTxData>) {

@@ -19,6 +19,7 @@ import OrganizerDashboard from "./pages/organizerDashboard";
 import SharedCollection from "./pages/sharedCollection";
 import OrganizerInfo from "./pages/organizerInfo";
 import SubscriberInfo from "./pages/subscriberInfo";
+import AdminDeploy from "./pages/adminDeploy";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -59,6 +60,9 @@ const Router = () => {
           {/* No nav link points here anymore — deliberately shelved rather than deleted, for a
               possible future organizer-analytics view. Reachable only by typing the URL directly. */}
           <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          {/* Admin-only, gated inside the page itself (REACT_APP_ADMIN_WALLET_ADDRESSES) — not
+              linked from any nav menu, same reasoning as /organizer-dashboard above. */}
+          <Route path="/admin/deploy" element={<AdminDeploy />} />
           <Route path="/share/:pkHex" element={<SharedCollection />} />
           <Route path="/souls" element={<Souls />} />
           <Route path="/Settings-profile" element={<SettingsProfile />} />
