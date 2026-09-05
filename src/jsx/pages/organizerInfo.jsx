@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Calendar, PlusCircle, Check } from "lucide-react";
-import Layout from "../layout/layout";
+import LandingNav from "../layout/landingNav";
+import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
 
 const FEATURES = [
   {
@@ -22,8 +23,13 @@ const FEATURES = [
 ];
 
 const OrganizerInfo = () => {
+  const [, setRole] = useSiteRole();
+
   return (
-    <Layout>
+    <div className="landing-page">
+      <LandingNav />
+      <div className="content-body">
+      <div className="container">
       <div className="role-info-page role-organizer">
         <div className="row role-hero align-items-center">
           <div className="col-md-6">
@@ -33,7 +39,11 @@ const OrganizerInfo = () => {
               As an organizer, you publish events on Midnight and control who can claim a POAP for
               them — including push-minting directly to a wallet that hasn't claimed yet.
             </p>
-            <Link to="/my-events" className="btn btn-role-cta">
+            <Link
+              to="/app/my-events"
+              className="btn btn-role-cta"
+              onClick={() => setRole(SITE_ROLES.ORGANIZER)}
+            >
               Go to My Events
             </Link>
           </div>
@@ -58,7 +68,9 @@ const OrganizerInfo = () => {
           ))}
         </div>
       </div>
-    </Layout>
+      </div>
+      </div>
+    </div>
   );
 };
 

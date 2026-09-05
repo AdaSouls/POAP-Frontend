@@ -74,7 +74,7 @@ export default function CreatePoap() {
 
       succesfullBlockchainCreation(`${claimLabel.done} Successfully`, `Transaction: ${txHash}`, "");
       closeDrawer();
-      navigate("/my-subscriptions");
+      navigate("/app/my-subscriptions");
     } catch (error) {
       console.error("Error subscribing:", error);
       errorFunction("Error", error.message || `Failed to ${claimLabel.action.toLowerCase()}. Please try again.`, "");

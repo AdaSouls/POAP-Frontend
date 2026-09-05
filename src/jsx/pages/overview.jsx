@@ -4,8 +4,8 @@ import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 
 const pages = [
-  { title: "My Events", description: "Browse and create POAP events", path: "/my-events" },
-  { title: "My Subscriptions", description: "Claim POAPs and view your token collection", path: "/my-subscriptions" },
+  { title: "My Events", description: "Browse and create POAP events", path: "/app/my-events" },
+  { title: "My Subscriptions", description: "Claim POAPs and view your token collection", path: "/app/my-subscriptions" },
 ];
 
 const Overview = () => {

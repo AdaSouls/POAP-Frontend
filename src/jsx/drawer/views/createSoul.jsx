@@ -82,7 +82,7 @@ export default function CreateSoul() {
     }
     
     closeDrawer();
-    navigate(`/collections/souls`);
+    navigate(`/app/collections/souls`);
   };
   
   return (

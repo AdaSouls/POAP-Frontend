@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/index";
+import AppHome from "./pages/appHome";
 import Souls from "./pages/souls";
 import SettingsProfile from "./pages/settings-profile";
 import Search from "./pages/search";
@@ -49,27 +50,31 @@ const Router = () => {
       {/* <BrowserRouter> */}
       <div id="main-wrapper">
         <Routes>
+          {/* Landing (marketing/onboarding) — everything else below lives under /app. */}
           <Route path="/" exact element={<Dashboard />} />
-          <Route path="/overview" element={<Overview />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/my-events" element={<MyEvents />} />
-          <Route path="/explore-events" element={<ExploreEvents />} />
-          <Route path="/my-subscriptions" element={<MySubscriptions />} />
           <Route path="/organizer" element={<OrganizerInfo />} />
           <Route path="/subscriber" element={<SubscriberInfo />} />
+
+          {/* App */}
+          <Route path="/app" element={<AppHome />} />
+          <Route path="/app/overview" element={<Overview />} />
+          <Route path="/app/search" element={<Search />} />
+          <Route path="/app/my-events" element={<MyEvents />} />
+          <Route path="/app/explore-events" element={<ExploreEvents />} />
+          <Route path="/app/my-subscriptions" element={<MySubscriptions />} />
           {/* No nav link points here anymore — deliberately shelved rather than deleted, for a
               possible future organizer-analytics view. Reachable only by typing the URL directly. */}
-          <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          <Route path="/app/organizer-dashboard" element={<OrganizerDashboard />} />
           {/* Admin-only, gated inside the page itself (REACT_APP_ADMIN_WALLET_ADDRESSES) — not
-              linked from any nav menu, same reasoning as /organizer-dashboard above. */}
-          <Route path="/admin/deploy" element={<AdminDeploy />} />
-          <Route path="/share/:pkHex" element={<SharedCollection />} />
-          <Route path="/souls" element={<Souls />} />
-          <Route path="/Settings-profile" element={<SettingsProfile />} />
-          <Route path="/soulbounds-claim" element={<SoulboundClaim />} />
-          <Route path="/collection/:id" element={<Collection />} />
-          <Route path="/collections/:section" element={<Collections />} />
-          <Route path="claim-mint" element={<ClaimMint />} />
+              linked from any nav menu, same reasoning as /app/organizer-dashboard above. */}
+          <Route path="/app/admin/deploy" element={<AdminDeploy />} />
+          <Route path="/app/share/:pkHex" element={<SharedCollection />} />
+          <Route path="/app/souls" element={<Souls />} />
+          <Route path="/app/Settings-profile" element={<SettingsProfile />} />
+          <Route path="/app/soulbounds-claim" element={<SoulboundClaim />} />
+          <Route path="/app/collection/:id" element={<Collection />} />
+          <Route path="/app/collections/:section" element={<Collections />} />
+          <Route path="/app/claim-mint" element={<ClaimMint />} />
         </Routes>
       </div>
     </BrowserRouter>

@@ -23,7 +23,7 @@ describe('PoapEvent Component', () => {
               path="/search"
               element={<table><tbody><PoapEvent event={event} index={0} mintable owned={false} /></tbody></table>}
             />
-            <Route path="/my-events" element={<div>My Events Page</div>} />
+            <Route path="/app/my-events" element={<div>My Events Page</div>} />
           </Routes>
         </MemoryRouter>
       </MockDrawerProvider>

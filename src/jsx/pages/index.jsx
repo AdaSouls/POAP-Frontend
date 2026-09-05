@@ -13,72 +13,50 @@ import {
   Award,
   ChevronDown,
 } from "lucide-react";
-import Layout from "../layout/layout";
-import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
-import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
+import LandingNav from "../layout/landingNav";
 
 const USE_CASES = [
   {
     icon: Ticket,
     role: "organizer",
     title: "Event Tickets & Access",
-    description:
-      "Issue verifiable entry passes for conferences, meetups, or ticketed events. Attendees " +
-      "claim their pass straight to their wallet, and organizers can push-mint directly to " +
-      "someone who hasn't claimed yet — no separate ticketing platform required.",
+    description: "Verifiable event passes, claimed straight to your wallet — no separate ticketing platform.",
   },
   {
     icon: Headphones,
     role: "subscriber",
     title: "Podcast Subscriptions",
-    description:
-      "Prove a listener is a paying subscriber without exposing who they are. Creators gate " +
-      "premium episodes or early access behind a claimable token, and the relationship stays " +
-      "private by default — visible only to whoever chooses to share it.",
+    description: "Prove you're a paying subscriber without revealing who you are.",
   },
   {
     icon: Video,
     role: "organizer",
     title: "Live Streams & Social Content",
-    description:
-      "Gate access to a live stream, a private Discord, or a closed social feed behind a " +
-      "claimable token. One token can represent standing access, not just a single-use badge, " +
-      "so it keeps working for every future stream the same way.",
+    description: "Gate a stream, a private Discord, or a closed feed behind one reusable token.",
   },
   {
     icon: Users,
     role: "subscriber",
     title: "Private Meetings & Calls",
-    description:
-      "Grant entry to a members-only call, a closed strategy session, or a one-on-one booking. " +
-      "The proof travels with the wallet itself, not a shared link that anyone could forward.",
+    description: "Entry to members-only calls, tied to your wallet — not a link anyone could forward.",
   },
   {
     icon: GraduationCap,
     role: "organizer",
     title: "Diplomas & Certificates",
-    description:
-      "Represent a course, workshop, or certification as a claimable, provable credential. " +
-      "It's verifiable on-chain without publishing anyone's name or academic record for the " +
-      "world to see.",
+    description: "On-chain, verifiable credentials — without publishing your name or record.",
   },
   {
     icon: Star,
     role: "subscriber",
     title: "Celebrity & Athlete Subscriptions",
-    description:
-      "Let a public figure's fan club, membership tier, or paid community be provably held — " +
-      "without turning every fan's identity into public data. The figure controls who's a " +
-      "member; members control what they reveal.",
+    description: "Provable fan-club membership, without exposing every fan's identity.",
   },
   {
     icon: FileText,
     role: "organizer",
     title: "Document Delivery",
-    description:
-      "An early path for issuing proofs tied to real documents — an ID, a birth certificate, " +
-      "any record where the fact of possession matters more than broadcasting the contents. " +
-      "Still early, but the same private-by-default model applies.",
+    description: "An early path for proofs tied to real documents — possession, not contents.",
   },
 ];
 
@@ -148,16 +126,15 @@ const UseCaseRow = ({ icon: Icon, role, title, description, iconLeft }) => {
 };
 
 const Dashboard = () => {
-  const { midnight: { provider } } = useDrawer();
-  const dispatch = useDrawerDispatch();
-  const [, setRole] = useSiteRole();
-
-  const showMidnightWallet = () => {
-    dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
-  };
-
   return (
-    <Layout activeMenu={1}>
+    <div className="landing-page">
+      <LandingNav />
+
+      {/* Reuses Layout's own wrapper classes (content-body clears the fixed nav, container
+          centers/constrains width) directly rather than rendering <Layout>, since Layout
+          unconditionally also renders the app's <Header/> with no way to opt out. */}
+      <div className="content-body">
+      <div className="container">
       <div className="index-hero-section">
         <motion.div
           className="index-hero"
@@ -174,13 +151,9 @@ const Dashboard = () => {
             contract that can represent far more than event badges, while your wallet identity is
             derived locally and shared with an organizer only when you choose to.
           </p>
-          <button
-            type="button"
-            className={`btn btn-dual-cta${provider ? " connected" : ""}`}
-            onClick={showMidnightWallet}
-          >
-            {provider ? "Wallet Connected" : "Connect Wallet"}
-          </button>
+          <Link to="/app" className="btn btn-dual-cta">
+            Get Started
+          </Link>
         </motion.div>
 
         <motion.div
@@ -190,25 +163,6 @@ const Dashboard = () => {
         >
           <ChevronDown size={28} />
         </motion.div>
-      </div>
-
-      <motion.div
-        className="index-section-header"
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={REVEAL_VIEWPORT}
-        transition={{ duration: 0.4 }}
-      >
-        <h4 className="mb-1">What you can build with AdaSouls</h4>
-        <p className="text-muted small mb-0">
-          The same underlying token can stand in for a lot more than a conference badge.
-        </p>
-      </motion.div>
-
-      <div className="index-usecase-list">
-        {USE_CASES.map((useCase, i) => (
-          <UseCaseRow key={useCase.title} {...useCase} iconLeft={i % 2 === 0} />
-        ))}
       </div>
 
       <motion.div
@@ -240,11 +194,7 @@ const Dashboard = () => {
                 Create events, issue POAPs, and manage attendance.
               </p>
             </div>
-            <Link
-              to="/organizer"
-              className="btn btn-role-cta"
-              onClick={() => setRole(SITE_ROLES.ORGANIZER)}
-            >
+            <Link to="/organizer" className="btn btn-role-cta">
               Learn more
             </Link>
           </div>
@@ -258,21 +208,38 @@ const Dashboard = () => {
                 Discover events, claim POAPs, and build your collection.
               </p>
             </div>
-            <Link
-              to="/subscriber"
-              className="btn btn-role-cta"
-              onClick={() => setRole(SITE_ROLES.SUBSCRIBER)}
-            >
+            <Link to="/subscriber" className="btn btn-role-cta">
               Learn more
             </Link>
           </div>
         </div>
       </motion.div>
 
+      <motion.div
+        className="index-section-header"
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={REVEAL_VIEWPORT}
+        transition={{ duration: 0.4 }}
+      >
+        <h4 className="mb-1">What you can build with AdaSouls</h4>
+        <p className="text-muted small mb-0">
+          The same underlying token can stand in for a lot more than a conference badge.
+        </p>
+      </motion.div>
+
+      <div className="index-usecase-list">
+        {USE_CASES.map((useCase, i) => (
+          <UseCaseRow key={useCase.title} {...useCase} iconLeft={i % 2 === 0} />
+        ))}
+      </div>
+
       <footer className="index-footer">
         <p className="text-muted small mb-0">© 2026 AdaSouls — built on Midnight.</p>
       </footer>
-    </Layout>
+      </div>
+      </div>
+    </div>
   );
 };
 

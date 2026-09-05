@@ -24,7 +24,7 @@ const EventItem = ({ event, index, mintable, owned }) => {
   };
 
   const viewEvent = () => {
-    navigate("/my-events");
+    navigate("/app/my-events");
   };
 
   // const isExpired = () => {

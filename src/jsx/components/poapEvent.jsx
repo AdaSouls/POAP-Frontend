@@ -15,7 +15,7 @@ const PoapEvent = ({ event, index, mintable, owned }) => {
   } = useDrawer();
 
   const viewEvent = () => {
-    navigate("/my-events");
+    navigate("/app/my-events");
   };
 
   // const isExpired = () => {

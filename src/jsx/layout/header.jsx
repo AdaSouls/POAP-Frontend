@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Wallet, ChevronUp, ChevronDown, Award, PlusCircle } from "lucide-react";
 import logo from "../../images/logo.png";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
+import { useLastRolePath, DEFAULT_ROLE_PATH } from "../hooks/useLastRolePath";
 import Tooltip from "../components/Tooltip";
 
 // Horizontal top nav, matching the structure of the poap.xyz reference (logo + nav + a single
@@ -33,20 +34,24 @@ const ROLE_OPTIONS = [
 
 const ROLE_NAV_ITEMS = {
   [SITE_ROLES.SUBSCRIBER]: [
-    { href: "/explore-events", label: "Explore Events" },
-    { href: "/my-subscriptions", label: "My Subscriptions" },
+    { href: "/app/explore-events", label: "Explore Events" },
+    { href: "/app/my-subscriptions", label: "My Subscriptions" },
   ],
   [SITE_ROLES.ORGANIZER]: [
-    { href: "/my-events", label: "My Events" },
+    { href: "/app/my-events", label: "My Events" },
   ],
 };
 
-const RoleDropdown = ({ role, onSelect }) => {
+const RoleDropdown = ({ role, onSelect, placeholderLabel }) => {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState(null);
   const toggleRef = useRef(null);
   const menuRef = useRef(null);
-  const currentLabel = ROLE_OPTIONS.find((option) => option.value === role)?.label ?? "Subscriber";
+  // On /app's own role-selection hub, nothing's actually been chosen for this visit yet — showing
+  // the persisted role's label there would look like a selection already stands, when the whole
+  // point of that page is to make one. See header's placeholderLabel usage below.
+  const currentLabel = placeholderLabel
+    ?? (ROLE_OPTIONS.find((option) => option.value === role)?.label ?? "Subscriber");
 
   const openMenu = () => {
     const rect = toggleRef.current.getBoundingClientRect();
@@ -93,7 +98,7 @@ const RoleDropdown = ({ role, onSelect }) => {
       <button
         type="button"
         ref={toggleRef}
-        className={`header-nav-dropdown-toggle header-nav-role-toggle role-${role}`}
+        className={`header-nav-dropdown-toggle header-nav-role-toggle${placeholderLabel ? "" : ` role-${role}`}`}
         onClick={() => (open ? setOpen(false) : openMenu())}
         aria-expanded={open}
       >
@@ -134,20 +139,38 @@ const RoleDropdown = ({ role, onSelect }) => {
 const Header = () => {
   const { midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
-  const navigate = useNavigate();
   const [role, setRole] = useSiteRole();
-  const roleNavItems = ROLE_NAV_ITEMS[role];
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [lastRolePath, recordRolePath] = useLastRolePath();
+
+  // /app's own hub (pages/appHome.jsx) is the one page that asks you to pick a role rather than
+  // assuming the persisted one — the dropdown and nav links here would otherwise look like a role
+  // is already active before you've clicked anything on that page.
+  const isRoleSelectionHub = location.pathname === "/app";
+  const roleNavItems = isRoleSelectionHub ? [] : ROLE_NAV_ITEMS[role];
+
+  // Every /app/* page renders this header, so every route change while a role is active is this
+  // role's "last page" from now on — read back by the role dropdown below (and by pages/appHome.jsx)
+  // so switching away and back returns here instead of resetting to the role's default. Must skip
+  // the hub itself (isRoleSelectionHub) — recording "/app" as a role's "last page" made that role's
+  // card/dropdown entry a dead link back to the hub it's already on (real bug, found via user
+  // report: clicking a role did nothing once its last-recorded page was "/app" itself).
+  useEffect(() => {
+    if (isRoleSelectionHub) return;
+    recordRolePath(role, location.pathname);
+  }, [role, location.pathname, recordRolePath, isRoleSelectionHub]);
 
   const showMidnightWallet = () => {
     dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
   };
 
-  // Picking a role from the dropdown lands on that role's informational page (routes match the
-  // SITE_ROLES values 1:1: "organizer" -> /organizer, "subscriber" -> /subscriber) in addition to
-  // persisting the choice, so switching roles always explains what that role does.
+  // Role info/explanation lives on the landing (/organizer, /subscriber) — switching role in the
+  // app instead returns to wherever that role last left off (see useLastRolePath.js), falling back
+  // to its default page the first time it's ever selected.
   const handleRoleSelect = (value) => {
     setRole(value);
-    navigate(`/${value}`);
+    navigate(lastRolePath[value] || DEFAULT_ROLE_PATH[value]);
   };
 
   return (
@@ -156,13 +179,17 @@ const Header = () => {
           inner content lines up exactly with the page instead of running edge-to-edge. */}
       <div className="container">
         <div className="header-content">
-          <Link to="/" className="brand-logo">
+          <Link to="/app" className="brand-logo">
             <img src={logo} alt="" />
             <span>AdaSouls</span>
           </Link>
 
-          <nav className={`header-nav role-${role}`}>
-            <RoleDropdown role={role} onSelect={handleRoleSelect} />
+          <nav className={`header-nav${isRoleSelectionHub ? "" : ` role-${role}`}`}>
+            <RoleDropdown
+              role={role}
+              onSelect={handleRoleSelect}
+              placeholderLabel={isRoleSelectionHub ? "Select Role" : null}
+            />
             {roleNavItems.map((item) => (
               <NavLink
                 key={item.href}

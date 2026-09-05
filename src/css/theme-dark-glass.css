@@ -2481,6 +2481,127 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--text-on-glass);
 }
 
+/* Landing nav (pages/index.jsx's <LandingNav>) — deliberately solid, not blurred, unlike
+   .header.header-horizontal: it has no backdrop-filter of its own, so its "Roles" dropdown can
+   render as a plain non-portaled absolutely-positioned menu without the nested-backdrop-filter
+   compositing bug documented on header.jsx's RoleDropdown (a blurred descendant of a blurred
+   ancestor only samples the ancestor's own painted output, not the real page behind both). Same
+   fixed/left/right/z-index/height shape as .header so it clears via the same .content-body
+   padding-top:68px the app pages already rely on — no separate offset needed. */
+.landing-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 10px 0;
+  background: rgba(6, 20, 27, 0.94);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.landing-nav-content {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  min-height: 48px;
+}
+
+/* margin-top:0 explicitly overrides style.css's unscoped .brand-logo { margin-top: 30px } — the
+   app header avoids that because it also carries the .header class, and style.css has a
+   .header .brand-logo override resetting it back to 0; this nav has no .header class at all, so
+   without this the brand block sits visibly lower than the rest of the nav row. */
+.landing-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0;
+  text-decoration: none;
+}
+
+.landing-nav-brand img {
+  max-width: 26px;
+}
+
+.landing-nav-brand span {
+  color: var(--text-on-glass);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.landing-nav-link {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-on-glass-muted);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.landing-nav-link:hover {
+  background: rgba(74, 92, 106, 0.22);
+  color: var(--text-on-glass);
+}
+
+.landing-nav-link-disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.landing-nav-link-disabled:hover {
+  background: transparent;
+  color: var(--text-on-glass-muted);
+}
+
+.landing-nav-dropdown {
+  position: relative;
+}
+
+.landing-nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+  z-index: 21;
+}
+
+.landing-nav-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--text-on-glass);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.landing-nav-dropdown-item:hover {
+  background: rgba(74, 92, 106, 0.22);
+  color: var(--text-on-glass);
+}
+
 /* Fills the first screen (viewport height minus the fixed 68px header — see .content-body's own
    padding-top, kept in sync with it) and vertically centers the hero inside it, with the scroll
    hint pinned near the bottom of that same space. This is also what pushes "What you can build"
@@ -2492,6 +2613,74 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+/* pages/appHome.jsx (/app hub) — same viewport-minus-fixed-header centering as .index-hero-section
+   above, just without the scroll hint (there's nothing below to scroll to on this page). */
+.app-home-section {
+  min-height: calc(100vh - 68px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-home-title {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.app-role-card-grid {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+
+/* Whole-card link, not icon+title+desc+separate-button like the landing's .index-role-plain —
+   explicit feedback that treatment read as a near-duplicate of the landing page. Same glass/
+   border language as .card-outline-only (poapCard.jsx/eventCard.jsx's own card shell) so this
+   reads as "the same kind of card" as everywhere else in the app, just square and clickable as a
+   whole. --role-accent/-soft cascade from the .role-organizer/.role-subscriber class each card
+   carries directly (see the "Role accent colors" block below). */
+.app-role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  width: 260px;
+  height: 260px;
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--glass-bg-light);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.app-role-card:hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent-soft);
+  transform: translateY(-2px);
+}
+
+.app-role-card-icon {
+  color: var(--role-accent);
+}
+
+.app-role-card-title {
+  color: var(--text-on-glass);
+  margin: 0;
+}
+
+.app-role-card-desc {
+  color: var(--text-on-glass-muted);
+  margin: 0;
 }
 
 /* Wallet-not-connected empty state (myEvents/mySubscriptions/myPendingApprovals) — same

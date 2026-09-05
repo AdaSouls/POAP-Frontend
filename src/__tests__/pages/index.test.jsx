@@ -1,9 +1,9 @@
 import React from 'react';
 import { screen, fireEvent } from '@testing-library/react';
 import Dashboard from '../../jsx/pages/index';
-import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../../testUtils';
+import { renderWithProviders } from '../../testUtils';
 
-describe('Dashboard Page', () => {
+describe('Dashboard Page (landing)', () => {
   it('renders the hero headline', () => {
     renderWithProviders(<Dashboard />);
     expect(screen.getByText(/One token\. Endless ways to prove it\./i)).toBeInTheDocument();
@@ -31,28 +31,18 @@ describe('Dashboard Page', () => {
     ]);
   });
 
-  it('shows "Connect Wallet" when no wallet is connected', () => {
+  it('has no wallet-connect UI — the hero CTA routes into the app instead', () => {
     renderWithProviders(<Dashboard />);
-    expect(screen.getByRole('button', { name: /connect wallet/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /connect wallet/i })).not.toBeInTheDocument();
+    const getStartedLinks = screen.getAllByRole('link', { name: /get started/i });
+    expect(getStartedLinks.length).toBeGreaterThan(0);
+    getStartedLinks.forEach((link) => expect(link).toHaveAttribute('href', '/app'));
   });
 
-  it('shows "Wallet Connected" when a wallet is connected', () => {
-    const drawerValue = {
-      ...mockDrawerContext,
-      midnight: {
-        ...mockDrawerContext.midnight,
-        provider: { address: 'aa'.repeat(32) },
-      },
-    };
-    renderWithProviders(<Dashboard />, { drawerValue });
-    expect(screen.getByRole('button', { name: /wallet connected/i })).toBeInTheDocument();
-  });
-
-  it('opens the wallet connect popup instead of navigating to a page', () => {
-    mockDrawerDispatch.mockClear();
+  it('nav "Roles" dropdown links to both role pages', () => {
     renderWithProviders(<Dashboard />);
-    const walletButton = screen.getByRole('button', { name: /connect wallet/i });
-    fireEvent.click(walletButton);
-    expect(mockDrawerDispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });
+    fireEvent.click(screen.getByRole('button', { name: /^roles/i }));
+    expect(screen.getByRole('link', { name: /organizer/i })).toHaveAttribute('href', '/organizer');
+    expect(screen.getByRole('link', { name: /subscriber/i })).toHaveAttribute('href', '/subscriber');
   });
 });

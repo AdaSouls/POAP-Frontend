@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Calendar, Award, Info } from "lucide-react";
-import Layout from "../layout/layout";
+import LandingNav from "../layout/landingNav";
+import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
 
 const FEATURES = [
   {
@@ -22,8 +23,13 @@ const FEATURES = [
 ];
 
 const SubscriberInfo = () => {
+  const [, setRole] = useSiteRole();
+
   return (
-    <Layout>
+    <div className="landing-page">
+      <LandingNav />
+      <div className="content-body">
+      <div className="container">
       <div className="role-info-page role-subscriber">
         <div className="row role-hero align-items-center">
           <div className="col-md-6">
@@ -35,7 +41,11 @@ const SubscriberInfo = () => {
               no separate approval step.
             </p>
             <div className="role-hero-cta-group">
-              <Link to="/my-subscriptions" className="btn btn-role-cta">
+              <Link
+                to="/app/my-subscriptions"
+                className="btn btn-role-cta"
+                onClick={() => setRole(SITE_ROLES.SUBSCRIBER)}
+              >
                 Go to My Subscriptions
               </Link>
             </div>
@@ -61,7 +71,9 @@ const SubscriberInfo = () => {
           ))}
         </div>
       </div>
-    </Layout>
+      </div>
+      </div>
+    </div>
   );
 };
 
