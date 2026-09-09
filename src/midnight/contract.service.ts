@@ -13,6 +13,7 @@ import {
   getOrCreatePrivateState,
 } from './providers';
 import { deriveCallerPk, deriveHolderPk, type PoapPrivateState, type TokenRecord } from './witnesses';
+import type { MerkleTreePathArg } from './merkle';
 
 export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
 
@@ -24,6 +25,33 @@ export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
 // createEvent, from a value/rand pair that never touches the network until the transaction itself.
 export function computePrivateMetadataCommit(value: Uint8Array, rand: Uint8Array): Uint8Array {
   return pureCircuits.computePrivateMetadataCommit(value, rand);
+}
+
+// Predicts the eventId createEvent(label, ...) will assign for a given organizer, BEFORE
+// submitting the transaction. Needed because createEvent no longer takes a raw caller-chosen
+// eventId (that was a confirmed vulnerability — event-ID squatting: whoever called createEvent
+// first for a given id became its organizer forever, with no recovery). The real id is now
+// event_key(organizerPk, label), computed inside the circuit and returned from the call — but
+// rather than parse that return value out of the transaction result (an SDK response shape this
+// codebase has no way to verify against a live network right now), callers should just derive it
+// themselves the same way the deploy tooling in poap-midnight does: independently, via this same
+// pure circuit, using the caller's own already-known pk (see witnesses.ts#deriveCallerPk /
+// useMidnight's `provider.address`).
+export function computeEventId(organizer: Uint8Array, label: Uint8Array): Uint8Array {
+  return pureCircuits.computeEventId(organizer, label);
+}
+
+// Precompute the exact attribute leaf the chain will check, so an organizer can build their
+// private-attribute Merkle tree client-side before calling createEvent with the resulting root.
+// See poap-midnight/contracts/src/test/poap-simulator.ts's buildMerklePath for the matching
+// tree-construction algorithm (ported to merkle.ts in this directory).
+export function computeAttributeLeaf(
+  eventId: Uint8Array,
+  fieldId: Uint8Array,
+  value: Uint8Array,
+  rand: Uint8Array,
+): Uint8Array {
+  return pureCircuits.computeAttributeLeaf(eventId, fieldId, value, rand);
 }
 
 export type PoapState = {
@@ -122,31 +150,54 @@ export class PoapContractService {
     return this.deployedContract.callTx.claim(eventId, isSoulbound);
   }
 
+  // `label` — NOT the on-chain eventId anymore (that was a confirmed vulnerability: a raw
+  // caller-chosen eventId let anyone squat any id, permanently locking out whoever the id "really"
+  // belonged to). The contract now derives the real eventId as event_key(organizerPk, label)
+  // internally and returns it. Callers should independently compute the same value via
+  // computeEventId(organizerPk, label) above (organizerPk = the connected wallet's own pk, e.g.
+  // useMidnight's `provider.address`) rather than trying to read it back out of this call's
+  // transaction result. `label` can be anything unique-to-you — a fresh random 32 bytes is fine,
+  // exactly like the old eventId was.
+  //
   // privateMetadataCommit: Bytes<32> — commit/reveal hook for an event's optional extra-info field
   // (see computePrivateMetadataCommit above and revealPrivateMetadata below). Independent of
   // isPublicMint — createEvent.jsx's own step 4 has a separate public/private switch for this
   // specific field. Defaults to the all-zero "no private part" commit for callers that don't set
   // one (including when the field is left public, or empty).
+  //
+  // privateAttributesRoot: Bytes<32> — Merkle root over independently-provable private attributes
+  // (see computeAttributeLeaf above and proveAttributeMembership/publishDisclosureRequest below).
+  // Unlike privateMetadataCommit (one blob, reveal-all-or-nothing), this lets a holder prove a
+  // PREDICATE about one field ("this event's region is in the EU") without revealing the value, to
+  // whoever asked. Defaults to the all-zero "no attributes committed" root.
   async createEvent(
-    eventId: Uint8Array,
+    label: Uint8Array,
     maxSupply: bigint,
     expiration: bigint,
     isPublicMint: boolean,
     metadataURI: string,
     privateMetadataCommit: Uint8Array = new Uint8Array(32),
+    privateAttributesRoot: Uint8Array = new Uint8Array(32),
   ) {
     return this.deployedContract.callTx.createEvent(
-      eventId,
+      label,
       maxSupply,
       expiration,
       isPublicMint,
       metadataURI,
       privateMetadataCommit,
+      privateAttributesRoot,
     );
   }
 
   async deactivateEvent(eventId: Uint8Array) {
     return this.deployedContract.callTx.deactivateEvent(eventId);
+  }
+
+  // Reactivate a previously-deactivated event — deactivateEvent used to be permanent, this
+  // undoes it. Same authority as deactivateEvent (admin or the event's own organizer).
+  async reactivateEvent(eventId: Uint8Array) {
+    return this.deployedContract.callTx.reactivateEvent(eventId);
   }
 
   // Publishes `value` into the public eventRevealedMetadata ledger map, once it's verified to
@@ -175,6 +226,58 @@ export class PoapContractService {
     tokenPrivateMetadataCommit: Uint8Array = new Uint8Array(32),
   ) {
     return this.deployedContract.callTx.mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit);
+  }
+
+  // ── Selective disclosure ──────────────────────────────────────────────────
+  //
+  // Channel B — prove a PREDICATE about a hidden attribute ("this event's field
+  // belongs to this set") to whoever asked, without ever disclosing the actual
+  // value on-chain. See poap.compact's "Selective Disclosure" section for the
+  // full design and the security fix that makes it sound (the set root MUST
+  // come from a published DisclosureRequest, never a caller-supplied argument).
+
+  // A verifier publishes the question BEFORE anyone can prove against it —
+  // pins eventId/fieldId/setRoot on-chain so the prover can't choose the
+  // answer to their own question. Returns the derived requestId (hand it to
+  // whoever should answer, alongside the actual set members so they can build
+  // a real membership path — see merkle.ts's buildMerklePath).
+  async publishDisclosureRequest(
+    label: Uint8Array,
+    eventId: Uint8Array,
+    fieldId: Uint8Array,
+    setRoot: Uint8Array,
+  ) {
+    return this.deployedContract.callTx.publishDisclosureRequest(label, eventId, fieldId, setRoot);
+  }
+
+  // Stateless — never writes to the ledger, signals success purely by not
+  // throwing (every failure path in the circuit is an assert). Most "just
+  // answer the question" flows should use this, not the *Once variant below.
+  async proveAttributeMembership(
+    requestId: Uint8Array,
+    value: Uint8Array,
+    rand: Uint8Array,
+    attributePath: MerkleTreePathArg,
+    setMembershipPath: MerkleTreePathArg,
+  ) {
+    return this.deployedContract.callTx.proveAttributeMembership(
+      requestId, value, rand, attributePath, setMembershipPath,
+    );
+  }
+
+  // Single-use variant — records a nullifier so this (wallet, request) pair
+  // can't be redeemed twice. Only use when a disclosure must provably happen
+  // at most once (e.g. redeeming a perk); it costs a real state write.
+  async proveAttributeMembershipOnce(
+    requestId: Uint8Array,
+    value: Uint8Array,
+    rand: Uint8Array,
+    attributePath: MerkleTreePathArg,
+    setMembershipPath: MerkleTreePathArg,
+  ) {
+    return this.deployedContract.callTx.proveAttributeMembershipOnce(
+      requestId, value, rand, attributePath, setMembershipPath,
+    );
   }
 
   async burn(tokenId: bigint) {

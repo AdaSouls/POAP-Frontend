@@ -19,7 +19,7 @@ import OrganizationProfileFields from "../../components/OrganizationProfileField
 import { uploadImageToIPFS, uploadJSONToIPFS, uploadPrivateJSONToIPFS } from "../../../services/ipfs.service";
 import { getCroppedImageBlob } from "../../../utils/cropImage";
 import { sha256 } from "../../../utils/cid";
-import { computePrivateMetadataCommit } from "../../../midnight/contract.service";
+import { computePrivateMetadataCommit, computeEventId } from "../../../midnight/contract.service";
 import { savePrivateEventDraft } from "../../../midnight/private-event-metadata";
 import {
   EVENT_CATEGORIES,
@@ -269,8 +269,13 @@ export default function CreateEvent() {
         ...(hasOrgProfileField ? { organization: organizationProfile } : {}),
       });
 
-      const eventId = new Uint8Array(32);
-      crypto.getRandomValues(eventId);
+      // `label` — NOT the on-chain eventId. createEvent used to accept a raw caller-chosen eventId
+      // directly, which was a confirmed vulnerability (event-ID squatting: whoever called
+      // createEvent first for a given id became its organizer forever, no recovery). The contract
+      // now derives the real id as event_key(organizerPk, label) internally; a fresh random 32
+      // bytes works fine as a label, same as the old eventId generation did.
+      const label = new Uint8Array(32);
+      crypto.getRandomValues(label);
 
       const expiration = expirationDate
         ? BigInt(Math.floor(new Date(expirationDate).getTime() / 1000))
@@ -279,13 +284,19 @@ export default function CreateEvent() {
       loadingFunction("Creating Event", `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
 
       const { txHash } = await provider.service.createEvent(
-        eventId,
+        label,
         BigInt(maxSupply || 0),
         expiration,
         categoryConfig.isPublicMint,
         metadataURI,
         ...(privateMetadataCommit ? [privateMetadataCommit] : []),
       );
+
+      // Predicted independently (not parsed out of the tx result — see computeEventId's comment in
+      // contract.service.ts) using this wallet's own already-known pk, the same value the contract
+      // derived internally when it inserted the event under this key.
+      const organizerPk = Buffer.from(provider.address, "hex");
+      const eventId = computeEventId(organizerPk, label);
 
       if (privateDraft) {
         savePrivateEventDraft(Buffer.from(eventId).toString("hex"), privateDraft);

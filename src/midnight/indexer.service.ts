@@ -22,6 +22,10 @@ export type IndexedEvent = {
   isPublicMint: boolean;
   metadataURI: string;
   minted: number;
+  // Merkle root only — hex, all-zero (64 "0" chars) means no private attributes committed. Never
+  // the attribute values themselves. See src/midnight/merkle.ts + contract.service.ts's
+  // publishDisclosureRequest/proveAttributeMembership for what this enables.
+  privateAttributesRoot: string;
   createdBlock: number | null;
   createdTx: string | null;
   deactivatedBlock: number | null;
@@ -89,4 +93,26 @@ export async function getTokensByEvent(
 
 export async function getToken(tokenId: number | bigint): Promise<IndexedToken> {
   return getJson<IndexedToken>(`/api/tokens/${tokenId}`);
+}
+
+// Selective disclosure — see poap-midnight/indexer/src/api/routes/disclosures.ts. What a holder's
+// wallet reads to know what it's being asked to prove (eventId/fieldId/setRoot) before building a
+// real Merkle path with merkle.ts's buildMerklePath. Public by design: this is the pinned
+// question, never the hidden answer.
+export type IndexedDisclosureRequest = {
+  requestId: string; // hex
+  verifierPk: string; // hex
+  eventId: string; // hex
+  fieldId: string; // hex
+  setRoot: string; // hex
+  publishedBlock: number | null;
+  publishedTx: string | null;
+};
+
+export async function getDisclosureRequest(requestIdHex: string): Promise<IndexedDisclosureRequest> {
+  return getJson<IndexedDisclosureRequest>(`/api/disclosure-requests/${requestIdHex}`);
+}
+
+export async function getDisclosureRequestsByVerifier(verifierPkHex: string): Promise<IndexedDisclosureRequest[]> {
+  return getJson<IndexedDisclosureRequest[]>(`/api/disclosure-requests?verifierPk=${verifierPkHex}`);
 }
