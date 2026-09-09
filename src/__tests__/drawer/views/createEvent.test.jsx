@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CreateEvent from '../../../jsx/drawer/views/createEvent';
 import { mockDrawerContext, renderWithProviders } from '../../../testUtils';
@@ -37,7 +37,10 @@ const clickCreate = () => userEvent.click(screen.getByRole('button', { name: /^c
 async function fillThroughToSubmit({ categoryLabel, name, maxSupply }) {
   await userEvent.click(screen.getByText(categoryLabel));
   await clickNext(); // step 0 -> details
-  await userEvent.type(screen.getByLabelText(/Event Name/i), name);
+  // Label text is category-specific ("Event Name"/"Subscription Name"/"Credential Name" — see
+  // eventCategories.js's detailsFields), so match on the common "Name" suffix rather than one
+  // category's exact wording.
+  await userEvent.type(screen.getByLabelText(/Name/i), name);
   await clickNext(); // details -> image
   await clickNext(); // image -> supply (no image picked, nothing to crop)
   await userEvent.clear(screen.getByLabelText(/Maximum Supply/i));
@@ -101,7 +104,19 @@ describe('CreateEvent drawer view', () => {
     await clickNext(); // image -> supply
 
     expect(screen.queryByRole('checkbox', { name: /public mint/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/^Public Mint$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^Public Mint$/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the fixed mint type as a badge on each category card at Step 0', () => {
+    renderWithProviders(<CreateEvent />);
+
+    const eventCard = screen.getByText('Event').closest('[role="button"]');
+    const subscriptionCard = screen.getByText('Subscription').closest('[role="button"]');
+    const credentialCard = screen.getByText('Credential').closest('[role="button"]');
+
+    expect(within(eventCard).getByText('Public Mint')).toBeInTheDocument();
+    expect(within(subscriptionCard).getByText('Public Mint')).toBeInTheDocument();
+    expect(within(credentialCard).getByText('Invite-Only Mint')).toBeInTheDocument();
   });
 
   it('completes the Event flow: public mint, category/taxonomy/channels land in the metadata JSON', async () => {
@@ -157,7 +172,7 @@ describe('CreateEvent drawer view', () => {
 
     await userEvent.click(screen.getByText('Credential'));
     await clickNext(); // step 0 -> details
-    await userEvent.type(screen.getByLabelText(/Event Name/i), 'Diplomas 2026');
+    await userEvent.type(screen.getByLabelText(/Credential Name/i), 'Diplomas 2026');
     await clickNext(); // details -> image
     await clickNext(); // image -> supply
     await userEvent.clear(screen.getByLabelText(/Maximum Supply/i));

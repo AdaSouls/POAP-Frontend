@@ -41,7 +41,12 @@ export default function CategoryPicker({ value, onChange, categories }) {
                   />
                 </div>
                 <div>
-                  <span className="d-block font-weight-semibold">{category.label}</span>
+                  <span className="d-block font-weight-semibold">
+                    {category.label}
+                    <span className={`badge ml-2 ${category.isPublicMint ? "bg-success" : "bg-secondary"}`}>
+                      {category.isPublicMint ? "Public Mint" : "Invite-Only Mint"}
+                    </span>
+                  </span>
                   <small className="form-text text-muted d-block mt-1">
                     {category.shortDescription}
                   </small>

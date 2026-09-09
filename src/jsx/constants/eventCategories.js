@@ -75,6 +75,7 @@ const SUBSCRIPTION_TAXONOMY = {
       { value: "finance", label: "Finance" },
       { value: "gaming", label: "Gaming" },
       { value: "education", label: "Education" },
+      { value: "sports", label: "Sports" },
       OTHER_OPTION,
     ],
   },
@@ -130,6 +131,12 @@ export const EVENT_CATEGORIES = {
     organizationProfileGateField: "orgType",
     organizationProfileExcludeValues: ["professional_independent"],
     icon: Calendar,
+    detailsFields: {
+      nameLabel: "Event Name",
+      namePlaceholder: "e.g. AdaSouls Meetup 2026",
+      descriptionLabel: "Description",
+      descriptionPlaceholder: "What's this event about?",
+    },
   },
   subscription: {
     key: "subscription",
@@ -142,6 +149,12 @@ export const EVENT_CATEGORIES = {
     organizationProfileGateField: "entityType",
     organizationProfileExcludeValues: ["person_creator"],
     icon: Users,
+    detailsFields: {
+      nameLabel: "Subscription Name",
+      namePlaceholder: "e.g. AdaSouls Weekly Update",
+      descriptionLabel: "Description",
+      descriptionPlaceholder: "What are people subscribing to?",
+    },
   },
   credential: {
     key: "credential",
@@ -154,6 +167,12 @@ export const EVENT_CATEGORIES = {
     organizationProfileGateField: null,
     organizationProfileExcludeValues: [],
     icon: Award,
+    detailsFields: {
+      nameLabel: "Credential Name",
+      namePlaceholder: "e.g. Blockchain Development Diploma",
+      descriptionLabel: "Description",
+      descriptionPlaceholder: "What does this credential certify?",
+    },
   },
 };
 
@@ -173,6 +192,13 @@ export function getCategoryConfig(categoryKey) {
 
 export function getCategoryLabel(categoryKey) {
   return getCategoryConfig(categoryKey)?.label || null;
+}
+
+// Falls back to the "event" category's copy when no category is chosen yet (or an unrecognized
+// one is passed) so EventDetailsFields always has something sensible to render — see its own
+// component for where this is consumed.
+export function getDetailsFieldsCopy(categoryKey) {
+  return getCategoryConfig(categoryKey)?.detailsFields || EVENT_CATEGORIES.event.detailsFields;
 }
 
 // { action, loading, done } for the subscriber-facing self-claim flow — the action button

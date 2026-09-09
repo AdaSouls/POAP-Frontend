@@ -38,10 +38,13 @@ import eventNormal from "../../../images/svg/event-normal.svg";
 // Step 0 picks a category (Event/Subscription/Credential, see
 // src/jsx/constants/eventCategories.js) before anything else — see
 // docs/event-creation-wizard-design.md for the full design. Every category then walks the SAME
-// step sequence (details → image → supply/visibility → channels → taxonomy → org profile
-// [conditional] → extra info → POAP image), just with different taxonomy fields and a fixed,
-// non-editable isPublicMint derived from the category. `step` is 0 for the category picker, then a
-// 1-based index into `steps` (computed below) once a category is chosen.
+// step sequence (details → image → supply → channels → taxonomy → org profile [conditional] →
+// extra info → POAP image), just with different taxonomy fields and a fixed, non-editable
+// isPublicMint derived from the category. `step` is 0 for the category picker, then a 1-based
+// index into `steps` (computed below) once a category is chosen. The Public Mint/Invite-Only Mint
+// explanation used to repeat as its own card on the supply step — moved to a badge on each
+// category card in CategoryPicker.jsx instead, since the choice is actually made at step 0 and
+// showing it again later (immutably) just confused people.
 const STEP_DETAILS = "details";
 const STEP_IMAGE = "image";
 const STEP_SUPPLY = "supply";
@@ -332,7 +335,7 @@ export default function CreateEvent() {
           )}
 
           {currentStepKey === STEP_DETAILS && (
-            <EventDetailsFields values={metadata} onChange={setMetadata} />
+            <EventDetailsFields values={metadata} onChange={setMetadata} category={category} />
           )}
 
           {currentStepKey === STEP_IMAGE && (
@@ -399,22 +402,6 @@ export default function CreateEvent() {
                 </small>
               </div>
 
-              <div className="col-12 mb-4">
-                <div className="drawer-modal-preview-card">
-                  <div className="d-flex align-items-center" style={{ gap: "14px" }}>
-                    <div>
-                      <span className="d-block font-weight-semibold">
-                        {categoryConfig.isPublicMint ? "Public Mint" : "Invite-Only Mint"}
-                      </span>
-                      <small className="form-text text-muted d-block mt-1">
-                        {categoryConfig.isPublicMint
-                          ? `Anyone can claim a POAP for this without you minting it individually — set by the "${categoryConfig.label}" category.`
-                          : `Only you can mint POAPs for this — recipients can't claim on their own. Set by the "${categoryConfig.label}" category.`}
-                      </small>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </>
           )}
 

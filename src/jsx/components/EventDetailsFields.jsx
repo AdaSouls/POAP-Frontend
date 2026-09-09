@@ -1,18 +1,24 @@
+import { getDetailsFieldsCopy } from "../constants/eventCategories";
+
 // Controlled, single-column: collects { name, description } and hands them back via onChange.
 // Split out from image handling (see EventImageField.jsx) so each is independently reusable.
-export default function EventDetailsFields({ values, onChange }) {
+// `category` (optional) swaps the labels/placeholders to match what's actually being created
+// (Event/Subscription/Credential) — see eventCategories.js's detailsFields.
+export default function EventDetailsFields({ values, onChange, category }) {
   const { name, description } = values;
+  const { nameLabel, namePlaceholder, descriptionLabel, descriptionPlaceholder } =
+    getDetailsFieldsCopy(category);
 
   return (
     <>
       <div className="col-12">
         <label className="form-label" htmlFor="eventName">
-          Event Name <span className="text-danger">*</span>
+          {nameLabel} <span className="text-danger">*</span>
         </label>
         <input
           type="text"
           className="form-control"
-          placeholder="e.g. AdaSouls Meetup 2026"
+          placeholder={namePlaceholder}
           id="eventName"
           name="eventName"
           value={name}
@@ -22,10 +28,10 @@ export default function EventDetailsFields({ values, onChange }) {
       </div>
 
       <div className="col-12 mb-3">
-        <label className="form-label" htmlFor="eventDescription">Description</label>
+        <label className="form-label" htmlFor="eventDescription">{descriptionLabel}</label>
         <textarea
           className="form-control"
-          placeholder="What's this event about?"
+          placeholder={descriptionPlaceholder}
           id="eventDescription"
           name="eventDescription"
           rows={8}
