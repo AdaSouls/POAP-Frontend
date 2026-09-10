@@ -28,7 +28,11 @@ const SubscriberInfo = () => {
   return (
     <div className="landing-page">
       <LandingNav />
-      <div className="content-body">
+      {/* role-scroll-body cancels .content-body's own padding-top:68px (theme-dark-glass.css) so
+          this page's content renders behind the now-transparent .landing-nav instead of starting
+          below it — .role-hero's own top padding was bumped to compensate, giving clearance past
+          the nav instead of relying on this div's padding for it. */}
+      <div className="content-body role-scroll-body">
       <div className="container">
       <div className="role-info-page role-subscriber">
         <div className="row role-hero align-items-center">
