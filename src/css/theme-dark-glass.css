@@ -86,6 +86,46 @@ body {
   color: var(--text-on-glass);
 }
 
+/* ── Native scrollbar ──────────────────────────────────────────────────────────────
+   Overrides style.css's old plain-gray `::-webkit-scrollbar-thumb: #999` (loaded before this
+   file, so these rules win at equal selector specificity via source order) with the same
+   glass-card surface (`--glass-bg-light` + `--glass-border`, matching `.card-outline-only`) used
+   throughout the rest of this file, site-wide — both the launcher and the app share the track.
+   The thumb differs by context: a two-role-color gradient by default (used on the launcher, which
+   has no single current role — see .index-hero-eyebrow's own gradient text for the same idea),
+   overridden to the single current role's SOLID accent color on app pages via a role-organizer/
+   -subscriber class layout.jsx toggles on BOTH <html> and <body> (an <html>-only version was
+   tried first and didn't visibly take effect, so this covers both rather than one specific
+   assumption about which element Chrome keys the page's scrollbar pseudo-elements off). */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--glass-bg-light);
+}
+
+/* Plain neutral gray, not a gradient — a two-role-color gradient (first solid, then alpha'd down
+   per feedback) was tried here and explicitly dropped in favor of this flat tone, same
+   --palette-5 the dot nav's own hover state already uses. */
+::-webkit-scrollbar-thumb {
+  background: var(--palette-5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  filter: brightness(1.15);
+}
+
+/* Solid role color (not the gradient above) for app pages — explicit feedback: "el color del
+   selector debe ser del color del rol íntegro, no un gradient". */
+html.role-organizer::-webkit-scrollbar-thumb,
+html.role-subscriber::-webkit-scrollbar-thumb,
+body.role-organizer::-webkit-scrollbar-thumb,
+body.role-subscriber::-webkit-scrollbar-thumb {
+  background: var(--role-accent);
+}
+
 /* ── Glass / solid primitives ──────────────────────────────────────────────────── */
 
 .glass-panel,
@@ -2375,8 +2415,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--role-accent, var(--text-on-glass));
 }
 
+/* Cancels .content-body's own padding-top:68px (theme-dark-glass.css, unchanged for every other
+   page) specifically for organizerInfo.jsx/subscriberInfo.jsx — same reasoning and pairing as
+   .landing-scroll-body on index.jsx: with the shared .landing-nav header now transparent (per
+   explicit feedback), content needs to actually render behind it, not stop short below it. */
+.role-scroll-body {
+  padding-top: 0;
+}
+
+/* padding-top bumped from 72px to compensate for .role-scroll-body above removing .content-body's
+   own 68px clearance — 72px alone would leave the eyebrow/title starting just a few px past the
+   fixed nav's own height, too tight a margin now that this div, not .content-body, is what clears
+   it. */
 .role-hero {
-  padding: 72px 0 40px;
+  padding: 140px 0 40px;
 }
 
 .role-eyebrow {
@@ -2488,6 +2540,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    ancestor only samples the ancestor's own painted output, not the real page behind both). Same
    fixed/left/right/z-index/height shape as .header so it clears via the same .content-body
    padding-top:68px the app pages already rely on — no separate offset needed. */
+/* No background/border (removed per explicit feedback) — the nav sits directly on the page
+   background, transparent over whatever scrolls underneath it (hero backdrop blobs/particles on
+   index.jsx, section content on organizerInfo.jsx/subscriberInfo.jsx). */
 .landing-nav {
   position: fixed;
   top: 0;
@@ -2495,8 +2550,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   right: 0;
   z-index: 20;
   padding: 10px 0;
-  background: rgba(6, 20, 27, 0.94);
-  border-bottom: 1px solid var(--glass-border);
 }
 
 .landing-nav-content {
@@ -2602,17 +2655,116 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--text-on-glass);
 }
 
-/* Fills the first screen (viewport height minus the fixed 68px header — see .content-body's own
-   padding-top, kept in sync with it) and vertically centers the hero inside it, with the scroll
-   hint pinned near the bottom of that same space. This is also what pushes "What you can build"
-   (the next section) below the fold on load — nothing after the hero is visible until the user
-   scrolls, by construction, regardless of exact hero content height or viewport size. */
-.index-hero-section {
-  min-height: calc(100vh - 68px);
+/* Cancels .content-body's own padding-top:68px (still used as-is by every other page, including
+   organizerInfo.jsx/subscriberInfo.jsx, the other two pages sharing .landing-page) specifically
+   for index.jsx's Dashboard — see the comment on this div in index.jsx for why: with the header
+   now transparent (.landing-nav, per explicit feedback), sections need to actually render behind
+   it rather than start below it, or "transparent" has nothing visible to show through. */
+.landing-scroll-body {
+  padding-top: 0;
+}
+
+/* The landing's actual scroll container (index.jsx's Dashboard) — turns the full viewport into its
+   own snapping viewport: each direct .landing-snap-section child is exactly one screen tall and
+   `scroll-snap-align: start`, so wheel/trackpad/keyboard scrolling advances one full section at a
+   time instead of continuously. Full 100vh (not 100vh minus the header's height) now that
+   .landing-scroll-body above cancels .content-body's clearance — the fixed, transparent
+   .landing-nav simply overlays the top of whichever section is in view. `scroll-behavior: smooth`
+   makes a dot-nav click's animated scroll (Dashboard's goToSection) and any native/touch scrolling
+   both feel consistent. */
+.landing-snap-scroller {
+  height: 100vh;
+  overflow-y: auto;
+  /* UseCaseRow's icon/text columns intentionally translateX up to ±520px off-screen as part of
+     their slide-in/out (index.jsx) — a transformed element still contributes to the page's
+     scrollable area even while invisible/off-canvas, so without this every use-case slide other
+     than the one currently centered was adding to a page-wide horizontal scrollbar. */
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+
+/* Base treatment shared by every full-screen slide (hero, role picker, each use case row —
+   index.jsx's HeroSection/RoleSection/UseCaseRow all carry this class alongside their own).
+   min-height (not a fixed height) so a slide with more content than fits one screen on a short
+   viewport grows instead of clipping — the scroll-snap-align below still treats its top as a
+   valid resting point either way. Full 100vh, matching .landing-snap-scroller above. */
+.landing-snap-section {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  scroll-snap-align: start;
+}
+
+/* Closing bar, not a full-screen slide — deliberately excluded from .landing-snap-section's
+   min-height (a nearly-empty full screen just for a copyright line would be a wasted slide) but
+   still needs its own scroll-snap-align so it's a valid place for the scroller to rest once the
+   user scrolls past the last use-case slide, instead of being unreachable/bounced back under
+   `scroll-snap-type: y mandatory`. */
+.landing-snap-footer {
+  scroll-snap-align: start;
+  margin-top: 40px;
+  padding: 24px 0 48px;
+  border-top: 1px solid var(--glass-border);
+  text-align: center;
+}
+
+/* Right-edge section dot-nav (index.jsx's LandingDotNav) — fixed to the viewport like
+   .landing-nav, not the scroller, so it stays put regardless of which section is in view.
+   z-index above .landing-nav's own 20 since nothing should paint over navigation controls. Same
+   glass-card recipe as .card-outline-only (poapCard.jsx/eventCard.jsx's own shell) rather than
+   sharing that class directly, since this is a fixed vertical pill, not a content card. Pushed in
+   from the true edge (right: 40px, was 20px) so it clears .landing-snap-scroller's own native
+   scrollbar instead of sitting flush against it. */
+.landing-dot-nav {
+  position: fixed;
+  top: 50%;
+  right: 40px;
+  transform: translateY(-50%);
+  z-index: 22;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 11px;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+
+.landing-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--glass-border);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.landing-dot:hover {
+  background: var(--palette-5);
+}
+
+/* Plain white — a two-role-color gradient was tried here and explicitly reverted ("el punto
+   seleccionado... que sea blanco, no con gradient"); the gradient treatment stayed on the
+   scrollbar thumb (above) instead, this dot just needs to read clearly as "you are here". */
+.landing-dot.active {
+  background: #ffffff;
+  transform: scale(1.3);
+}
+
+@media only screen and (max-width: 480px) {
+  /* No room for a side rail at phone widths without it overlapping content — the same sections
+     are still reachable by scrolling/swiping, just without the jump-to shortcut. */
+  .landing-dot-nav {
+    display: none;
+  }
 }
 
 /* pages/appHome.jsx (/app hub) — same viewport-minus-fixed-header centering as .index-hero-section
@@ -2700,6 +2852,61 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   justify-content: center;
 }
 
+/* position:relative anchors .hero-backdrop's absolute inset:0 to this section specifically (not
+   some further-up ancestor); overflow:hidden contains the backdrop icons' idle float drift so it
+   can't add to page scroll area the way the use-case rows' slide-in transforms once did (see
+   .landing-snap-scroller's own overflow-x: hidden above, added for the same class of bug). */
+.index-hero-section {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Floating icons + particles behind the hero text (index.jsx's HeroBackdrop) — covers the whole
+   section (not just .container's width) since these should drift "behind the screen", not stay
+   boxed to the text column. pointer-events:none so it never intercepts clicks meant for the CTA
+   button or scroll hint painted on top of it. */
+.hero-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Neutral palette tone (--palette-5), not --role-accent — the hero has no organizer/subscriber
+   role context to inherit that variable from, and a neutral tone reads as "ambient" rather than
+   competing with the actual role accent colors used everywhere else. Blur is set inline per-icon
+   (varies by simulated depth, see buildHeroIconField in index.jsx) since it has to differ icon to
+   icon, not just be a flat class-level value. */
+.hero-backdrop-icon {
+  position: absolute;
+  color: var(--palette-5);
+  transform: translate(-50%, -50%);
+}
+
+/* Color + glow for .hero-backdrop-particle are set inline per-particle in index.jsx now (each
+   particle picks one of the two role accent colors, ROLE_COLORS) rather than here — a CSS rule
+   overriding .usecase-particle's own `background: var(--role-accent)` had to fight source-order
+   specificity ties (see git history if curious), inline style sidesteps that entirely by always
+   winning outright. This class is kept as a marker/hook only, currently carries no rules of its
+   own. */
+
+/* Large blurred drifting color blobs behind everything else in .hero-backdrop (index.jsx's
+   HERO_BLOBS) — the "destellos" ambient background effect. .hero-backdrop-blob-anchor positions
+   via top/left + a CSS transform:translate(-50%,-50%); the actual blob is the nested
+   .hero-backdrop-blob motion.div doing the drift animation — split for the same reason as
+   .hero-backdrop-icon's own two-level nesting (a motion.* element with animated x/y fully owns
+   `style.transform`, so a positioning transform can't live on the same element). */
+.hero-backdrop-blob-anchor {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+/* No static border-radius here — index.jsx's BLOB_RADII animates it through a set of organic
+   (non-circular) keyframe shapes instead, per explicit "formas más amorfas, no solo círculos" ask;
+   framer-motion uses that animate array's own first value as the mount-time shape. */
+.hero-backdrop-blob {
+  filter: blur(80px);
+}
+
 .index-scroll-hint {
   margin-top: 40px;
   color: var(--text-on-glass-muted);
@@ -2758,8 +2965,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border-color: rgba(46, 204, 113, 0.7);
 }
 
+/* margin-top used to be 96px, doing double duty as breathing room between the previous section and
+   this one in a long continuously-scrolling page. Now that every section is its own full-screen
+   slide centered by .landing-snap-section's flex (RoleSection/UseCaseRow in index.jsx), that
+   separation comes from the slide boundary itself — a big top margin here would just push this
+   header (and whatever centered block it's the first child of) off-center within its own slide. */
 .index-section-header {
-  margin: 96px 0 40px;
+  margin: 0 0 40px;
   text-align: center;
 }
 
@@ -2782,26 +2994,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   margin: 0 auto;
 }
 
-/* Alternating icon/text rows (index.jsx's use-case list, rendered by the UseCaseRow component) —
-   icon and text swap sides every row (JSX sets `order` inline per row). Position isn't a one-time
-   reveal: each row's x-offset/opacity is scroll-linked via useScroll/useTransform, peaking
-   (centered, fully opaque) only while the row is near the vertical middle of the screen and
-   receding back out toward whichever margin each side leans on as it scrolls away from center in
-   either direction — see UseCaseRow in index.jsx, not a CSS/viewport-triggered animation. Equal
-   4/4 columns (not the full 6/6 — narrower on purpose) plus justify-content-center on the row
-   pulls icon and text in as a compact, centered pair instead of spanning edge-to-edge with a big
-   gap between them. Top-aligned (align-items-start on the row, not center) so every title starts
-   on the same line as the icon next to it instead of both being vertically centered against the
-   row's tallest column. */
-.index-usecase-list {
-  margin-top: 16px;
-  margin-bottom: 96px;
-}
-
-/* No dividing line between rows (removed per feedback — read as a hard rule the design didn't
-   need) — just generous vertical padding to keep rows visually separate. */
+/* Alternating icon/text rows (index.jsx's UseCaseRow, one per full-screen slide) — icon and text
+   swap sides every row (JSX sets `order` inline per row). Position isn't a one-time reveal: each
+   row's x-offset/opacity is scroll-linked via useScroll/useTransform, peaking (centered, fully
+   opaque) only while the row is near the vertical middle of the screen and receding back out
+   toward whichever margin each side leans on as it scrolls away from center in either direction —
+   see UseCaseRow in index.jsx, not a CSS/viewport-triggered animation. Equal 4/4 columns (not the
+   full 6/6 — narrower on purpose) plus justify-content-center on the row pulls icon and text in as
+   a compact, centered pair instead of spanning edge-to-edge with a big gap between them.
+   Top-aligned (align-items-start on the row, not center) so every title starts on the same line as
+   the icon next to it instead of both being vertically centered against the row's tallest column.
+   No vertical padding here (used to be 160px, for breathing room between rows in a long
+   continuously-scrolling page) — each row is now its own full-screen slide, already centered by
+   .landing-snap-section's flex, so extra padding here would just push it off that center. */
 .usecase-row {
-  padding: 160px 0;
+  padding: 0;
 }
 
 .usecase-icon-col {
@@ -2809,13 +3016,161 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   justify-content: center;
 }
 
-/* .role-hero-icon is already the "big gradient circle" treatment (organizerInfo.jsx/
-   subscriberInfo.jsx) — reused as-is for size/shape, just with a stronger glow
-   (--role-accent-glow instead of that class's own default --role-accent-soft) since this is
-   meant to read as a clear exterior "destello", not the subtler hero-icon glow it was designed
-   for elsewhere. */
-.usecase-icon-wrap.role-hero-icon {
-  box-shadow: 0 0 56px var(--role-accent-glow);
+/* Collage replacing the old single centered icon (index.jsx's UseCaseCollage) — the stage the
+   three tiles and the particle field position themselves within via `position: absolute`.
+   `width: min(520px, 100%)` + `aspect-ratio: 1` (not a fixed px size) so it grows as large as
+   .usecase-icon-col (col-md-5, index.jsx) has room for, capping at 520px, rather than overflowing
+   a narrower column on smaller viewports — the tile position percentages (tile-0/1/2 below) stay
+   correctly proportioned at any resulting size. */
+.usecase-collage {
+  position: relative;
+  width: min(520px, 100%);
+  aspect-ratio: 1;
+}
+
+/* Wraps the tiles + particle fields (index.jsx's UseCaseCollage) at the same size/position as
+   .usecase-collage itself (inset: 0 matches its parent exactly) — exists purely so the CONTENT can
+   shift independently of the box above it. Per explicit feedback: when the icon column sits on
+   the LEFT side of its row (text on the right), the box/container must stay exactly where the
+   grid puts it, but the rendered icons inside it should nudge left. Shifting this inner wrapper
+   does that without touching .usecase-collage's own width/position. */
+.usecase-collage-content {
+  position: absolute;
+  inset: 0;
+}
+
+.usecase-collage-content-shift-left {
+  transform: translateX(-120px);
+}
+
+/* Ambient glow behind the whole collage, same idea as the old .usecase-icon-wrap.role-hero-icon
+   "destello" but softer/wider since it's now backing three loose tiles instead of one solid
+   circle — a tight glow directly behind a small circle read fine, the same glow behind a spread
+   of tiles would look like a hard-edged halo around empty space. */
+.usecase-collage::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--role-accent-soft), transparent 72%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+.usecase-collage-tile-wrap {
+  position: absolute;
+}
+
+/* Tile sizes/positions/z-index are fixed per slot rather than derived — always exactly three
+   icons per use case (index.jsx's USE_CASES), so a hardcoded overlapping arrangement reads as a
+   deliberate collage instead of needing to generalize for a variable count. tile-0 (front,
+   largest) sits centered-low; tile-1 and tile-2 recede up-right/up-left behind it, per Icon
+   size={104/76/60} in index.jsx matching this size ordering. (A centered-average variant of these
+   three was tried and reverted per explicit feedback — back to the original layout.) */
+.usecase-collage-tile-wrap.tile-0 {
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.usecase-collage-tile-wrap.tile-1 {
+  left: 74%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.usecase-collage-tile-wrap.tile-2 {
+  left: 24%;
+  top: 24%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.usecase-collage-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--role-accent), var(--palette-3));
+  color: var(--text-on-solid);
+  border: 1px solid var(--glass-border);
+}
+
+.tile-0 .usecase-collage-tile {
+  width: 210px;
+  height: 210px;
+  box-shadow: 0 0 84px var(--role-accent-glow);
+}
+
+.tile-1 .usecase-collage-tile {
+  width: 152px;
+  height: 152px;
+  opacity: 0.92;
+  box-shadow: 0 0 52px var(--role-accent-glow);
+}
+
+.tile-2 .usecase-collage-tile {
+  width: 124px;
+  height: 124px;
+  opacity: 0.8;
+  box-shadow: 0 0 36px var(--role-accent-glow);
+}
+
+/* Particle field drifting behind the tiles (z-index below .usecase-collage-tile-wrap, which all
+   have z-index >= 1 while these default to auto/0) — position/size/timing are randomized per row
+   but deterministically (seeded in index.jsx) so the field doesn't jitter on re-render. */
+.usecase-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--role-accent);
+  box-shadow: 0 0 6px var(--role-accent-glow);
+  opacity: 0;
+  animation: usecase-particle-drift ease-in-out infinite;
+}
+
+/* Second particle field, rendered after the tiles in the DOM (index.jsx) and lifted above them
+   with z-index — drifts in front of the icons instead of only behind, so particles read as
+   floating through the whole collage rather than pinned to one layer. Slightly dimmer peak
+   opacity (via its own keyframes below) so it doesn't wash out the icons it passes over. */
+.usecase-particle-front {
+  z-index: 4;
+  animation-name: usecase-particle-drift-front;
+}
+
+@keyframes usecase-particle-drift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  35% {
+    opacity: 0.7;
+  }
+  65% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-6px, -26px) scale(1);
+  }
+}
+
+@keyframes usecase-particle-drift-front {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  35% {
+    opacity: 0.45;
+  }
+  65% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(6px, -30px) scale(1);
+  }
 }
 
 /* align-items:center centers .usecase-text-inner (below) as a single box in the column.
@@ -2864,6 +3219,27 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     margin-bottom: 20px;
   }
 
+  /* Same collage, scaled down — tile positions/sizes are percentage-based (tile-0/1/2 above) so
+     they stay proportional, only the stage's own cap needs to be smaller here. */
+  .usecase-collage {
+    width: min(330px, 100%);
+  }
+
+  .tile-0 .usecase-collage-tile {
+    width: 132px;
+    height: 132px;
+  }
+
+  .tile-1 .usecase-collage-tile {
+    width: 96px;
+    height: 96px;
+  }
+
+  .tile-2 .usecase-collage-tile {
+    width: 78px;
+    height: 78px;
+  }
+
   .usecase-text-col {
     order: 2 !important;
   }
@@ -2877,9 +3253,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
+/* margin-top used to be 112px (breathing room in a long scrolling page); the role picker is now
+   its own full-screen slide centered by .landing-snap-section's flex, so only a small gap from the
+   "Choose your role" header above it is needed. */
 .index-role-row {
-  margin-top: 112px;
-  margin-bottom: 48px;
+  margin-top: 32px;
 }
 
 /* No card/box, no icon-circle background — just the icon itself, colored by role
@@ -2908,11 +3286,3 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   max-width: 32ch;
 }
 
-/* Simple page-bottom footer, index.jsx only — the top margin here is also what gives the page
-   extra breathing room after the role section, not a separate spacing rule. */
-.index-footer {
-  margin-top: 120px;
-  padding: 24px 0 48px;
-  border-top: 1px solid var(--glass-border);
-  text-align: center;
-}
