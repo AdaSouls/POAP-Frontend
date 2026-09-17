@@ -189,7 +189,7 @@
     { "op": "declare_pub_input", "var": 18 },
     { "op": "declare_pub_input", "var": 19 },
     { "op": "declare_pub_input", "var": 20 },
-    { "op": "declare_pub_input", "var": 8 },
+    { "op": "declare_pub_input", "var": 2 },
     { "op": "declare_pub_input", "var": 22 },
     { "op": "declare_pub_input", "var": 23 },
     { "op": "declare_pub_input", "var": 24 },
