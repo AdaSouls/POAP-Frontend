@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Chart from "react-apexcharts";
-import { Award, Calendar, Database, ImageOff, Info, Ticket, X } from "lucide-react";
+import { Award, Calendar, Database, ImageOff, Info, Lock, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
@@ -195,6 +195,19 @@ const EventCard = forwardRef(({
       copyable: true,
     });
     dispatch({ type: "SHOW_BLOCKCHAIN_INFO", payload: { title: "Blockchain Info", fields } });
+  };
+
+  // Open to any connected wallet, not just this event's own organizer — poap.compact's
+  // publishDisclosureRequest has no organizer/admin gate (see docs/selective-disclosure-ui-design.md).
+  // Only shown when the event actually committed at least one private attribute at creation time
+  // (createEvent.jsx's private-attributes step publishes the {fieldId, label} list here, never the
+  // value itself).
+  const privateAttributeFields = metadata?.privateAttributeFields || [];
+  const openPublishDisclosureRequestDrawer = () => {
+    dispatch({
+      type: "PUBLISH_DISCLOSURE_REQUEST",
+      payload: { eventId: event.eventId, fields: privateAttributeFields },
+    });
   };
 
   const statusBadgeClass = alreadyHeld
@@ -584,6 +597,17 @@ const EventCard = forwardRef(({
                     <Database size={14} className="mr-2" />
                     View Blockchain Info
                   </button>
+
+                  {privateAttributeFields.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-card-detail-action btn-sm ml-2"
+                      onClick={openPublishDisclosureRequestDrawer}
+                    >
+                      <Lock size={14} className="mr-2" />
+                      Ask for a Disclosure
+                    </button>
+                  )}
 
                   {privateDraft && (
                     <div className="mt-3">

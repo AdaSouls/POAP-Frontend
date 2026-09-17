@@ -73,3 +73,89 @@ export async function buildMerklePath(
   }
   return { leaf: leafBytes32, path, rootBytes: upgradeFromTransient(acc) };
 }
+
+export type MerkleTreeResult = {
+  rootBytes: Uint8Array;
+  leafCount: number; // real leaves only, excludes padding
+  pathForIndex(index: number): MerklePathResult;
+  pathForLeaf(leafBytes32: Uint8Array): MerklePathResult;
+};
+
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+const ZERO_LEAF = new Uint8Array(32);
+let zeroLeafDigestPromise: Promise<bigint> | null = null;
+function zeroLeafDigest(): Promise<bigint> {
+  if (!zeroLeafDigestPromise) zeroLeafDigestPromise = leafDigestField(ZERO_LEAF);
+  return zeroLeafDigestPromise;
+}
+
+/**
+ * Builds a real Merkle tree over N leaves (padded with a shared zero-leaf digest up to 2**depth),
+ * unlike buildMerklePath above which only ever handles a single real leaf with caller-supplied
+ * (or default all-zero-field) siblings. Needed once an event commits more than one private
+ * attribute, or a disclosure request's candidate set has more than one member — see
+ * docs/selective-disclosure-ui-design.md.
+ *
+ * NOT interchangeable with buildMerklePath's default padding for the single-leaf case: that
+ * function pads with a raw field value of 0n, this one pads with the real digest of an all-zero
+ * Bytes<32> leaf. Both are internally self-consistent (a path this function returns always
+ * verifies against this function's own root), they just don't produce the same root for the same
+ * single leaf — don't assume the two are swappable.
+ *
+ * depth must be 8 for an attribute tree or 16 for a set-membership tree (see poap.compact's
+ * proveAttributeMembership). leaves.length must be between 1 and 2**depth.
+ */
+export async function buildMerkleTree(leaves: Uint8Array[], depth: number): Promise<MerkleTreeResult> {
+  const capacity = 2 ** depth;
+  if (leaves.length < 1 || leaves.length > capacity) {
+    throw new Error(`buildMerkleTree: expected 1-${capacity} leaves for depth ${depth}, got ${leaves.length}`);
+  }
+
+  const realDigests = await Promise.all(leaves.map(leafDigestField));
+  const padding = capacity - leaves.length;
+  const paddingDigest = padding > 0 ? await zeroLeafDigest() : null;
+
+  const levels: bigint[][] = new Array(depth + 1);
+  levels[0] = realDigests.concat(paddingDigest !== null ? new Array(padding).fill(paddingDigest) : []);
+  for (let level = 1; level <= depth; level++) {
+    const prev = levels[level - 1];
+    const next: bigint[] = new Array(prev.length / 2);
+    for (let k = 0; k < next.length; k++) {
+      next[k] = transientHash(FIELD_PAIR, [prev[2 * k], prev[2 * k + 1]]);
+    }
+    levels[level] = next;
+  }
+  const rootBytes = upgradeFromTransient(levels[depth][0]);
+
+  function pathForIndex(index: number): MerklePathResult {
+    if (index < 0 || index >= leaves.length) {
+      throw new Error(`buildMerkleTree: index ${index} out of range for ${leaves.length} leaves`);
+    }
+    const path: MerkleTreePathEntryArg[] = [];
+    let i = index;
+    for (let level = 0; level < depth; level++) {
+      const sibling = levels[level][i ^ 1];
+      const goesLeft = i % 2 === 0;
+      path.push({ sibling: { field: sibling }, goes_left: goesLeft });
+      i = i >> 1;
+    }
+    return { leaf: leaves[index], path, rootBytes };
+  }
+
+  function pathForLeaf(leafBytes32: Uint8Array): MerklePathResult {
+    const index = leaves.findIndex((leaf) => bytesEqual(leaf, leafBytes32));
+    if (index === -1) {
+      throw new Error('buildMerkleTree: leaf not found among the tree\'s original leaves');
+    }
+    return pathForIndex(index);
+  }
+
+  return { rootBytes, leafCount: leaves.length, pathForIndex, pathForLeaf };
+}

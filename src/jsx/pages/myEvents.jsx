@@ -8,8 +8,11 @@ import EventFilters from "../components/EventFilters";
 import Tooltip from "../components/Tooltip";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
-import { getAllEvents } from "../../midnight/indexer.service";
+import { getAllEvents, getAllDisclosureRequests } from "../../midnight/indexer.service";
+import { getPrivateAttributeDraft } from "../../midnight/private-attribute-drafts";
 import { getEventStatus } from "../../utils/poapHelpers";
+
+const truncateHex = (hex) => `${hex.slice(0, 8)}…${hex.slice(-6)}`;
 
 const REFRESH_INTERVAL_MS = 5000;
 
@@ -48,9 +51,11 @@ const MyEvents = () => {
   const [allEvents, setAllEvents] = useState([]);
   const [filters, setFilters] = useState({});
   const [expandedId, setExpandedId] = useState(null);
+  const [disclosureRequests, setDisclosureRequests] = useState([]);
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
+  const disclosurePollRef = useRef(null);
 
   // createEvent has no on-chain access gate anymore — any connected wallet can create an event.
   const canCreateEvent = Boolean(provider);
@@ -77,6 +82,26 @@ const MyEvents = () => {
     return () => clearInterval(pollRef.current);
   }, [loadEvents]);
 
+  // Separate poll, different endpoint — GET /api/disclosure-requests has no eventId filter server-
+  // side (see indexer/src/api/routes/disclosures.ts), so this fetches every published request and
+  // filters client-side, below, to the ones that are both on one of this organizer's own events AND
+  // for a field this browser actually holds a local draft for (see private-attribute-drafts.ts —
+  // only the organizer who committed an attribute can ever respond to a question about it).
+  const loadDisclosureRequests = useCallback(async () => {
+    try {
+      const requests = await getAllDisclosureRequests();
+      setDisclosureRequests(requests || []);
+    } catch (error) {
+      console.error("Error loading disclosure requests:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDisclosureRequests();
+    disclosurePollRef.current = setInterval(loadDisclosureRequests, REFRESH_INTERVAL_MS);
+    return () => clearInterval(disclosurePollRef.current);
+  }, [loadDisclosureRequests]);
+
   const filteredEvents = useMemo(() => applyFilters(allEvents, filters), [allEvents, filters]);
 
   // "My Events" is the organizer's own event list — event discovery across everyone else's
@@ -85,6 +110,19 @@ const MyEvents = () => {
     if (!provider) return [];
     return filteredEvents.filter((e) => e.issuerPk === provider.address);
   }, [filteredEvents, provider]);
+
+  // Requests are informational only here, no "Respond" button: the candidate set's actual member
+  // values (needed to build the set-membership proof) only ever travel via a share link's query
+  // params, never through the indexer (only setRoot, the commitment, is public — see
+  // publishDisclosureRequest.jsx). Responding happens at /app/disclosure/respond once the verifier
+  // hands over that link out of band.
+  const pendingOwnDisclosureRequests = useMemo(() => {
+    const ownEventIds = new Set(ownEvents.map((e) => e.eventId));
+    return disclosureRequests
+      .filter((request) => ownEventIds.has(request.eventId))
+      .map((request) => ({ ...request, draft: getPrivateAttributeDraft(request.eventId, request.fieldId) }))
+      .filter((request) => request.draft);
+  }, [disclosureRequests, ownEvents]);
 
   // If the expanded event drops out of the (polled/filtered) list, don't leave the grid stuck
   // showing zero cards — fall back to the full grid instead.
@@ -133,6 +171,25 @@ const MyEvents = () => {
             </div>
           </div>
         </div>
+
+        {pendingOwnDisclosureRequests.length > 0 && (
+          <div className="row mb-3">
+            <div className="col-12">
+              <div className="drawer-modal-preview-card">
+                <p className="m-0 small font-weight-semibold mb-2">
+                  Pending Disclosure Requests ({pendingOwnDisclosureRequests.length})
+                </p>
+                {pendingOwnDisclosureRequests.map((request) => (
+                  <p className="m-0 small text-muted mb-1" key={request.requestId}>
+                    Someone is asking about <span className="text-white">{request.draft.fieldName}</span> on
+                    event {truncateHex(request.eventId)} (verifier {truncateHex(request.verifierPk)}) — waiting
+                    for them to share the response link with you.
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="row">
           {loading ? (

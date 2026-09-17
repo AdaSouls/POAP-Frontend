@@ -116,3 +116,11 @@ export async function getDisclosureRequest(requestIdHex: string): Promise<Indexe
 export async function getDisclosureRequestsByVerifier(verifierPkHex: string): Promise<IndexedDisclosureRequest[]> {
   return getJson<IndexedDisclosureRequest[]>(`/api/disclosure-requests?verifierPk=${verifierPkHex}`);
 }
+
+// For an organizer's "pending requests on my events" view — omitting verifierPk entirely returns
+// every published request (confirmed against poap-midnight/indexer/src/api/routes/disclosures.ts's
+// `WHERE $1::text IS NULL OR verifier_pk = $1`), filtered client-side by eventId since there's no
+// eventId query param on the backend.
+export async function getAllDisclosureRequests(): Promise<IndexedDisclosureRequest[]> {
+  return getJson<IndexedDisclosureRequest[]>('/api/disclosure-requests');
+}

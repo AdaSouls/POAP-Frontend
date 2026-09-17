@@ -21,6 +21,7 @@ import SharedCollection from "./pages/sharedCollection";
 import OrganizerInfo from "./pages/organizerInfo";
 import SubscriberInfo from "./pages/subscriberInfo";
 import AdminDeploy from "./pages/adminDeploy";
+import DisclosureRespond from "./pages/disclosureRespond";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -75,6 +76,7 @@ const Router = () => {
           <Route path="/app/collection/:id" element={<Collection />} />
           <Route path="/app/collections/:section" element={<Collections />} />
           <Route path="/app/claim-mint" element={<ClaimMint />} />
+          <Route path="/app/disclosure/respond" element={<DisclosureRespond />} />
         </Routes>
       </div>
     </BrowserRouter>

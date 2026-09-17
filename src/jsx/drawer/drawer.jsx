@@ -15,6 +15,7 @@ import GetHolderKey from './views/getHolderKey.jsx';
 import RevealPrivateInfo from './views/revealPrivateInfo.jsx';
 import SubscribersList from './views/subscribersList.jsx';
 import BlockchainInfoModal from './views/blockchainInfoModal.jsx';
+import PublishDisclosureRequest from './views/publishDisclosureRequest.jsx';
 
 export const Drawer = () => {
 
@@ -78,6 +79,10 @@ export const Drawer = () => {
       return <BlockchainInfoModal />;
     }
 
+    if (state?.publishDisclosureRequest === true) {
+      return <PublishDisclosureRequest />;
+    }
+
   };
 
   // Key names an active flag rather than any content from the view itself, so AnimatePresence
@@ -86,7 +91,7 @@ export const Drawer = () => {
   const activeViewKey = [
     'showCardanoWallet', 'showMidnightWallet', 'createSoul', 'createSoulToken', 'createPoap',
     'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint', 'getHolderKey',
-    'revealPrivateInfo', 'showSubscribers', 'showBlockchainInfo',
+    'revealPrivateInfo', 'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest',
   ].find((flag) => state?.[flag] === true) || 'none';
 
   // CLOSE_DRAWER flips every view flag to false in the same dispatch as `open: false` (see the
@@ -122,7 +127,7 @@ export const Drawer = () => {
   // panel).
   const MODAL_VIEWS = [
     'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
-    'revealPrivateInfo', 'showSubscribers', 'showBlockchainInfo',
+    'revealPrivateInfo', 'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest',
   ];
   const isModalView = MODAL_VIEWS.includes(chromeViewKey);
   const drawerLayout = isModalView ? 'drawer-modal' : 'drawer-cart';
@@ -139,7 +144,7 @@ export const Drawer = () => {
   // forms: Get My Key and Reveal Private Info are both opened from mySubscriptions.jsx/poapCard.jsx
   // context). Independent of isWideModalView — this only swaps input colors, doesn't touch modal
   // width.
-  const isGlassFormView = ['createEvent', 'createMint', 'getHolderKey', 'revealPrivateInfo'].includes(chromeViewKey);
+  const isGlassFormView = ['createEvent', 'createMint', 'getHolderKey', 'revealPrivateInfo', 'publishDisclosureRequest'].includes(chromeViewKey);
 
   const closeDrawer = () => dispatch({ type: 'CLOSE_DRAWER' });
 

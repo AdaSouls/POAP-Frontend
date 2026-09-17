@@ -16,11 +16,15 @@ import CategoryPicker from "../../components/CategoryPicker";
 import TaxonomyStepFields from "../../components/TaxonomyStepFields";
 import ChannelsField from "../../components/ChannelsField";
 import OrganizationProfileFields from "../../components/OrganizationProfileFields";
+import PrivateAttributesStepFields from "../../components/PrivateAttributesStepFields";
 import { uploadImageToIPFS, uploadJSONToIPFS, uploadPrivateJSONToIPFS } from "../../../services/ipfs.service";
 import { getCroppedImageBlob } from "../../../utils/cropImage";
 import { sha256 } from "../../../utils/cid";
-import { computePrivateMetadataCommit, computeEventId } from "../../../midnight/contract.service";
+import { computePrivateMetadataCommit, computeEventId, computeAttributeLeaf } from "../../../midnight/contract.service";
 import { savePrivateEventDraft } from "../../../midnight/private-event-metadata";
+import { savePrivateAttributeDraft } from "../../../midnight/private-attribute-drafts";
+import { encodeAttributeValue } from "../../../midnight/attribute-value-codec";
+import { buildMerkleTree } from "../../../midnight/merkle";
 import {
   EVENT_CATEGORIES,
   getCategoryConfig,
@@ -52,6 +56,7 @@ const STEP_CHANNELS = "channels";
 const STEP_TAXONOMY = "taxonomy";
 const STEP_ORG_PROFILE = "orgProfile";
 const STEP_EXTRA_INFO = "extraInfo";
+const STEP_PRIVATE_ATTRIBUTES = "privateAttributes";
 const STEP_POAP_IMAGE = "poapImage";
 
 const CATEGORY_LIST = Object.values(EVENT_CATEGORIES);
@@ -80,6 +85,9 @@ export default function CreateEvent() {
   // src/midnight/private-event-metadata.ts and docs/privacy-matrix.md.
   const [extraInfo, setExtraInfo] = useState("");
   const [extraInfoIsPrivate, setExtraInfoIsPrivate] = useState(false);
+  // { fieldName, value }[] — Channel B (selective disclosure), independent of Extra Info's Channel
+  // A commit/reveal above. See docs/selective-disclosure-ui-design.md.
+  const [privateAttributes, setPrivateAttributes] = useState([]);
   const [usePoapImage, setUsePoapImage] = useState(false);
   // Separate {imageFile, croppedAreaPixels} pair — EventImageField hardcodes those two field names
   // on whatever `values` object it's given, so this can't share `metadata` above without colliding
@@ -116,6 +124,7 @@ export default function CreateEvent() {
     if (!categoryConfig) return [];
     const list = [
       STEP_DETAILS, STEP_IMAGE, STEP_SUPPLY, STEP_CHANNELS, STEP_TAXONOMY, STEP_ORG_PROFILE, STEP_EXTRA_INFO,
+      STEP_PRIVATE_ATTRIBUTES,
     ];
     if (categoryConfig.isPublicMint) {
       list.push(STEP_POAP_IMAGE);
@@ -129,11 +138,27 @@ export default function CreateEvent() {
   const isDetailsValid = () => metadata.name.trim().length > 0;
   const isSupplyValid = () => Number(maxSupply) >= 0;
   const isPoapImageValid = () => !usePoapImage || Boolean(poapImageValues.imageFile);
+  // A fully-empty row is fine (ignored at submit — see handleSubmit's validAttributeRows filter);
+  // a partially-filled row, or a value over the 32-byte encoding limit, blocks Next.
+  const isPrivateAttributesValid = () =>
+    privateAttributes.every((row) => {
+      const hasFieldName = row.fieldName.trim().length > 0;
+      const hasValue = row.value.trim().length > 0;
+      if (!hasFieldName && !hasValue) return true;
+      if (!hasFieldName || !hasValue) return false;
+      try {
+        encodeAttributeValue(row.value);
+        return true;
+      } catch {
+        return false;
+      }
+    });
 
   const stepValidators = {
     [STEP_DETAILS]: isDetailsValid,
     [STEP_SUPPLY]: isSupplyValid,
     [STEP_POAP_IMAGE]: isPoapImageValid,
+    [STEP_PRIVATE_ATTRIBUTES]: isPrivateAttributesValid,
   };
   const isCurrentStepValid = () => {
     if (step === 0) return category !== null;
@@ -226,6 +251,22 @@ export default function CreateEvent() {
         poapImageUri = await uploadImageToIPFS(poapBlob);
       }
 
+      // `label` — NOT the on-chain eventId. createEvent used to accept a raw caller-chosen eventId
+      // directly, which was a confirmed vulnerability (event-ID squatting: whoever called
+      // createEvent first for a given id became its organizer forever, no recovery). The contract
+      // now derives the real id as event_key(organizerPk, label) internally; a fresh random 32
+      // bytes works fine as a label, same as the old eventId generation did.
+      const label = new Uint8Array(32);
+      crypto.getRandomValues(label);
+
+      // Computed before the tx (not parsed out of its result — see computeEventId's comment in
+      // contract.service.ts) using this wallet's own already-known pk. Needed early now, not just
+      // for the Channel A draft key: Channel B's attribute leaves below are keyed by this same
+      // eventId, and must be known before privateAttributesRoot is built and passed into
+      // createEvent itself.
+      const organizerPk = Buffer.from(provider.address, "hex");
+      const eventId = computeEventId(organizerPk, label);
+
       // Extra info's own switch decides where it goes — independent of the category's fixed mint
       // type. Public: just another key in the same metadataURI JSON everyone already reads (no
       // crypto, no reveal, visible immediately). Private: the commit/reveal flow — value = sha256
@@ -234,7 +275,7 @@ export default function CreateEvent() {
       // private-event-metadata.ts's design notes), no separate URI needs to be stored anywhere,
       // just value/rand.
       const trimmedExtraInfo = extraInfo.trim();
-      let privateMetadataCommit;
+      let privateMetadataCommit = new Uint8Array(32);
       let privateDraft = null;
       if (trimmedExtraInfo && extraInfoIsPrivate) {
         loadingFunction("Creating Event", "Uploading private info to IPFS…", "");
@@ -249,6 +290,44 @@ export default function CreateEvent() {
           valueHex: Buffer.from(value).toString("hex"),
           randHex: Buffer.from(rand).toString("hex"),
         };
+      }
+
+      // Channel B — selective disclosure. Each non-empty row becomes its own Merkle leaf
+      // (computeAttributeLeaf), committed together as one tree (buildMerkleTree, depth 8 — see
+      // poap.compact's proveAttributeMembership); privateAttributesRoot stays the all-zero default
+      // when there are none. fieldId is a fresh random id per attribute (not derived from the
+      // label) — it's how a later disclosure request names which field it's asking about, and how
+      // this browser looks its own draft back up (private-attribute-drafts.ts, keyed by
+      // (eventId, fieldId)). The {fieldId, label} pairs (never the value) also go into the public
+      // metadataURI JSON below, so a verifier can discover what's askable without any private state.
+      const validAttributeRows = privateAttributes.filter(
+        (row) => row.fieldName.trim() && row.value.trim(),
+      );
+      let privateAttributesRoot = new Uint8Array(32);
+      const attributeDraftsToSave = [];
+      const privateAttributeFieldsForMetadata = [];
+      if (validAttributeRows.length > 0) {
+        const leaves = validAttributeRows.map((row) => {
+          const fieldId = new Uint8Array(32);
+          crypto.getRandomValues(fieldId);
+          const rand = new Uint8Array(32);
+          crypto.getRandomValues(rand);
+          const encodedValue = encodeAttributeValue(row.value);
+          const leaf = computeAttributeLeaf(eventId, fieldId, encodedValue, rand);
+          const fieldIdHex = Buffer.from(fieldId).toString("hex");
+          attributeDraftsToSave.push({
+            fieldIdHex,
+            draft: {
+              fieldName: row.fieldName.trim(),
+              valueHex: Buffer.from(encodedValue).toString("hex"),
+              randHex: Buffer.from(rand).toString("hex"),
+            },
+          });
+          privateAttributeFieldsForMetadata.push({ fieldId: fieldIdHex, label: row.fieldName.trim() });
+          return leaf;
+        });
+        const tree = await buildMerkleTree(leaves, 8);
+        privateAttributesRoot = tree.rootBytes;
       }
 
       const taxonomyEntries = serializeTaxonomyValues(category, taxonomyValues);
@@ -267,15 +346,10 @@ export default function CreateEvent() {
         ...taxonomyEntries,
         ...(channels.length ? { channels } : {}),
         ...(hasOrgProfileField ? { organization: organizationProfile } : {}),
+        ...(privateAttributeFieldsForMetadata.length
+          ? { privateAttributeFields: privateAttributeFieldsForMetadata }
+          : {}),
       });
-
-      // `label` — NOT the on-chain eventId. createEvent used to accept a raw caller-chosen eventId
-      // directly, which was a confirmed vulnerability (event-ID squatting: whoever called
-      // createEvent first for a given id became its organizer forever, no recovery). The contract
-      // now derives the real id as event_key(organizerPk, label) internally; a fresh random 32
-      // bytes works fine as a label, same as the old eventId generation did.
-      const label = new Uint8Array(32);
-      crypto.getRandomValues(label);
 
       const expiration = expirationDate
         ? BigInt(Math.floor(new Date(expirationDate).getTime() / 1000))
@@ -289,18 +363,17 @@ export default function CreateEvent() {
         expiration,
         categoryConfig.isPublicMint,
         metadataURI,
-        ...(privateMetadataCommit ? [privateMetadataCommit] : []),
+        privateMetadataCommit,
+        privateAttributesRoot,
       );
-
-      // Predicted independently (not parsed out of the tx result — see computeEventId's comment in
-      // contract.service.ts) using this wallet's own already-known pk, the same value the contract
-      // derived internally when it inserted the event under this key.
-      const organizerPk = Buffer.from(provider.address, "hex");
-      const eventId = computeEventId(organizerPk, label);
 
       if (privateDraft) {
         savePrivateEventDraft(Buffer.from(eventId).toString("hex"), privateDraft);
       }
+      const eventIdHex = Buffer.from(eventId).toString("hex");
+      attributeDraftsToSave.forEach(({ fieldIdHex, draft }) => {
+        savePrivateAttributeDraft(eventIdHex, fieldIdHex, draft);
+      });
 
       closeDrawer();
       succesfullBlockchainCreation("Event Created Successfully", `Transaction: ${txHash}`, "");
@@ -482,6 +555,10 @@ export default function CreateEvent() {
                 </div>
               </div>
             </>
+          )}
+
+          {currentStepKey === STEP_PRIVATE_ATTRIBUTES && (
+            <PrivateAttributesStepFields values={privateAttributes} onChange={setPrivateAttributes} />
           )}
 
           {currentStepKey === STEP_POAP_IMAGE && (

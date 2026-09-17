@@ -144,6 +144,35 @@ describe('EventCard Component', () => {
       });
     });
 
+    it('does not show an Ask for a Disclosure button when the event has no private attributes', async () => {
+      renderWithProviders(<EventCard event={mockEvent} isExpanded />);
+      expect(screen.queryByRole('button', { name: /ask for a disclosure/i })).not.toBeInTheDocument();
+    });
+
+    it('shows an Ask for a Disclosure button and dispatches PUBLISH_DISCLOSURE_REQUEST with the event id and field list when clicked', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          name: 'DevCon 2026',
+          privateAttributeFields: [{ fieldId: 'cc'.repeat(32), label: 'Region' }],
+        }),
+      });
+      const dispatch = jest.fn();
+      const eventWithAttributes = { ...mockEvent, metadataURI: 'https://example.com/meta-with-attributes.json' };
+      renderWithProviders(<EventCard event={eventWithAttributes} isExpanded />, { drawerDispatch: dispatch });
+
+      const askButton = await screen.findByRole('button', { name: /ask for a disclosure/i });
+      await userEvent.click(askButton);
+
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'PUBLISH_DISCLOSURE_REQUEST',
+        payload: {
+          eventId: eventWithAttributes.eventId,
+          fields: [{ fieldId: 'cc'.repeat(32), label: 'Region' }],
+        },
+      });
+    });
+
     it('fetches and shows the live token count for this event', async () => {
       renderWithProviders(<EventCard event={mockEvent} isExpanded />);
 

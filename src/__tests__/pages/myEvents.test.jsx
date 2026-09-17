@@ -3,7 +3,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventsPage from '../../jsx/pages/myEvents';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
-import { getAllEvents, getEvent, getTokensByEvent } from '../../midnight/indexer.service';
+import { getAllEvents, getEvent, getTokensByEvent, getAllDisclosureRequests } from '../../midnight/indexer.service';
+import { savePrivateAttributeDraft } from '../../midnight/private-attribute-drafts';
 
 jest.mock('../../midnight/indexer.service');
 
@@ -18,6 +19,7 @@ describe('MyEvents page', () => {
     getAllEvents.mockResolvedValue(mockEvents);
     getEvent.mockResolvedValue({ ...mockEvents[0], liveTokens: 3 });
     getTokensByEvent.mockResolvedValue([]);
+    getAllDisclosureRequests.mockResolvedValue([]);
   });
 
   it('renders events page header', () => {
@@ -97,6 +99,32 @@ describe('MyEvents page', () => {
       expect(screen.getAllByText(/Event aaaaaaaa/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Event cccccccc/i).length).toBeGreaterThan(0);
     });
+  });
+
+  it('shows a pending disclosure request only for an own event where a local draft exists for the field', async () => {
+    const fieldIdHex = 'ff'.repeat(32);
+    savePrivateAttributeDraft(mockEvents[0].eventId, fieldIdHex, {
+      fieldName: 'Region',
+      valueHex: '01'.repeat(32),
+      randHex: '02'.repeat(32),
+    });
+    getAllDisclosureRequests.mockResolvedValue([
+      // Matches an own event + has a local draft — should show.
+      { requestId: 'r1', verifierPk: 'aa'.repeat(32), eventId: mockEvents[0].eventId, fieldId: fieldIdHex, setRoot: '00'.repeat(32) },
+      // Matches an own event but no local draft for this fieldId — should NOT show.
+      { requestId: 'r2', verifierPk: 'aa'.repeat(32), eventId: mockEvents[0].eventId, fieldId: 'no-draft', setRoot: '00'.repeat(32) },
+      // Not an own event (issuerPk 'dd'.repeat(32), not this wallet's 'bb'.repeat(32)) — should NOT show.
+      { requestId: 'r3', verifierPk: 'aa'.repeat(32), eventId: mockEvents[1].eventId, fieldId: fieldIdHex, setRoot: '00'.repeat(32) },
+    ]);
+    const drawerValue = {
+      ...mockDrawerContext,
+      midnight: { ...mockDrawerContext.midnight, provider: { address: 'bb'.repeat(32) } },
+    };
+
+    renderWithProviders(<EventsPage />, { drawerValue });
+
+    expect(await screen.findByText(/Pending Disclosure Requests \(1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Region/i)).toBeInTheDocument();
   });
 
   it('hides sibling cards while one is expanded, and brings them back after it collapses', async () => {
