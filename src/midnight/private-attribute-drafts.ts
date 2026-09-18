@@ -1,14 +1,12 @@
-// Local cache of an organizer's own private-ATTRIBUTE drafts (Channel B — selective disclosure
-// via proveAttributeMembership), separate from private-event-metadata.ts's Channel A drafts
-// (revealPrivateMetadata — one blob, reveal-all-or-nothing). Stored in localStorage, not private
-// state: the contract only ever sees the Merkle leaf/root, never these raw values. Scoped per
-// (eventId, fieldId), same one-key-per-item pattern as private-event-metadata.ts.
+// Local cache of an organizer's own private-attribute drafts (selective disclosure via
+// proveAttributeMembership). Stored in localStorage, not private state: the contract only ever
+// sees the Merkle leaf/root, never these raw values. Scoped per (eventId, fieldId), one key per
+// item (simpler, no read-modify-write races between tabs).
 //
-// Known limitation, accepted by design (same as private-event-metadata.ts): if this browser's
-// localStorage is cleared before the organizer builds a proof or reveals, the field's opening is
-// unrecoverable — value/rand were never sent anywhere else. Losing it means that one attribute can
-// never be proven or revealed again (the committed root itself is unaffected — other fields stay
-// fine); it does not affect the event itself.
+// Known limitation, accepted by design: if this browser's localStorage is cleared before the
+// organizer builds a proof, the field's opening is unrecoverable — value/rand were never sent
+// anywhere else. Losing it means that one attribute can never be proven again (the committed root
+// itself is unaffected — other fields stay fine); it does not affect the event itself.
 //
 // IMPORTANT: never reuse `rand` across attribute leaves for the same event (see
 // contract.service.ts#computeAttributeLeaf's warning) — generate a fresh random value per field.

@@ -55,10 +55,6 @@ const MySubscriptions = () => {
     dispatch({ type: "GET_HOLDER_KEY" });
   };
 
-  const openRevealPrivateInfo = () => {
-    dispatch({ type: "REVEAL_PRIVATE_INFO" });
-  };
-
   const copyCollectionShareLink = () => {
     if (!provider || myPoaps.length === 0) return;
     const entries = myPoaps
@@ -130,11 +126,6 @@ const MySubscriptions = () => {
               {provider && (
                 <button className="btn btn-white btn-small" onClick={openGetHolderKey}>
                   Get My Key
-                </button>
-              )}
-              {provider && (
-                <button className="btn btn-white btn-small" onClick={openRevealPrivateInfo}>
-                  Reveal Private Info
                 </button>
               )}
               {provider && myPoaps.length > 0 && (

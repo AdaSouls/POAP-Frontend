@@ -11,15 +11,10 @@ import { savePrivateAttributeDraft } from '../../../midnight/private-attribute-d
 jest.mock('../../../services/ipfs.service', () => ({
   uploadImageToIPFS: jest.fn(),
   uploadJSONToIPFS: jest.fn(),
-  uploadPrivateJSONToIPFS: jest.fn(),
 }));
 jest.mock('../../../midnight/contract.service', () => ({
-  computePrivateMetadataCommit: jest.fn(),
   computeEventId: jest.fn(() => new Uint8Array(32).fill(1)),
   computeAttributeLeaf: jest.fn((eventId, fieldId) => fieldId),
-}));
-jest.mock('../../../midnight/private-event-metadata', () => ({
-  savePrivateEventDraft: jest.fn(),
 }));
 // merkle.ts pulls in @midnight-ntwrk/compact-runtime, a WASM-bindgen build Jest can't load (see
 // src/__tests__/midnight/merkle.test.ts's header comment) — mocked here purely so importing
@@ -44,8 +39,9 @@ const clickNext = () => userEvent.click(screen.getByRole('button', { name: /^nex
 const clickBack = () => userEvent.click(screen.getByRole('button', { name: /^back$/i }));
 const clickCreate = () => userEvent.click(screen.getByRole('button', { name: /^create$/i }));
 
-// Every category walks details → image → supply → channels → taxonomy → org profile → extra info,
-// then STEP_POAP_IMAGE only for self-mint categories (Event/Subscription) — Credential skips it,
+// Every category walks details → image → supply → channels → taxonomy → org profile →
+// private attributes, then STEP_POAP_IMAGE only for self-mint categories (Event/Subscription) —
+// Credential skips it,
 // since its tokens get their own per-recipient image later via push-mint, not a shared one set
 // here (see createEvent.jsx's steps useMemo). Every step after supply is fully optional, so this
 // just keeps clicking Next until Create appears instead of hardcoding a step count per category.
@@ -170,8 +166,7 @@ describe('CreateEvent drawer view', () => {
     await userEvent.click(screen.getByLabelText('Format'));
     await userEvent.click(screen.getByRole('option', { name: 'In-person' }));
     await clickNext(); // taxonomy -> org profile
-    await clickNext(); // org profile -> extra info
-    await clickNext(); // extra info -> private attributes
+    await clickNext(); // org profile -> private attributes
     await clickNext(); // private attributes -> POAP image
     await clickCreate(); // submit
 

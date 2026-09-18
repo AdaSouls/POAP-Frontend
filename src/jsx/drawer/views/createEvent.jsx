@@ -17,11 +17,9 @@ import TaxonomyStepFields from "../../components/TaxonomyStepFields";
 import ChannelsField from "../../components/ChannelsField";
 import OrganizationProfileFields from "../../components/OrganizationProfileFields";
 import PrivateAttributesStepFields from "../../components/PrivateAttributesStepFields";
-import { uploadImageToIPFS, uploadJSONToIPFS, uploadPrivateJSONToIPFS } from "../../../services/ipfs.service";
+import { uploadImageToIPFS, uploadJSONToIPFS } from "../../../services/ipfs.service";
 import { getCroppedImageBlob } from "../../../utils/cropImage";
-import { sha256 } from "../../../utils/cid";
-import { computePrivateMetadataCommit, computeEventId, computeAttributeLeaf } from "../../../midnight/contract.service";
-import { savePrivateEventDraft } from "../../../midnight/private-event-metadata";
+import { computeEventId, computeAttributeLeaf } from "../../../midnight/contract.service";
 import { savePrivateAttributeDraft } from "../../../midnight/private-attribute-drafts";
 import { encodeAttributeValue } from "../../../midnight/attribute-value-codec";
 import { buildMerkleTree } from "../../../midnight/merkle";
@@ -43,7 +41,7 @@ import eventNormal from "../../../images/svg/event-normal.svg";
 // src/jsx/constants/eventCategories.js) before anything else — see
 // docs/event-creation-wizard-design.md for the full design. Every category then walks the SAME
 // step sequence (details → image → supply → channels → taxonomy → org profile [conditional] →
-// extra info → POAP image), just with different taxonomy fields and a fixed, non-editable
+// private attributes → POAP image), just with different taxonomy fields and a fixed, non-editable
 // isPublicMint derived from the category. `step` is 0 for the category picker, then a 1-based
 // index into `steps` (computed below) once a category is chosen. The Public Mint/Invite-Only Mint
 // explanation used to repeat as its own card on the supply step — moved to a badge on each
@@ -55,7 +53,6 @@ const STEP_SUPPLY = "supply";
 const STEP_CHANNELS = "channels";
 const STEP_TAXONOMY = "taxonomy";
 const STEP_ORG_PROFILE = "orgProfile";
-const STEP_EXTRA_INFO = "extraInfo";
 const STEP_PRIVATE_ATTRIBUTES = "privateAttributes";
 const STEP_POAP_IMAGE = "poapImage";
 
@@ -79,14 +76,7 @@ export default function CreateEvent() {
   const [channels, setChannels] = useState([]);
   const [taxonomyValues, setTaxonomyValues] = useState({});
   const [organizationProfile, setOrganizationProfile] = useState({});
-  // Free-text extra info, independent of the category's fixed mint type — its own switch decides
-  // whether it's baked into the public metadataURI JSON (extraInfoIsPrivate: false) or uploaded via
-  // the private commit/reveal flow (extraInfoIsPrivate: true). See
-  // src/midnight/private-event-metadata.ts and docs/privacy-matrix.md.
-  const [extraInfo, setExtraInfo] = useState("");
-  const [extraInfoIsPrivate, setExtraInfoIsPrivate] = useState(false);
-  // { fieldName, value }[] — Channel B (selective disclosure), independent of Extra Info's Channel
-  // A commit/reveal above. See docs/selective-disclosure-ui-design.md.
+  // { fieldName, value }[] — selective disclosure. See docs/selective-disclosure-ui-design.md.
   const [privateAttributes, setPrivateAttributes] = useState([]);
   const [usePoapImage, setUsePoapImage] = useState(false);
   // Separate {imageFile, croppedAreaPixels} pair — EventImageField hardcodes those two field names
@@ -123,7 +113,7 @@ export default function CreateEvent() {
   const steps = useMemo(() => {
     if (!categoryConfig) return [];
     const list = [
-      STEP_DETAILS, STEP_IMAGE, STEP_SUPPLY, STEP_CHANNELS, STEP_TAXONOMY, STEP_ORG_PROFILE, STEP_EXTRA_INFO,
+      STEP_DETAILS, STEP_IMAGE, STEP_SUPPLY, STEP_CHANNELS, STEP_TAXONOMY, STEP_ORG_PROFILE,
       STEP_PRIVATE_ATTRIBUTES,
     ];
     if (categoryConfig.isPublicMint) {
@@ -267,32 +257,12 @@ export default function CreateEvent() {
       const organizerPk = Buffer.from(provider.address, "hex");
       const eventId = computeEventId(organizerPk, label);
 
-      // Extra info's own switch decides where it goes — independent of the category's fixed mint
-      // type. Public: just another key in the same metadataURI JSON everyone already reads (no
-      // crypto, no reveal, visible immediately). Private: the commit/reveal flow — value = sha256
-      // of the exact JSON that also gets uploaded, so the same 32 bytes double as the IPFS
-      // content's own CID digest (verified against the real Pinata API, see
-      // private-event-metadata.ts's design notes), no separate URI needs to be stored anywhere,
-      // just value/rand.
-      const trimmedExtraInfo = extraInfo.trim();
-      let privateMetadataCommit = new Uint8Array(32);
-      let privateDraft = null;
-      if (trimmedExtraInfo && extraInfoIsPrivate) {
-        loadingFunction("Creating Event", "Uploading private info to IPFS…", "");
-        const privateJSON = { notes: trimmedExtraInfo };
-        const value = await sha256(JSON.stringify(privateJSON));
-        const rand = new Uint8Array(32);
-        crypto.getRandomValues(rand);
-        privateMetadataCommit = computePrivateMetadataCommit(value, rand);
-        await uploadPrivateJSONToIPFS(privateJSON);
-        privateDraft = {
-          notes: trimmedExtraInfo,
-          valueHex: Buffer.from(value).toString("hex"),
-          randHex: Buffer.from(rand).toString("hex"),
-        };
-      }
+      // poap.compact's createEvent still takes a privateMetadataCommit slot (the commit/reveal
+      // "Extra Info" feature this UI used to offer) — always pass the all-zero default now that
+      // this wizard no longer sets it, per poap.compact's own convention for "no private part".
+      const privateMetadataCommit = new Uint8Array(32);
 
-      // Channel B — selective disclosure. Each non-empty row becomes its own Merkle leaf
+      // Selective disclosure. Each non-empty row becomes its own Merkle leaf
       // (computeAttributeLeaf), committed together as one tree (buildMerkleTree, depth 8 — see
       // poap.compact's proveAttributeMembership); privateAttributesRoot stays the all-zero default
       // when there are none. fieldId is a fresh random id per attribute (not derived from the
@@ -340,7 +310,6 @@ export default function CreateEvent() {
         name: metadata.name.trim(),
         ...(metadata.description.trim() ? { description: metadata.description.trim() } : {}),
         ...(imageUri ? { image: imageUri } : {}),
-        ...(trimmedExtraInfo && !extraInfoIsPrivate ? { notes: trimmedExtraInfo } : {}),
         ...(poapImageUri ? { poapImage: poapImageUri } : {}),
         category,
         ...taxonomyEntries,
@@ -367,9 +336,6 @@ export default function CreateEvent() {
         privateAttributesRoot,
       );
 
-      if (privateDraft) {
-        savePrivateEventDraft(Buffer.from(eventId).toString("hex"), privateDraft);
-      }
       const eventIdHex = Buffer.from(eventId).toString("hex");
       attributeDraftsToSave.forEach(({ fieldIdHex, draft }) => {
         savePrivateAttributeDraft(eventIdHex, fieldIdHex, draft);
@@ -507,54 +473,6 @@ export default function CreateEvent() {
               onChange={setOrganizationProfile}
               showAddress={showOrgAddress}
             />
-          )}
-
-          {currentStepKey === STEP_EXTRA_INFO && (
-            <>
-              <div className="col-12">
-                <label className="form-label">Extra Info (optional)</label>
-                <textarea
-                  className="form-control"
-                  placeholder="Anything extra you want attached to this event — an address, a note, whatever you want."
-                  id="extraInfo"
-                  name="extraInfo"
-                  rows={5}
-                  style={{ height: "120px", resize: "vertical", paddingTop: "12px" }}
-                  value={extraInfo}
-                  onChange={(event) => setExtraInfo(event.target.value)}
-                />
-                <small className="form-text text-muted">
-                  Its own public/private setting below, independent of everything else.
-                </small>
-              </div>
-
-              <div className="col-12 mt-3">
-                <div className="drawer-modal-preview-card">
-                  <div className="d-flex align-items-center" style={{ gap: "14px" }}>
-                    <div className="form-check form-switch mb-0 flex-shrink-0">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="extraInfoIsPrivate"
-                        aria-label="Extra info is private"
-                        checked={extraInfoIsPrivate}
-                        onChange={(event) => setExtraInfoIsPrivate(event.target.checked)}
-                      />
-                    </div>
-                    <div>
-                      <span className="d-block font-weight-semibold">
-                        {extraInfoIsPrivate ? "Private" : "Public"}
-                      </span>
-                      <small className="form-text text-muted d-block mt-1">
-                        {extraInfoIsPrivate
-                          ? "Hidden until you reveal it later from the event's own page."
-                          : "Visible to anyone as soon as the event is created."}
-                      </small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
           )}
 
           {currentStepKey === STEP_PRIVATE_ATTRIBUTES && (

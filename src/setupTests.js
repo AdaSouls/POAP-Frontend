@@ -17,9 +17,9 @@ if (!navigator.clipboard) {
   });
 }
 
-// jsdom doesn't provide TextEncoder/TextDecoder as globals — needed by anything hashing text via
-// Web Crypto (src/utils/cid.ts's sha256) or, transitively, by the `effect` package some Midnight
-// SDK modules import at module scope. Node's own `util` module has real implementations.
+// jsdom doesn't provide TextEncoder/TextDecoder as globals — needed transitively by the `effect`
+// package some Midnight SDK modules import at module scope. Node's own `util` module has real
+// implementations.
 if (!global.TextEncoder) {
   const { TextEncoder, TextDecoder } = require('util');
   global.TextEncoder = TextEncoder;
@@ -27,8 +27,8 @@ if (!global.TextEncoder) {
 }
 
 // jsdom's window.crypto only has getRandomValues, not the full Web Crypto API (no `.subtle`) —
-// needed by anything hashing via crypto.subtle.digest (src/utils/cid.ts's sha256). Node's own
-// `crypto.webcrypto` is a real, spec-compliant implementation.
+// needed by anything hashing via crypto.subtle.digest. Node's own `crypto.webcrypto` is a real,
+// spec-compliant implementation.
 if (!global.crypto || !global.crypto.subtle) {
   const { webcrypto } = require('crypto');
   Object.defineProperty(global, 'crypto', { value: webcrypto, writable: true, configurable: true });

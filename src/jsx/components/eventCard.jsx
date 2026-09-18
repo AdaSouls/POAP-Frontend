@@ -8,9 +8,6 @@ import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import { getEventStatus, getEventStatusLabel } from "../../utils/poapHelpers";
 import { getEvent, getTokensByEvent } from "../../midnight/indexer.service";
-import { getPrivateEventDraft } from "../../midnight/private-event-metadata";
-import { getPrivateContentSignedUrl } from "../../services/ipfs.service";
-import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../toasts/sweetAlerts";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
 import { getClaimActionLabel, getSubscriberListLabel, getTaxonomyEntries } from "../constants/eventCategories";
@@ -86,78 +83,6 @@ const EventCard = forwardRef(({
   // (organizer-minted) events.
   const canMintForEvent =
     variant !== "explore" && !event.isPublicMint && (isAdmin || provider?.address === event.issuerPk);
-
-  // Private-event metadata (commit/reveal) — only ever shown to the actual owner (not just any
-  // admin: reveal needs the (value, rand) pair only the creating browser ever had, see
-  // private-event-metadata.ts) and only if this exact browser is the one that created it —
-  // independent of whether the EVENT itself is public or private, since the extra-info field has
-  // its own public/private switch in createEvent.jsx now. No local draft (different device,
-  // cleared storage, field left public, or no extra info at all) means nothing to show — see
-  // private-event-metadata.ts's accepted limitation.
-  const isOwner = provider?.address === event.issuerPk;
-  const privateDraft = useMemo(
-    () => (isOwner ? getPrivateEventDraft(event.eventId) : null),
-    [isOwner, event.eventId],
-  );
-  const [revealStatus, setRevealStatus] = useState("checking"); // "checking" | "not-revealed" | "revealed"
-  const [revealedNotes, setRevealedNotes] = useState(null);
-  const [revealing, setRevealing] = useState(false);
-
-  useEffect(() => {
-    if (!isExpanded || !privateDraft || !provider) return undefined;
-    let cancelled = false;
-    setRevealStatus("checking");
-    provider.service
-      .getState()
-      .then(({ ledger }) => {
-        if (cancelled) return null;
-        const eventIdBytes = Uint8Array.from(Buffer.from(event.eventId, "hex"));
-        if (!ledger.eventRevealedMetadata.member(eventIdBytes)) {
-          setRevealStatus("not-revealed");
-          return null;
-        }
-        setRevealStatus("revealed");
-        // Fetched via the signed-URL path (not read back from localStorage) specifically to prove
-        // the on-chain value → CID → content round trip actually works, not just that this browser
-        // remembers what it typed in.
-        return getPrivateContentSignedUrl(privateDraft.valueHex)
-          .then((url) => fetch(url))
-          .then((response) => response.json())
-          .then((json) => {
-            if (!cancelled) setRevealedNotes(json?.notes ?? null);
-          });
-      })
-      .catch((error) => {
-        console.error("Error checking private-metadata reveal status:", error);
-        if (!cancelled) setRevealStatus("not-revealed");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isExpanded, privateDraft, provider, event.eventId]);
-
-  const handleReveal = async () => {
-    if (!privateDraft || !provider) return;
-    setRevealing(true);
-    try {
-      loadingFunction("Revealing Private Info", `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
-      const eventIdBytes = Uint8Array.from(Buffer.from(event.eventId, "hex"));
-      const valueBytes = Uint8Array.from(Buffer.from(privateDraft.valueHex, "hex"));
-      const randBytes = Uint8Array.from(Buffer.from(privateDraft.randHex, "hex"));
-      const { txHash } = await provider.service.revealPrivateMetadata(eventIdBytes, valueBytes, randBytes);
-      setRevealStatus("revealed");
-      const url = await getPrivateContentSignedUrl(privateDraft.valueHex);
-      const response = await fetch(url);
-      const json = await response.json();
-      setRevealedNotes(json?.notes ?? null);
-      succesfullBlockchainCreation("Private Info Revealed", `Transaction: ${txHash}`, "");
-    } catch (error) {
-      console.error("Error revealing private metadata:", error);
-      errorFunction("Error", error.message || "Failed to reveal private info. Please try again.", "");
-    } finally {
-      setRevealing(false);
-    }
-  };
 
   const openMintDrawer = () => {
     dispatch({ type: "CREATE_MINT", payload: event });
@@ -479,13 +404,6 @@ const EventCard = forwardRef(({
                           <p className="text-muted small mb-0">{metadata.description}</p>
                         )
                       )}
-                      {/* Extra info the organizer opted to make public (see createEvent.jsx's own
-                          public/private switch for this field) — same metadataURI JSON as
-                          name/description, visible to anyone, no reveal needed. Not to be confused
-                          with the owner-only private-info block further down. */}
-                      {metadata?.notes && (
-                        <p className="text-muted small mb-0 mt-1">{metadata.notes}</p>
-                      )}
                     </div>
                   )}
                 </div>
@@ -607,33 +525,6 @@ const EventCard = forwardRef(({
                       <Lock size={14} className="mr-2" />
                       Ask for a Disclosure
                     </button>
-                  )}
-
-                  {privateDraft && (
-                    <div className="mt-3">
-                      <p className="m-0 small text-muted mb-1">Private Info</p>
-                      {revealStatus === "checking" ? (
-                        <p className="text-muted small mb-0">Checking reveal status…</p>
-                      ) : (
-                        <>
-                          <p className="m-0 text-break small font-weight-semibold mb-2">
-                            {revealStatus === "revealed" ? revealedNotes : privateDraft.notes}
-                          </p>
-                          {revealStatus === "revealed" ? (
-                            <span className="badge bg-success">Revealed</span>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn btn-card-detail-action btn-sm"
-                              onClick={handleReveal}
-                              disabled={revealing}
-                            >
-                              {revealing ? "Revealing…" : "Reveal"}
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
                   )}
 
                   {!event.isActive && event.deactivatedBlock && (
