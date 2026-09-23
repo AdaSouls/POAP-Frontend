@@ -13,6 +13,7 @@ const CORS_ALLOWED_ORIGIN = process.env.CORS_ALLOWED_ORIGIN || 'http://localhost
 const PINATA_UPLOAD_URL = 'https://uploads.pinata.cloud/v3/files';
 const PINATA_GATEWAYS_URL = 'https://api.pinata.cloud/v3/gateways';
 const PINATA_SIGNED_URL_URL = 'https://api.pinata.cloud/v3/files/private/download_link';
+const PINATA_PRIVATE_FILES_URL = 'https://api.pinata.cloud/v3/files/private';
 // How long a signed URL stays valid — just long enough for the frontend to fetch it once right
 // after asking, not meant to be cached/reused by the client.
 const SIGNED_URL_EXPIRES_SECONDS = 300;
@@ -24,14 +25,16 @@ if (!PINATA_JWT) {
 
 const app = express();
 app.use(cors({ origin: CORS_ALLOWED_ORIGIN }));
-app.use(express.json());
+// Encrypted backups (see /api/backup below) are the largest JSON bodies this server takes.
+app.use(express.json({ limit: '1mb' }));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-async function pinToIpfs(blob, filename, network) {
+async function pinToIpfs(blob, filename, network, keyvalues) {
   const form = new FormData();
   form.append('file', blob, filename);
   form.append('network', network);
+  if (keyvalues) form.append('keyvalues', JSON.stringify(keyvalues));
 
   const response = await fetch(PINATA_UPLOAD_URL, {
     method: 'POST',
@@ -45,7 +48,7 @@ async function pinToIpfs(blob, filename, network) {
   }
 
   const { data } = await response.json();
-  return `ipfs://${data.cid}`;
+  return { uri: `ipfs://${data.cid}`, id: data.id, cid: data.cid };
 }
 
 app.post('/api/ipfs/upload-image', upload.single('image'), async (req, res) => {
@@ -55,7 +58,7 @@ app.post('/api/ipfs/upload-image', upload.single('image'), async (req, res) => {
   }
   try {
     const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
-    const uri = await pinToIpfs(blob, req.file.originalname || 'image', 'public');
+    const { uri } = await pinToIpfs(blob, req.file.originalname || 'image', 'public');
     res.json({ uri });
   } catch (error) {
     console.error('[ipfs-server] upload-image failed:', error);
@@ -66,7 +69,7 @@ app.post('/api/ipfs/upload-image', upload.single('image'), async (req, res) => {
 app.post('/api/ipfs/upload-json', async (req, res) => {
   try {
     const blob = new Blob([JSON.stringify(req.body)], { type: 'application/json' });
-    const uri = await pinToIpfs(blob, 'metadata.json', 'public');
+    const { uri } = await pinToIpfs(blob, 'metadata.json', 'public');
     res.json({ uri });
   } catch (error) {
     console.error('[ipfs-server] upload-json failed:', error);
@@ -85,7 +88,7 @@ app.post('/api/ipfs/upload-json', async (req, res) => {
 app.post('/api/ipfs/upload-json-private', async (req, res) => {
   try {
     const blob = new Blob([JSON.stringify(req.body)], { type: 'application/json' });
-    const uri = await pinToIpfs(blob, 'private-metadata.json', 'private');
+    const { uri } = await pinToIpfs(blob, 'private-metadata.json', 'private');
     res.json({ uri });
   } catch (error) {
     console.error('[ipfs-server] upload-json-private failed:', error);
@@ -154,6 +157,27 @@ app.get('/api/ipfs/gateway-domain', async (req, res) => {
   }
 });
 
+// Short-lived signed URL for one private-network file of this account.
+async function createSignedUrl(cid) {
+  const gatewayDomain = await getGatewayDomain();
+  const response = await fetch(PINATA_SIGNED_URL_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${PINATA_JWT}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: `https://${gatewayDomain}.mypinata.cloud/files/${cid}`,
+      expires: SIGNED_URL_EXPIRES_SECONDS,
+      date: Math.floor(Date.now() / 1000),
+      method: 'GET',
+    }),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Pinata signed-URL request failed (${response.status}): ${text || response.statusText}`);
+  }
+  const { data: url } = await response.json();
+  return url;
+}
+
 // Given the 32-byte `value` a client already has (either because it's the organizer who computed
 // it at createEvent time, or because it read it off the public ledger's eventRevealedMetadata
 // after a reveal — see contract.service.ts), mints a short-lived signed URL for the matching
@@ -168,26 +192,90 @@ app.post('/api/ipfs/private-signed-url', async (req, res) => {
       res.status(400).json({ error: 'Expected a 32-byte hex "value" (64 hex characters)' });
       return;
     }
-    const cid = cidFromDigestHex(value);
-    const gatewayDomain = await getGatewayDomain();
-    const response = await fetch(PINATA_SIGNED_URL_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${PINATA_JWT}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url: `https://${gatewayDomain}.mypinata.cloud/files/${cid}`,
-        expires: SIGNED_URL_EXPIRES_SECONDS,
-        date: Math.floor(Date.now() / 1000),
-        method: 'GET',
-      }),
-    });
-    if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      throw new Error(`Pinata signed-URL request failed (${response.status}): ${text || response.statusText}`);
-    }
-    const { data: url } = await response.json();
+    const url = await createSignedUrl(cidFromDigestHex(value));
     res.json({ url });
   } catch (error) {
     console.error('[ipfs-server] private-signed-url failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Encrypted backups ──────────────────────────────────────────────────────────
+//
+// The frontend (src/midnight/backup.ts) encrypts the backup in the browser with the user's password
+// before sending it; this server only ever sees ciphertext. Files are tagged with a Pinata keyvalue
+// `adasoulsBackup=<lookupId>` — lookupId is derived from the password + wallet, so someone who
+// only knows the wallet can't even fetch the ciphertext. Filter syntax (metadata[key]=value on
+// GET /v3/files/private) verified against the real Pinata API on 2026-09-23.
+const LOOKUP_ID_PATTERN = /^[0-9a-f]{64}$/;
+const BACKUP_KEYVALUE = 'adasoulsBackup';
+
+async function listBackups(lookupId) {
+  const params = new URLSearchParams({ [`metadata[${BACKUP_KEYVALUE}]`]: lookupId, order: 'DESC', limit: '20' });
+  const response = await fetch(`${PINATA_PRIVATE_FILES_URL}?${params}`, {
+    headers: { Authorization: `Bearer ${PINATA_JWT}` },
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Pinata list failed (${response.status}): ${text || response.statusText}`);
+  }
+  const { data } = await response.json();
+  return data?.files ?? [];
+}
+
+app.post('/api/backup', async (req, res) => {
+  try {
+    const { lookupId, envelope } = req.body ?? {};
+    if (typeof lookupId !== 'string' || !LOOKUP_ID_PATTERN.test(lookupId)) {
+      res.status(400).json({ error: 'Expected a 32-byte hex "lookupId"' });
+      return;
+    }
+    if (envelope?.format !== 'adasouls-backup' || typeof envelope.ciphertext !== 'string') {
+      res.status(400).json({ error: 'Expected an encrypted AdaSouls backup envelope' });
+      return;
+    }
+    const blob = new Blob([JSON.stringify(envelope)], { type: 'application/json' });
+    const { id } = await pinToIpfs(blob, `adasouls-backup-${lookupId}.json`, 'private', {
+      [BACKUP_KEYVALUE]: lookupId,
+    });
+    // Keep only the newest backup per lookupId. Best-effort: a failed cleanup doesn't fail the backup.
+    try {
+      const older = (await listBackups(lookupId)).filter((file) => file.id !== id);
+      await Promise.all(
+        older.map((file) =>
+          fetch(`${PINATA_PRIVATE_FILES_URL}/${file.id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${PINATA_JWT}` },
+          }),
+        ),
+      );
+    } catch (cleanupError) {
+      console.error('[ipfs-server] backup cleanup failed:', cleanupError);
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[ipfs-server] backup upload failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/backup/:lookupId', async (req, res) => {
+  try {
+    const { lookupId } = req.params;
+    if (!LOOKUP_ID_PATTERN.test(lookupId)) {
+      res.status(400).json({ error: 'Expected a 32-byte hex lookupId' });
+      return;
+    }
+    const [latest] = await listBackups(lookupId);
+    if (!latest) {
+      res.status(404).json({ error: 'No backup found' });
+      return;
+    }
+    const response = await fetch(await createSignedUrl(latest.cid));
+    if (!response.ok) throw new Error(`Backup download failed (${response.status})`);
+    res.json(await response.json());
+  } catch (error) {
+    console.error('[ipfs-server] backup fetch failed:', error);
     res.status(500).json({ error: error.message });
   }
 });

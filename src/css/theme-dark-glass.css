@@ -3565,3 +3565,138 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     transition: none;
   }
 }
+
+/* ── Private-state password + encrypted backup (PasswordStep.jsx, RestoreFields.jsx,
+   backupRestore.jsx, header chip) ─────────────────────────────────────────────── */
+
+.password-step-header {
+  color: var(--text-on-glass);
+}
+
+.password-step .form-check-label {
+  color: var(--text-on-glass-muted);
+}
+
+.password-step-switch {
+  color: var(--text-on-glass-muted) !important;
+}
+
+.password-step-switch:hover {
+  color: var(--text-on-glass) !important;
+}
+
+.restore-source-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.restore-source-option {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-on-glass-muted);
+  font-size: 13px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.restore-source-option:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.restore-source-option.is-selected {
+  border-color: var(--accent-blue);
+  color: var(--text-on-glass);
+}
+
+.restore-file-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Last-backup line in the Backup & Restore popup — amber until there's an up-to-date backup. */
+.backup-status {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid #f1b44c;
+  color: #f1b44c;
+  background: rgba(241, 180, 76, 0.06);
+}
+
+.backup-status.is-ok {
+  border-color: rgba(46, 204, 113, 0.6);
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.06);
+}
+
+/* Header nudge left of the wallet button. Takes over the wallet button's own margin-left:auto
+   (see .header-cta) so the pair stays pushed right together, and pulls in the header's 32px gap. */
+.header-horizontal .header-backup-chip {
+  margin-left: auto;
+  margin-right: -20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #f1b44c;
+  background: rgba(241, 180, 76, 0.08);
+  color: #f1b44c;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.header-horizontal .header-backup-chip:hover {
+  background: rgba(241, 180, 76, 0.16);
+}
+
+.header-horizontal .header-backup-chip ~ .header-cta {
+  margin-left: 0;
+}
+
+/* Recovery code (backupRestore.jsx) — amber until the user confirms they saved it. */
+.recovery-code-box {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.recovery-code-box.is-unsaved {
+  border-color: #f1b44c;
+  background: rgba(241, 180, 76, 0.06);
+}
+
+.recovery-code-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-on-glass-muted);
+}
+
+.recovery-code-value {
+  display: block;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--text-on-glass);
+  word-break: break-all;
+}
+
+.recovery-code-input {
+  font-family: SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+
+/* "Save your recovery code" in the connected wallet popup (laceWallet.jsx). */
+.btn-card-detail-action.is-attention {
+  border-color: #f1b44c;
+  color: #f1b44c !important;
+}

@@ -7,6 +7,7 @@ import {
   getWalletDisplayName,
 } from "../../midnight/providers";
 import { isAdminWallet, deployPoapContract } from "../../midnight/admin-deploy.service";
+import { downloadBackupFile } from "../../midnight/backup";
 
 const truncate = (value, head = 10, tail = 6) =>
   value ? `${value.slice(0, head)}…${value.slice(-tail)}` : "";
@@ -237,6 +238,14 @@ const AdminDeploy = () => {
                       REACT_APP_MIDNIGHT_NETWORK_ID to "{result.networkId}" in .env, then
                       rebuild/restart the app.
                     </p>
+                    <p className="mt-2 mb-2">
+                      <strong>Download the admin backup now.</strong> It is the only copy of this
+                      contract's admin identity besides this browser — lose both and nobody can act as
+                      admin. It opens with this wallet's recovery code (see Backup &amp; Restore in the app).
+                    </p>
+                    <button className="btn btn-gradient btn-sm" onClick={() => downloadBackupFile(result.adminBackup)}>
+                      Download admin backup
+                    </button>
                   </div>
                 )}
 

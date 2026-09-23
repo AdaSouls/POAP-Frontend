@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Check } from "lucide-react";
+import { X, Check, ShieldCheck, ShieldAlert } from "lucide-react";
 import {
   useDrawer,
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
 import { discoverCompatibleWallets, getWalletDisplayName, LaceNotFoundError } from "../../../midnight/providers";
+import { cancelPasswordRequest, subscribePasswordRequest } from "../../../midnight/storage-password";
 import loadingGif from "../../../images/loading.gif";
+import IdentityStep from "../../components/IdentityStep";
+import { useRecoveryCodeSaved } from "../../hooks/useRecoveryCodeSaved";
 
 // How long the button shows the green-fill "Connected" state before flipping to the actual
 // Disconnect button — the card's own reveal (bottom "Connected — 0x…" row + white border) is
@@ -75,6 +78,10 @@ export default function LaceWallet() {
   // background until the unlock lands, the user cancels, or UNLOCK_WAIT_MAX_MS runs out.
   const [waitingUnlock, setWaitingUnlock] = useState(false);
 
+  // Set while connect() waits on the identity step (new browser / missing key — private-state-unlock.ts).
+  const [passwordRequest, setPasswordRequest] = useState(null);
+  useEffect(() => subscribePasswordRequest(setPasswordRequest), []);
+
   const attemptConnect = async () => {
     const newProviderState = await midnight.connect(selectedWallet);
     dispatch({ type: "UPDATE_MIDNIGHT_WALLET", payload: newProviderState });
@@ -88,7 +95,7 @@ export default function LaceWallet() {
       await attemptConnect();
     } catch (err) {
       if (err?.name === "LaceLockedError") setWaitingUnlock(true);
-      else setLocalError(err);
+      else if (err?.name !== "PasswordRequestCancelledError") setLocalError(err);
     }
   };
 
@@ -108,7 +115,7 @@ export default function LaceWallet() {
           if (cancelled) return;
           if (err?.name !== "LaceLockedError" || Date.now() - started > UNLOCK_WAIT_MAX_MS) {
             setWaitingUnlock(false);
-            setLocalError(err);
+            if (err?.name !== "PasswordRequestCancelledError") setLocalError(err);
             return;
           }
         }
@@ -128,7 +135,13 @@ export default function LaceWallet() {
     closeDrawer();
   };
 
-  const errorToShow = waitingUnlock ? null : localError ?? midnight?.error;
+  const codeSaved = useRecoveryCodeSaved(midnight?.provider?.service?.walletCoinPublicKey);
+
+  const openBackup = () => {
+    dispatch({ type: "SHOW_BACKUP" });
+  };
+
+  const errorToShow = waitingUnlock || passwordRequest ? null : localError ?? midnight?.error;
   const selectedWalletName = selectedWallet ? getWalletDisplayName(selectedWallet) : "Midnight";
   // Card reveal (bottom "Connected — 0x…" row, white border, matching divider line) fires the
   // moment the button first says "Connected" (phase "success"), not delayed until it later flips
@@ -152,7 +165,9 @@ export default function LaceWallet() {
       </div>
       <div className="drawer-body">
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {isRevealed ? (
+          {passwordRequest && !isRevealed ? (
+            <IdentityStep request={passwordRequest} />
+          ) : isRevealed ? (
             <div
               className={
                 "card card-button" +
@@ -218,6 +233,20 @@ export default function LaceWallet() {
             )
           )}
 
+          {phase === "connected" && (
+            codeSaved === false ? (
+              <button type="button" className="btn btn-card-detail-action btn-sm mt-3 align-self-start is-attention" onClick={openBackup}>
+                <ShieldAlert size={14} className="mr-2" />
+                Save your recovery code
+              </button>
+            ) : (
+              <button type="button" className="btn btn-card-detail-action btn-sm mt-3 align-self-start" onClick={openBackup}>
+                <ShieldCheck size={14} className="mr-2" />
+                Backup &amp; Restore
+              </button>
+            )
+          )}
+
           {waitingUnlock && (
             <div className="alert alert-info mt-3 d-flex align-items-center" role="status">
               <img src={loadingGif} width="16" height="16" alt="" className="mr-2" />
@@ -259,6 +288,10 @@ export default function LaceWallet() {
           >
             <span className="wallet-connect-btn-fill" aria-hidden="true" />
             <span className="wallet-connect-btn-label">{phase === "connected" ? "Disconnect" : "Connected"}</span>
+          </button>
+        ) : passwordRequest ? (
+          <button className="btn btn-outline-light" onClick={cancelPasswordRequest}>
+            Cancel
           </button>
         ) : waitingUnlock ? (
           <button className="btn btn-outline-light" onClick={() => setWaitingUnlock(false)}>

@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Wallet, ChevronUp, ChevronDown, Award, PlusCircle } from "lucide-react";
+import { Wallet, ChevronUp, ChevronDown, Award, PlusCircle, ShieldAlert } from "lucide-react";
 import logo from "../../images/logo.png";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
 import { useLastRolePath, DEFAULT_ROLE_PATH } from "../hooks/useLastRolePath";
 import Tooltip from "../components/Tooltip";
+import { subscribeBackupStatus } from "../../midnight/backup-status";
+import { useRecoveryCodeSaved } from "../hooks/useRecoveryCodeSaved";
 
 // Horizontal top nav, matching the structure of the poap.xyz reference (logo + nav + a single
 // CTA, all in one bar, full-width content below), not just its color scheme.
@@ -165,6 +167,22 @@ const Header = () => {
     dispatch({ type: "SHOW_MIDNIGHT_WALLET" });
   };
 
+  // Persistent nudge until the connected wallet's recovery code is saved and its backup is up to
+  // date (see src/midnight/storage-password.ts / backup-status.ts). Automatic backups normally clear
+  // the backup part on their own; the recovery code only the user can confirm.
+  const [backupStatus, setBackupStatus] = useState(null);
+  useEffect(() => subscribeBackupStatus(setBackupStatus), []);
+  const codeSaved = useRecoveryCodeSaved(midnight.provider?.service?.walletCoinPublicKey);
+  const backupWarning = !midnight.provider
+    ? null
+    : codeSaved === false
+      ? "Save recovery code"
+      : backupStatus && !backupStatus.lastBackupAt
+        ? "Not backed up"
+        : backupStatus?.dirty
+          ? "Backup outdated"
+          : null;
+
   // Role info/explanation lives on the landing (/organizer, /subscriber) — switching role in the
   // app instead returns to wherever that role last left off (see useLastRolePath.js), falling back
   // to its default page the first time it's ever selected.
@@ -200,6 +218,17 @@ const Header = () => {
               </NavLink>
             ))}
           </nav>
+
+          {backupWarning && (
+            <button
+              type="button"
+              className="header-backup-chip"
+              onClick={() => dispatch({ type: "SHOW_BACKUP" })}
+            >
+              <ShieldAlert size={14} />
+              <span>{backupWarning}</span>
+            </button>
+          )}
 
           <Tooltip label={midnight.provider ? "Wallet connected" : "Connect wallet"}>
             <button

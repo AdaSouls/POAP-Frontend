@@ -4,6 +4,15 @@ import { Contract } from './contract/managed/poap/contract/index.js';
 import { compiledPoapContract } from './contract.service';
 import { POAP_PRIVATE_STATE_KEY, buildProviders, connectToWalletForNetwork } from './providers';
 import { createPoapPrivateState, type PoapPrivateState } from './witnesses';
+import { createBackup, type BackupEnvelope } from './backup';
+import {
+  clearStoragePassword,
+  generateRecoveryCode,
+  getStoredRecoveryCode,
+  hasStoragePassword,
+  setStoragePassword,
+  storeRecoveryCode,
+} from './storage-password';
 
 // Gate for /admin/deploy — see .env.example's REACT_APP_ADMIN_WALLET_ADDRESSES. Client-side UI
 // gating only, same convention as isAdmin in user-roles.provider.jsx (there it's derived from the
@@ -24,6 +33,9 @@ export type DeployResult = {
   contractAddress: string;
   deployTxHash: string;
   networkId: string;
+  // Encrypted backup of the new contract's admin identity (opens with this wallet's recovery code)
+  // — the only copy besides this browser. Losing both means nobody can act as admin on it.
+  adminBackup: BackupEnvelope;
 };
 
 // Deploys a brand-new POAP contract using the connected wallet (Lace/1am) as both the fee-paying
@@ -33,8 +45,17 @@ export type DeployResult = {
 // extension instead of a Node-side MidnightWalletProvider — see providers.ts's buildProviders()
 // for why that avoids the multi-hour cold-sync problem a fresh headless wallet has on a real
 // network: Lace balances/signs using its own already-synced session, not a from-genesis rescan.
+//
+// The new admin identity is encrypted with this wallet's key in this browser (its recovery code,
+// see storage-password.ts) — the existing one, or a freshly generated one for a wallet new here.
 export async function deployPoapContract(wallet: InitialAPI, networkId: string): Promise<DeployResult> {
   const connection = await connectToWalletForNetwork(wallet, networkId);
+  const coinPublicKey = connection.shieldedAddress.shieldedCoinPublicKey;
+  let key = getStoredRecoveryCode(coinPublicKey);
+  if (!key) {
+    key = generateRecoveryCode();
+    storeRecoveryCode(coinPublicKey, key, false);
+  }
   const providers = await buildProviders(connection);
   const config = await connection.connectedApi.getConfiguration();
 
@@ -46,15 +67,29 @@ export async function deployPoapContract(wallet: InitialAPI, networkId: string):
   crypto.getRandomValues(secretKey);
   const initialPrivateState: PoapPrivateState = createPoapPrivateState(secretKey);
 
-  const deployed: DeployedContract<Contract<PoapPrivateState>> = await deployContract(providers, {
-    compiledContract: compiledPoapContract,
-    privateStateId: POAP_PRIVATE_STATE_KEY,
-    initialPrivateState,
-  });
+  // Only borrow the session password if nothing else (a connected wallet in this same tab) set one.
+  const borrowedSession = !hasStoragePassword();
+  if (borrowedSession) setStoragePassword(key);
+  try {
+    const deployed: DeployedContract<Contract<PoapPrivateState>> = await deployContract(providers, {
+      compiledContract: compiledPoapContract,
+      privateStateId: POAP_PRIVATE_STATE_KEY,
+      initialPrivateState,
+    });
+    const contractAddress = deployed.deployTxData.public.contractAddress;
+    providers.privateStateProvider.setContractAddress(contractAddress);
+    const adminBackup = await createBackup(providers.privateStateProvider, POAP_PRIVATE_STATE_KEY, key, {
+      networkId: config.networkId,
+      contractAddress,
+    });
 
-  return {
-    contractAddress: deployed.deployTxData.public.contractAddress,
-    deployTxHash: deployed.deployTxData.public.txHash,
-    networkId: config.networkId,
-  };
+    return {
+      contractAddress,
+      deployTxHash: deployed.deployTxData.public.txHash,
+      networkId: config.networkId,
+      adminBackup,
+    };
+  } finally {
+    if (borrowedSession) clearStoragePassword();
+  }
 }

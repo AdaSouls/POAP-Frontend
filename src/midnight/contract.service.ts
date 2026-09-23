@@ -17,6 +17,15 @@ import type { MerkleTreePathArg } from './merkle';
 
 export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
 
+// Output of PoapContractService.prepare(): a connected wallet with providers built and scoped to
+// the contract, before anything has touched the (still locked) private state.
+export type PreparedConnection = {
+  contractAddress: ContractAddress;
+  providers: PoapProviders;
+  coinPublicKey: string;
+  privateStateKey: string;
+};
+
 // Pure — no ledger/witness access, no proof, no transaction (confirmed in the compiled contract:
 // exported as a standalone pureCircuits function, not part of provableCircuits/callTx at all).
 // This *is* the compiled contract's own persistentCommit computation, not a hand-reimplementation,
@@ -81,37 +90,44 @@ export class PoapContractService {
     readonly walletCoinPublicKey: string,
   ) {}
 
-  static async connect(contractAddress: ContractAddress, wallet: InitialAPI): Promise<PoapContractService> {
-    console.log('[PoapContractService.connect] connectToWallet()…');
+  // Connecting runs in three steps so the caller can put the interactive one — unlocking the
+  // private state with the user's password (private-state-unlock.ts) — between the other two,
+  // outside any timeout: prepare() → unlockPrivateState(prepared...) → finish(prepared).
+  static async prepare(contractAddress: ContractAddress, wallet: InitialAPI): Promise<PreparedConnection> {
+    console.log('[PoapContractService.prepare] connectToWallet()…');
     const connection = await connectToWallet(wallet);
-    console.log('[PoapContractService.connect] connectToWallet() resolved');
+    console.log('[PoapContractService.prepare] connectToWallet() resolved');
     const providers = await buildProviders(connection);
-    console.log('[PoapContractService.connect] buildProviders() resolved');
+    console.log('[PoapContractService.prepare] buildProviders() resolved');
     // Required before any private-state get/set — scopes storage to this contract address
     // (namespace isolation between different contracts sharing the same browser profile).
     providers.privateStateProvider.setContractAddress(contractAddress);
+    return {
+      contractAddress,
+      providers,
+      coinPublicKey: connection.shieldedAddress.shieldedCoinPublicKey,
+      privateStateKey: POAP_PRIVATE_STATE_KEY,
+    };
+  }
+
+  static async finish(prepared: PreparedConnection): Promise<PoapContractService> {
+    const { contractAddress, providers, coinPublicKey } = prepared;
     const { privateState, isNew } = await getOrCreatePrivateState(providers);
-    console.log('[PoapContractService.connect] getOrCreatePrivateState() resolved, isNew:', isNew);
+    console.log('[PoapContractService.finish] getOrCreatePrivateState() resolved, isNew:', isNew);
 
     // findDeployedContract's initialPrivateState must only be passed the first time (it requires
     // there be NO pre-existing private state at this key); on subsequent connects it loads the
     // existing state from the provider itself, so we omit it.
-    console.log('[PoapContractService.connect] findDeployedContract()…');
+    console.log('[PoapContractService.finish] findDeployedContract()…');
     const deployedContract = await findDeployedContract(providers, {
       compiledContract: compiledPoapContract,
       contractAddress,
       privateStateId: POAP_PRIVATE_STATE_KEY,
       ...(isNew ? { initialPrivateState: privateState } : {}),
     });
-    console.log('[PoapContractService.connect] findDeployedContract() resolved');
+    console.log('[PoapContractService.finish] findDeployedContract() resolved');
 
-    return new PoapContractService(
-      deployedContract,
-      providers,
-      privateState,
-      contractAddress,
-      connection.shieldedAddress.shieldedCoinPublicKey,
-    );
+    return new PoapContractService(deployedContract, providers, privateState, contractAddress, coinPublicKey);
   }
 
   /** Reactive stream combining public ledger state with this browser's private token state. */

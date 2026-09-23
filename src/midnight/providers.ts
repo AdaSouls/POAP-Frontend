@@ -9,6 +9,8 @@ import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-ap
 import { Transaction, type FinalizedTransaction, type TransactionId } from '@midnight-ntwrk/ledger-v8';
 import { createPoapPrivateState, createWitnesses, type PoapPrivateState } from './witnesses';
 import { setTxPhase, trackTxPhase } from './tx-status';
+import { getStoragePassword } from './storage-password';
+import { markBackupDirty } from './backup-status';
 import type { ImpureCircuits } from './contract/managed/poap/contract/index.js';
 
 export type PoapCircuitId = keyof ImpureCircuits<unknown>;
@@ -19,7 +21,7 @@ export const POAP_ZK_CONFIG_BASE_PATH = '/midnight/poap';
 // configured network and REACT_APP_MIDNIGHT_CONTRACT_ADDRESS (a contract address only resolves on
 // the network it was actually deployed to). See docs/environment.md in ../POAP-Midnight and
 // deploy.ts's envConfig/TARGET_NETWORK for the backend-side counterpart of this same switch.
-const NETWORK_ID = process.env.REACT_APP_MIDNIGHT_NETWORK_ID || 'undeployed';
+export const NETWORK_ID = process.env.REACT_APP_MIDNIGHT_NETWORK_ID || 'undeployed';
 // The proof server is local for every network, always — confirmed 2026-08-29/30 two ways:
 // (1) docs.midnight.network/guides/networks-and-environments states it explicitly ("stays local
 // for every network... it handles your private data"), and (2) empirically: Lace's
@@ -289,12 +291,9 @@ export async function buildProviders(connection: WalletConnection) {
   console.log('[buildProviders] getConfiguration() resolved:', config);
 
   const rawPrivateStateProvider = levelPrivateStateProvider<{ [POAP_PRIVATE_STATE_KEY]: PoapPrivateState }>({
-    // Local dev only: private state is encrypted at rest and now requires a password. There's no
-    // real secret to protect beyond what's already in this browser profile's private state, so a
-    // fixed password is fine here — do not reuse this pattern for anything storing real value.
-    // Must satisfy midnight-js-utils' validatePassword policy: 16+ chars, at least 3 of
-    // {upper, lower, digit, special}, no 4+ repeated/sequential chars.
-    privateStoragePasswordProvider: () => 'AdaSouls-Local-Dev-2026!',
+    // The user's own password, entered when connecting (see private-state-unlock.ts) and kept in
+    // memory only. Any private-state read/write before that throws StorageLockedError.
+    privateStoragePasswordProvider: () => getStoragePassword(),
     accountId: shieldedAddress.shieldedAddress,
   });
   const rawPublicDataProvider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri);
@@ -305,7 +304,9 @@ export async function buildProviders(connection: WalletConnection) {
       ...rawPrivateStateProvider,
       async set(id: typeof POAP_PRIVATE_STATE_KEY, state: PoapPrivateState) {
         try {
-          return await rawPrivateStateProvider.set(id, state);
+          const result = await rawPrivateStateProvider.set(id, state);
+          markBackupDirty();
+          return result;
         } catch (error) {
           logFiberFailure('privateStateProvider.set', error);
           throw error;

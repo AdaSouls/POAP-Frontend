@@ -1,235 +1,187 @@
 # Brainstorm — Selective disclosure respondida por el suscriptor + respaldo cifrado
 
-Estado: **PAUSADO (2026-09-23)**. Retomar desde "Próximo paso" al final.
+Estado: **EN CURSO — construcción por etapas (2026-09-23)**. Se construye en el frontend lo que
+funciona con el contrato actual y se deja preparado (detrás de detección de circuitos) lo que depende
+del backend. Ver "Plan por etapas" al final.
 Target: Catalyst Hito 5 (2026-10-30).
 
-## Objetivo (Paso 1, confirmado)
+## Objetivo
 
-- **Problema**: que el **suscriptor/holder** pueda probarle a un tercero un predicado sobre un dato
-  privado (ej. "mi valor ∈ {EU, US, LATAM}") **sin revelarlo** y sin depender de que el organizador
-  responda por él. Hoy solo el organizador puede responder (es el único que tiene `value`/`rand`).
-- **Alcance por categoría**:
-  - **Event / Follow (Subscription)**: campos privados **iguales para todos** los suscriptores
-    (mint público).
-  - **Credential**: campos privados **únicos por destinatario** (mint individual vía `mintTo`).
+- **Problema**: que el **holder** pueda demostrar un predicado sobre un dato privado de su POAP
+  (ej. "Región ∈ {EU, US, LATAM}") **sin revelarlo** y sin depender de que el organizador responda
+  por él. Hoy solo el organizador puede responder (es el único que tiene `value`/`rand`).
+- **Caso de uso**: un tercero le pide al holder que demuestre la veracidad de un dato de su POAP.
+  El tercero **no usa la app**: solo pide. El holder genera la prueba y se la **muestra** (pantalla o
+  link a la transacción).
 - **Respaldo**: los secretos (`value`/`rand` de cada campo) y la clave de identidad `local_sk` hoy
-  viven solo en el navegador. Se quiere un respaldo cifrado en Pinata privado. Aplica a **ambos
-  roles** (organizador y suscriptor).
-- **Deadline**: entra en el Hito 5.
+  viven solo en el navegador → respaldo cifrado en Pinata privado, para **ambos roles**.
 
-## Lo que se encontró explorando el sistema (Paso 2)
+## Alcance (decidido 2026-09-23)
 
-- `proveAttributeMembership` (`poap.compact`) no verifica identidad: quien conoce la apertura
-  `(value, rand)` de una hoja puede probar. Si el suscriptor tiene la apertura, puede responder él
-  mismo — sin cambios de contrato.
-- `proveAttributeMembershipOnce`: el nullifier usa `local_sk()` de quien prueba + `requestId`, así
-  que en un evento compartido **cada wallet puede responder una vez** por pedido.
-- `privateAttributesRoot` se fija **una sola vez** en `createEvent` (profundidad 8 → máx. 256 hojas)
-  y no hay circuito para modificarlo. **Los atributos son del evento, no del token.**
-- La prueba **no queda atada a quién la genera**: el tercero no puede distinguir si respondió el
-  holder, el organizador o cualquiera que tenga la apertura.
-- Existe `tokenPrivateMetadataCommit` por token (en `mintTo`), pero solo tiene commit/reveal
-  (`revealPrivateTokenMetadata` publica el valor para siempre) — no sirve para selective disclosure.
-  El frontend hoy siempre manda ceros.
-- `local_sk` vive en el private state del navegador (IndexedDB, `getOrCreatePrivateState` en
-  `providers.ts`). Perderla = el organizador pierde control de sus eventos y el suscriptor deja de
-  ver sus POAPs. **Riesgo mayor que perder los drafts de atributos.**
+- **Hasta que lleguen los cambios del backend, NO hay campos únicos por credencial.** Los campos
+  privados son **del evento** — iguales para todos los holders, en todas las categorías (Event,
+  Follow y Credential). Todo lo de este documento funciona **sin cambios de contrato**.
+- **Solo el organizador publica pedidos** ("Ask for a Disclosure"), desde la card expandida de su
+  propio evento. Se saca el botón de las cards de evento de Explore (rol subscriber).
+- **El subscriber**, desde la card expandida de su POAP: **responde** los pedidos del organizador y
+  puede **generar una prueba por iniciativa propia** ("Prove an Attribute").
+- **Sin verificación por parte de terceros**: no hay página pública de verificación ni link de
+  verificación. El comprobante es algo que el holder muestra.
+- **Solo pedidos `Once`** (`proveAttributeMembershipOnce`). Se elimina la variante repetible y la
+  elección en la UI.
+- **Canal de respuesta = el comprobante (opción a)**: ni el organizador ni un tercero pueden ver
+  respuestas on-chain; el holder les muestra/manda el comprobante.
+
+## Lo que se sabe del sistema (verificado en `poap.compact` / indexer)
+
+- `proveAttributeMembership[Once]` **no verifica identidad**: quien conoce la apertura
+  `(value, rand)` puede probar. Si el holder tiene la apertura, responde él mismo.
+- `publishDisclosureRequest` **no tiene gate**: cualquier wallet publica; el pedido guarda
+  `verifier = caller_pk()`. → El holder puede publicar un pedido sobre el evento de su POAP para
+  "Prove an Attribute".
+- `privateAttributesRoot` se fija una sola vez en `createEvent` (profundidad 8 → máx. 256 hojas).
+  **Los atributos son del evento, no del token.**
+- **La variante sin `Once` no deja rastro** en el ledger (el indexer no la ve). **`Once` guarda un
+  nullifier `hash(local_sk, requestId)`** en `usedDisclosures`, pero **no se puede asociar al
+  `requestId`**: el indexer solo sabe que *alguien* respondió *algo*. → Nadie puede contar
+  respuestas por pedido; por eso el canal es el comprobante.
+- Nullifiers del mismo holder en pedidos distintos **no se pueden correlacionar** (dependen del
+  `requestId`) → `Once` no cuesta privacidad.
+- `Once` es "una vez por `local_sk` por pedido", no por persona: otra wallet (u otra `local_sk` tras
+  perder la anterior) puede volver a responder el mismo pedido.
+- `local_sk` vive en el private state del navegador (IndexedDB, `getOrCreatePrivateState`).
+  Perderla = el organizador pierde control de sus eventos y el holder deja de ver sus POAPs.
 - `private-attribute-drafts.ts`: los secretos del organizador viven solo en `localStorage`.
 - `disclosure-response.ts` exige tener los drafts de **todos** los campos del evento para
-  reconstruir el árbol.
-- `server/` (este repo) ya tiene `upload-json-private` (Pinata `network: private`) y
-  `private-signed-url` (sin autenticación — cualquiera con el CID obtiene un link).
-- Wallet: `signData` existe (dapp-connector-api v4, `keyType: 'unshielded'`) pero probablemente no
-  es determinística → no sirve para derivar una clave de cifrado reproducible (sin verificar).
-- Los eventos Credential (`isPublicMint: false`) no aparecen en Explore → un verificador externo no
-  tiene hoy un punto de entrada para "Ask for a Disclosure" sobre una credencial.
-- `publishDisclosureRequest.jsx:72` acepta conjuntos de 1 solo valor (equivale a revelarlo), aunque
-  el texto de ayuda pide al menos un señuelo.
+  reconstruir el árbol → el kit tiene que incluir todas las aperturas del evento.
+- `server/` ya tiene `upload-json-private` (Pinata `network: private`) y `private-signed-url`.
+- `publishDisclosureRequest.jsx` acepta conjuntos de 1 solo valor (equivale a revelarlo).
 
-### Aclaración: qué significa "una vez por pedido" en la variante `Once`
+## Diseño
 
-No es una vez en la vida: es **una vez por pedido** (`requestId`), y cada pedido es independiente.
+### Datos: qué garantiza la prueba y qué no
+- Prueba que **quien conoce las aperturas del evento** sabe que el valor ∈ conjunto. **No prueba que
+  quien responde tenga el POAP** — eso lo muestra la card del POAP (sello verificado + tx de mint).
+  El comprobante muestra las dos cosas juntas.
+- Como los campos son iguales para todos, lo que se prueba es un **atributo del evento** ("el evento
+  fue en EU"), no un dato personal. El copy de la UI no debe prometer "tu dato personal".
 
-- Al responder con `proveAttributeMembershipOnce`, el contrato guarda un nullifier
-  `hash(local_sk del que responde, requestId)` en `usedDisclosures`.
-- **Mismo suscriptor, mismo pedido, segunda vez** → misma marca → rechazado ("Disclosure already
-  redeemed for this request").
-- **Otro pedido** (del mismo verificador o de otro, aunque pregunte lo mismo) → otro `requestId` →
-  puede responder.
-- **Otro suscriptor, mismo pedido** → otra `local_sk` → otra marca → puede responder.
-- `Once` es **opcional**: `proveAttributeMembership` (sin `Once`) no guarda nada y se puede responder
-  ilimitadamente. `Once` es para casos tipo "canjear un beneficio una vez por persona". Hoy quien
-  **responde** elige la variante en la UI, no el verificador → **decisión abierta 6**: si el
-  verificador necesita "una sola vez", cómo se le exige (ej. que el pedido indique que espera `Once`
-  y la UI de respuesta no ofrezca la otra variante; el contrato en sí no lo impone).
-- La marca depende de `local_sk`, **no de la persona**: otra wallet, o una `local_sk` nueva tras
-  perder la anterior, genera otra marca y podría responder de nuevo el mismo pedido. El respaldo
-  cifrado ayuda acá: restaurar recupera la misma `local_sk`.
+### Organizer — card expandida de su evento (`eventCard.jsx`, `variant="manage"`)
+- **"Ask for a Disclosure"** queda solo acá. El pedido siempre es `Once` (sin selector).
+- **"Share Attribute Kit"** (nuevo): link con **todas** las aperturas del evento en el fragmento `#`
+  (nunca llega a un servidor) para mandar a los holders.
+- My Events: la sección "Pending Disclosure Requests" (hoy: el organizador responde) pasa a ser
+  **"My Requests"** — listado de las preguntas publicadas, sin conteo de respuestas.
 
-## Diseño preliminar presentado (Paso 3) — parcialmente descartado
+### Subscriber — card expandida del POAP (`poapCard.jsx`)
+- **"Disclosure Requests"**: pedidos del organizador sobre ese evento, cada uno con "Respond".
+  Si no hay kit importado → "Import kit".
+- **"Prove an Attribute"** (nuevo): elegir campo + conjunto de valores → por debajo
+  `publishDisclosureRequest` + `proveAttributeMembershipOnce` (**dos firmas**) → comprobante.
+- **Comprobante** (al terminar responder o probar, en el mismo popup): la pregunta
+  ("Región ∈ {EU, US, LATAM}"), el resultado, el POAP que respalda (evento, sello, tx de mint) y el
+  link a la transacción en midnightexplorer.com. Es lo que el holder muestra.
+- **Importar kit**: abrir el link del organizador guarda las aperturas en este navegador; la card
+  del POAP muestra "Kit imported".
+- Se quita "Ask for a Disclosure" de las cards de evento en Explore.
 
-### Event / Follow (vigente)
-- El organizador reparte un **kit de atributos**: link/QR con las aperturas del evento en el
-  fragmento `#` (nunca llega a un servidor). Tenerlo = poder probar (secreto compartido).
-- Página nueva "Importar kit" → guarda las aperturas localmente → `disclosureRespond.jsx` funciona
-  para el suscriptor sin más cambios de lógica (solo copy: "responder" deja de ser exclusivo del
-  organizador).
-- Botón "Compartir kit de atributos" en la tarjeta expandida del evento (organizador).
-
-### Credential (DESCARTADO por el usuario)
-- Se propuso **un evento on-chain por credencial** (maxSupply 1, root con los valores del
-  destinatario) + `mintTo`, con dos firmas por credencial, agrupadas bajo un evento "serie".
-- **Decisión del usuario (2026-09-23): NO.** La idea es mantener el modelo actual — **un evento
-  Credential dentro del cual se emiten las credenciales individuales** — pero con información
-  privada única por cada credencial. Eso no es posible con el contrato actual → requiere cambio de
-  contrato (ver análisis abajo).
-
-### Respaldo cifrado (vigente, sin confirmar detalles)
-- Contenido: `local_sk` (private state) + todas las aperturas (drafts del organizador y kits
-  recibidos por el suscriptor).
+### Respaldo cifrado (ambos roles)
+- Contenido: `local_sk` (private state) + drafts del organizador + kits importados.
 - Cifrado en el navegador: contraseña → PBKDF2 → AES-GCM (WebCrypto). Nunca texto plano en Pinata
   (privado en Pinata ≠ cifrado de punta a punta).
-- Guardado vía `upload-json-private` con una etiqueta de búsqueda; endpoint nuevo en `server/` para
-  obtener el respaldo más reciente por etiqueta. Etiqueta derivada de wallet **+** contraseña (quien
-  solo conoce la wallet no puede ni descargar el cifrado para atacarlo offline).
-- Settings: crear/actualizar/restaurar; auto-respaldo al guardar un secreto nuevo si ya hay
-  contraseña; opción de descargar el archivo cifrado.
+- Guardado vía `upload-json-private` con etiqueta derivada de wallet **+** contraseña; endpoint nuevo
+  en `server/` para obtener el respaldo más reciente por etiqueta.
+- Settings: crear / actualizar / restaurar; auto-respaldo al guardar un secreto nuevo si ya hay
+  contraseña; descargar el archivo cifrado.
 
-### Decisiones abiertas
-1. ~~Agrupación de credenciales (serie + hijas vs. eventos sueltos)~~ — superada por la decisión de
-   arriba.
-2. Kit de Event/Follow: ¿lo recibe cualquiera o solo quien reclamó? (propuesta: el organizador
-   decide a quién mandarlo; con mint público restringirlo no agrega protección real).
-3. ~~Dos firmas por credencial~~ — superada.
-4. Respaldo: ¿contraseña obligatoria para usar atributos privados, u opcional con advertencia?
-5. ¿Endurecer el tamaño mínimo del conjunto en "Ask for a Disclosure"?
-6. `Once` vs. repetible: ¿lo elige el verificador al publicar el pedido (y la UI de respuesta lo
-   respeta) en vez de quien responde? Ver la aclaración sobre `Once` más arriba.
+### Visual
+- Dark-first, reutilizando los popups centrados (`.drawer-modal`), las cards y el popup único de
+  progreso de transacciones (22f3df78). Nada de drawers laterales.
 
-### Riesgos
-- Sin vínculo prueba ↔ holder con el contrato actual (hay que comunicarlo en la UI).
-- Respaldo: la contraseña da acceso a la identidad completa; si se olvida no hay recuperación.
-- Corrección criptográfica real solo verificable en vivo contra el devnet (Jest usa el hash
-  simulado). La prueba en vivo del flujo actual de selective disclosure también sigue pendiente.
+## Decisiones
 
-## Análisis: cambios de contrato para credenciales con atributos privados por token
+### Cerradas
+- Alcance sin campos únicos por credencial hasta el cambio de backend.
+- Solo el organizador pide; subscriber responde + "Prove an Attribute" desde su POAP.
+- Sin verificación de terceros; el comprobante es el canal (opción a).
+- Solo `Once`.
+- ~~Un evento on-chain por credencial~~ — descartado por el usuario.
+- **Kit**: el organizador lo comparte manualmente a quien quiera (un link por evento).
+- **Respaldo**: contraseña opcional, con aviso persistente mientras no esté configurada.
+- **Conjunto**: mínimo 2 valores al pedir / probar.
+- **"Prove an Attribute"**: dos firmas aceptadas; el popup de progreso muestra "paso 1 de 2 / 2 de 2".
 
-(Fuera del alcance de este repo — sería un pedido a Matías para `../POAP-Midnight`.)
+## Riesgos
+- La prueba no queda atada al holder (contrato actual) → comunicarlo en la UI; se resuelve con el
+  cambio de backend (ver "Estacionado").
+- Respaldo: la contraseña da acceso a la identidad completa; si se olvida, no hay recuperación.
+- Corrección criptográfica real solo verificable en vivo contra el devnet (Jest usa hash simulado);
+  la prueba en vivo del flujo actual de selective disclosure sigue pendiente.
+- `Once` cuesta algo más de DUST que la variante sin rastro (escribe en el ledger).
 
-### Qué falta hoy
-El árbol de atributos cuelga del **evento** (`EventRecord.privateAttributesRoot`, fijado en
-`createEvent`). Para un evento Credential con N credenciales distintas hace falta un árbol **por
-token**, fijado en el momento del `mintTo`.
+## Estacionado: campos privados únicos por credencial (espera cambio de backend)
 
-### Opción A — mínima: raíz por token + pedidos dirigidos a un token
-- Ledger nuevo: `tokenPrivateAttributesRoot: Map<Uint<64>, Bytes<32>>`.
-- `mintTo(..., tokenPrivateAttributesRoot)`: parámetro nuevo (o reutilizar el slot
-  `tokenPrivateMetadataCommit`, que el frontend hoy manda en cero — más barato, pero rompe la
-  semántica de `revealPrivateTokenMetadata`; mejor un campo nuevo).
-- Hoja con dominio propio que incluya `tokenId`:
-  `H("adasouls:token-attr-leaf:v1:", tokenId, fieldId, commit(value, rand))` — evita reusar una
-  apertura entre tokens.
-- `publishTokenDisclosureRequest(label, tokenId, fieldId, setRoot)` (o agregar un campo
-  `tokenId` opcional a `DisclosureRequest`).
-- `proveTokenAttributeMembership(requestId, value, rand, attrPath, setPath)` (+ variante `Once`),
-  que además exija **ser el dueño del token**:
-  `assert(tokenOwner.lookup(tId) == holder_pk(tokenIssuer.lookup(tId)))` y `!burnedTokens`.
-- **Gana**: vínculo prueba ↔ holder (solo el dueño puede responder, ni siquiera el organizador).
-- **Costo en privacidad**: el pedido nombra el `tokenId`, así que el verificador sabe qué token es
-  y ve su pseudónimo `holder_pk` (ya público en `tokenOwner`) → puede ver las otras credenciales
-  del mismo holder con ese mismo organizador.
+Pedido enviado a Matías (`../POAP-Midnight`); sin respuesta al 2026-09-23. Se retoma cuando llegue.
 
-### Opción B — privada: árbol de compromisos (patrón zerocash)
-- Ledger nuevo: `credentialCommitments: HistoricMerkleTree<D, Bytes<32>>`.
-- En `mintTo`, insertar `leaf = H(eventId, recipientHolderPk, tokenAttributesRoot)`.
-- El pedido apunta al **evento** (como hoy); el holder prueba, sin revelar cuál es su hoja:
-  1. conoce `local_sk` que deriva `holderPk` (sin `disclose`),
-  2. `H(eventId, holderPk, attrRoot)` está en `credentialCommitments` (`checkRoot`),
-  3. su atributo está en `attrRoot` y su valor en el conjunto del pedido.
-- Revocación: `burn` debería agregar un nullifier de la credencial a un set de revocadas, y la
-  prueba verificar que no está revocada.
-- **Gana**: vínculo con el holder **y** anonimato dentro del conjunto de holders del evento (el
-  verificador sabe "alguien con una credencial válida de este evento cumple X", no cuál).
-- **Costo**: más complejo; las lecturas de ledger por clave son públicas en la transcripción de
-  Midnight, por eso hace falta el árbol en vez de leer `tokenOwner[tokenId]`.
+- **Qué falta**: el árbol de atributos cuelga del evento; para N credenciales distintas hace falta
+  un árbol **por token**, fijado en `mintTo`.
+- **Opción A** — raíz por token (`tokenPrivateAttributesRoot`) + pedidos dirigidos a un `tokenId` +
+  prueba que exige ser el dueño del token. Gana vínculo prueba ↔ holder; el verificador ve qué
+  token es.
+- **Opción B** — árbol de compromisos (patrón zerocash): el holder prueba sin revelar cuál es su
+  credencial. Gana vínculo + anonimato dentro del evento; más complejo, requiere revocación por
+  nullifier.
+- **Impacto común**: tamaño del contrato (ya hubo deploy por etapas), indexer, redeploy (nueva
+  dirección, re-sync de artefactos), `compactc` no disponible en este Windows.
+- **UX requerida cuando llegue**: el evento Credential se crea una vez (wizard define solo la
+  plantilla de campos); cada emisión desde "Mint" (`mintPoap.jsx`) agrega un paso "Datos privados"
+  con los valores del destinatario, una sola firma, y el popup de éxito muestra el kit para el
+  destinatario. Evaluar emisión en lote (CSV).
+- Recomendación preliminar: B por la historia de privacidad del Hito 5; A si prima el tiempo.
 
-### Impacto común a ambas opciones
-- **Tamaño del contrato**: el deploy ya chocó con el límite de peso de bloque con 15 circuitos
-  (se resolvió con deploy por etapas) — cada circuito nuevo empeora eso.
-- **Indexer**: exponer el nuevo campo por token / el nuevo tipo de pedido.
-- **Frontend después del cambio**: el wizard de Credential define solo los **nombres** de los campos
-  (plantilla, en el `metadataURI` del evento); "Emitir credencial" (`mintPoap.jsx`) pide los valores
-  del destinatario, arma la raíz por token, llama `mintTo` (una sola firma) y muestra el kit para el
-  destinatario; el suscriptor responde desde su propio navegador.
-- Event/Follow no cambian (siguen usando la raíz del evento + kit compartido).
+## Encaje con el Hito 5 (evaluado 2026-09-23)
+- El criterio 6 pide *"basic proof that caller owns a token"*. Este mecanismo **no** lo cumple (no
+  verifica identidad) y **ningún circuito del contrato actual prueba tenencia**. Se le pidió a Matías
+  un `proveTokenOwnership(tokenId)` (o equivalente) con prioridad sobre los campos por credencial.
+- Este mecanismo, si se construye, se presenta como "selective disclosure de atributos de evento",
+  no como prueba de asistencia.
 
-### Requisito de UX (agregado 2026-09-23): no romper la UI actual ni hacerlo engorroso
+## Qué necesita el backend (irreducible) — pedido a Matías 2026-09-23
+El frontend no puede fabricar una prueba de tenencia (está atada a `holder_pk`, derivada de
+`local_sk`; ningún circuito actual la verifica sin destruir el token). Hace falta, idealmente en un
+solo cambio (≈ opción A):
+1. `proveTokenOwnership(tokenId)` → criterio 6 del Hito 5.
+2. Raíz de atributos por token en `mintTo` + `proveTokenAttributeMembership` con chequeo de dueño →
+   casos por persona.
 
-El flujo "un evento Credential → muchas credenciales, cada una con datos privados propios" tiene que
-**encajar en la UI que ya existe**, y el organizador **no debe tener que crear ni configurar el
-evento de nuevo** cada vez que emite una credencial del mismo evento. A pensar al retomar:
+**Timing**: todo cambio de contrato = redeploy (nueva dirección, nada se migra). Tiene que entrar
+**antes del deploy a Mainnet** del Hito 5, o se pierde la evidencia de las 3 wallets.
 
-- **Se crea una sola vez**: el wizard de Credential (`createEvent.jsx`) sigue siendo el mismo; el
-  paso de atributos privados pasa a definir solo la **plantilla** (nombres de campos, sin valores),
-  que queda guardada en el `metadataURI` del evento.
-- **Emitir se repite desde el mismo lugar de hoy**: tarjeta expandida del evento → "Mint"
-  (`mintPoap.jsx`). El wizard suma un paso "Datos privados" con los campos de la plantilla ya
-  cargados — el organizador solo completa los **valores** de ese destinatario. Nada de volver a
-  elegir categoría, imagen del evento, taxonomía, etc.
-- **Mismos lugares, mismos componentes**: My Events sigue mostrando un solo evento por credencial
-  (con su contador de emitidas); el holder ve su credencial en My Subscriptions como hoy
-  (`poapCard.jsx`), con una indicación de que tiene campos privados y su kit importado.
-- **Kit al destinatario sin pasos extra**: al terminar el mint, el mismo popup de éxito muestra el
-  link/QR del kit para mandárselo — simétrico al "Get My Key" que el destinatario ya le mandó antes.
-- **Emisión en lote (a evaluar)**: si hay muchos destinatarios, cargar varios de una vez (ej. CSV
-  con clave del destinatario + valores) en vez de repetir el wizard N veces. Cada mint sigue siendo
-  una transacción aparte.
-- **Si el cambio de contrato no llega a tiempo para el Hito 5**: cualquier alternativa provisional
-  (ej. eventos por credencial creados automáticamente por debajo) tiene que ser **invisible** para
-  el organizador — el botón "Emitir" crea lo que haga falta sin que tenga que repetir el wizard de
-  creación, y la UI la agrupa bajo el evento original. El usuario ya descartó exponer "un evento
-  por credencial" como modelo; esto sería solo un detalle de implementación temporal, a decidir.
+## Plan por etapas (acordado 2026-09-23)
 
-### Aclaración: qué pasa por detrás al emitir una credencial
+### A. Operativo hoy (contrato actual)
+- **A1. Respaldo cifrado** de `local_sk` + secretos (drafts, kits), y reemplazar la contraseña fija
+  del private state (`'AdaSouls-Local-Dev-2026!'` en `providers.ts`). Imprescindible para Mainnet.
+- **A2. Flujo de disclosure del holder** con campos a nivel evento (diseño de arriba).
+- **A3. Predicados**: ≥, ≤, entre, uno de → se convierten a conjunto (profundidad 16 → hasta 65.536
+  valores). Habilita edad / nota / horas CPD sin cambio de contrato.
+- **A4. Campos con tipo en la plantilla**: lista, número con mín./máx., fecha/año.
 
-**Crear el evento Credential**: igual que hoy, una sola transacción. Única diferencia: en el paso
-de atributos privados se cargan solo los **nombres** de los campos (plantilla en el `metadataURI`),
-sin valores.
+### B. Preparado para el backend (detrás de detección de circuitos)
+- **B5. Detección**: `contract.service.ts` consulta `impureCircuits` del módulo compilado; la UI se
+  habilita sola cuando llegan los artefactos nuevos.
+- **B6. "Prove I Own This POAP"** en la card del POAP, completo salvo la llamada al circuito.
+- **B7. Paso "Datos privados" en `mintPoap.jsx`**: valores por destinatario sobre la plantilla del
+  evento → raíz por token para `mintTo`.
+- **B8. Un solo componente de comprobante** para tenencia / atributo de evento / atributo de token.
 
-**Emitir una credencial**: para el organizador la UI es la misma en ambos casos (tarjeta del evento
-→ "Mint" → destinatario, imagen y **valores** de los campos para esa persona). Lo que cambia es qué
-pasa por detrás:
+### No hacer
+- Guardar datos "por persona" anclados al contrato actual (se pierden con el redeploy).
+- Presentar A como cumplimiento del criterio 6.
 
-- **Con cambio de contrato (A o B) — el camino elegido**: no se crea ningún evento extra.
-  `mintTo` recibe la raíz de los datos privados de ese token. Un evento con N credenciales, cada
-  una con sus propios datos privados. Una sola firma por credencial.
-- **Sin cambio de contrato — solo plan B temporal si no llega al Hito 5**: por detrás se crearía un
-  evento oculto (maxSupply 1, con los datos privados de esa persona) y se le mintearía la
-  credencial ahí. Dos firmas por credencial; la UI tendría que agrupar/ocultar esos eventos y sumar
-  el contador; on-chain y en el indexer siguen siendo eventos separados (la credencial pertenece al
-  evento oculto, no al original); y al llegar el cambio de contrato, lo emitido así quedaría con el
-  modelo viejo. Es un parche, no el diseño.
-
-**Decisión del usuario (2026-09-23): se va a intentar modificar el contrato para hacerlo bien**
-(opción A o B), en vez de apoyarse en el plan B. A resolver al retomar:
-- Coordinación con Matías (mantiene `../POAP-Midnight`): ¿propuesta/PR para que él la revise, o
-  cambio hecho por él? Hasta ahora ese repo no se edita desde este lado.
-- En este Windows no hay `compactc` — compilar el contrato y regenerar keys/zkir depende de él (o de
-  instalarlo en otro entorno, ej. WSL).
-- Redeploy obligatorio: nueva dirección de contrato → hay que re-sincronizar artefactos del
-  frontend (`src/midnight/contract/managed/poap/`, `public/midnight/poap/{zkir,keys}/`) y los
-  eventos/tokens existentes en el devnet no se migran.
-
-### Recomendación preliminar
-Opción B si el objetivo es la historia de privacidad de Midnight para el Hito 5; Opción A si prima
-el tiempo y alcanza con "solo el dueño puede responder". A confirmar con Matías: soporte de
-`HistoricMerkleTree`/`checkRoot` en la versión de Compact que usa, y el margen de tamaño del
-contrato.
-
-## Próximo paso
-1. **Cambio de contrato (decidido intentarlo)**: elegir Opción A o B, acordar con Matías cómo se
-   hace (PR/propuesta vs. lo implementa él) y resolver cómo compilar sin `compactc` en Windows.
-2. Mientras tanto, se puede avanzar sin tocar contrato con: kit de Event/Follow + respaldo cifrado.
-3. Cerrar las decisiones abiertas 2, 4, 5 y 6.
-4. Validar el requisito de UX de Credential (sin re-crear el evento por credencial): plantilla en
-   la creación, valores en cada emisión, emisión en lote, y qué hacer si el contrato no llega.
+### Orden
+1. A1 (respaldo + contraseña del private state) ← **implementado 2026-09-23** (tests + build OK;
+   falta prueba manual en devnet, empezando por la migración con una wallet de prueba)
+2. B5 + B6 + B8
+3. A3 + A4
+4. A2 + B7

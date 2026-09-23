@@ -1,7 +1,9 @@
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react';
+import { act, screen, fireEvent } from '@testing-library/react';
 import Header from '../../jsx/layout/header';
-import { renderWithProviders } from '../../testUtils';
+import { mockDrawerContext, renderWithProviders } from '../../testUtils';
+import { markBackedUp, markBackupDirty, setBackupContext } from '../../midnight/backup-status';
+import { markRecoveryCodeSaved, storeRecoveryCode } from '../../midnight/storage-password';
 
 const STORAGE_KEY = 'adasouls:siteRole';
 
@@ -89,5 +91,46 @@ describe('Header nav', () => {
 
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('organizer');
     expect(window.location.pathname).toBe('/app/my-events');
+  });
+
+  describe('backup warning chip', () => {
+    const connected = {
+      ...mockDrawerContext,
+      midnight: {
+        ...mockDrawerContext.midnight,
+        provider: { address: 'aa'.repeat(32), wallet: 'Lace', service: { walletCoinPublicKey: 'coin-pk' } },
+      },
+    };
+
+    beforeEach(() => {
+      setBackupContext({ coinPublicKey: 'coin-pk', contractAddress: 'cc'.repeat(32) });
+      storeRecoveryCode('coin-pk', 'SOME-CODE', false);
+    });
+    afterEach(() => {
+      setBackupContext(null);
+      window.localStorage.clear();
+    });
+
+    it('is hidden while no wallet is connected', () => {
+      renderWithProviders(<Header />);
+      expect(screen.queryByRole('button', { name: /not backed up/i })).not.toBeInTheDocument();
+    });
+
+    it('nudges towards Backup & Restore until the recovery code is saved and the backup is up to date', () => {
+      const dispatch = jest.fn();
+      renderWithProviders(<Header />, { drawerValue: connected, drawerDispatch: dispatch });
+
+      fireEvent.click(screen.getByRole('button', { name: /save recovery code/i }));
+      expect(dispatch).toHaveBeenCalledWith({ type: 'SHOW_BACKUP' });
+
+      act(() => markRecoveryCodeSaved('coin-pk'));
+      expect(screen.getByRole('button', { name: /not backed up/i })).toBeInTheDocument();
+
+      act(() => markBackedUp());
+      expect(screen.queryByRole('button', { name: /not backed up|backup outdated/i })).not.toBeInTheDocument();
+
+      act(() => markBackupDirty());
+      expect(screen.getByRole('button', { name: /backup outdated/i })).toBeInTheDocument();
+    });
   });
 });

@@ -1,9 +1,12 @@
 import { useState, useMemo, useCallback } from "react";
 import { PoapContractService } from "../../../midnight/contract.service";
-import { getWalletDisplayName } from "../../../midnight/providers";
+import { getWalletDisplayName, NETWORK_ID } from "../../../midnight/providers";
+import { unlockPrivateState } from "../../../midnight/private-state-unlock";
+import { clearStoragePassword } from "../../../midnight/storage-password";
+import { endBackupSession, startBackupSession } from "../../../midnight/backup";
+import { callerPkCacheKey, clearCallerPkCache } from "./callerPkCache";
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS;
-const CALLER_PK_CACHE_PREFIX = "adasouls:midnight:callerPkHex:";
 // Generous enough to survive real ZK proving + balancing (observed ~55s for a real funding tx),
 // but bounded so the UI can't spin forever — Lace's own balanceUnsealedTransaction is known to hang
 // indefinitely (never resolve, never reject) rather than error out when DUST isn't registered/accrued.
@@ -44,7 +47,7 @@ function withTimeout(promise, ms, onTimeout) {
 // the same wallet; without the contract address in the key, a post-redeploy "My Events" silently
 // shows nothing because the cached address no longer matches any event's on-chain organizer).
 async function resolveCallerPkHex(service) {
-  const cacheKey = CALLER_PK_CACHE_PREFIX + service.walletCoinPublicKey + ':' + service.contractAddress;
+  const cacheKey = callerPkCacheKey(service.walletCoinPublicKey, service.contractAddress);
   const cached = window.localStorage.getItem(cacheKey);
   if (cached) return cached;
 
@@ -81,13 +84,26 @@ function useMidnight() {
       // Restored 2026-08-30 — the DUST/connect hang this was disabled to diagnose (2026-08-13) is
       // now understood: Lace's balanceUnsealedTransaction hangs indefinitely instead of erroring
       // when DUST isn't registered/accrued yet, so an unbounded await here left the UI spinning
-      // forever with no feedback. Wrapping the whole connect+resolve sequence surfaces
-      // ConnectTimeoutError's actionable message instead.
-      console.log('[useMidnight.connect] PoapContractService.connect()…');
+      // forever with no feedback. Wrapping the connect+resolve steps surfaces ConnectTimeoutError's
+      // actionable message instead. Only the chain/wallet steps are timed: the one in between
+      // waits on the user typing their password into the wallet popup (private-state-unlock.ts).
+      console.log('[useMidnight.connect] PoapContractService.prepare()…');
+      const prepared = await withTimeout(
+        PoapContractService.prepare(CONTRACT_ADDRESS, wallet),
+        CONNECT_TIMEOUT_MS,
+        () => new ConnectTimeoutError(),
+      );
+      const outcome = await unlockPrivateState(prepared.providers.privateStateProvider, {
+        privateStateKey: prepared.privateStateKey,
+        coinPublicKey: prepared.coinPublicKey,
+        contractAddress: CONTRACT_ADDRESS,
+      });
+      // A restored or brand-new identity may differ from the one this wallet had here before.
+      if (outcome === "restored" || outcome === "new") clearCallerPkCache(prepared.coinPublicKey, CONTRACT_ADDRESS);
       const { service, addressHex } = await withTimeout(
         (async () => {
-          const service = await PoapContractService.connect(CONTRACT_ADDRESS, wallet);
-          console.log('[useMidnight.connect] PoapContractService.connect() resolved, resolving caller pk…');
+          const service = await PoapContractService.finish(prepared);
+          console.log('[useMidnight.connect] PoapContractService.finish() resolved, resolving caller pk…');
           const addressHex = await resolveCallerPkHex(service);
           console.log('[useMidnight.connect] resolveCallerPkHex() resolved:', addressHex);
           return { service, addressHex };
@@ -95,6 +111,14 @@ function useMidnight() {
         CONNECT_TIMEOUT_MS,
         () => new ConnectTimeoutError(),
       );
+
+      startBackupSession({
+        provider: prepared.providers.privateStateProvider,
+        privateStateKey: prepared.privateStateKey,
+        coinPublicKey: prepared.coinPublicKey,
+        contractAddress: CONTRACT_ADDRESS,
+        networkId: NETWORK_ID,
+      });
 
       const newProviderState = {
         service,
@@ -105,7 +129,10 @@ function useMidnight() {
       setProvider(newProviderState);
       return newProviderState;
     } catch (err) {
-      setError(err);
+      clearStoragePassword();
+      endBackupSession();
+      // Cancelling the password prompt just goes back to the wallet picker — not an error to show.
+      setError(err?.name === "PasswordRequestCancelledError" ? null : err);
       setProvider(null);
       throw err;
     } finally {
@@ -114,6 +141,8 @@ function useMidnight() {
   }, []);
 
   const disconnect = useCallback(() => {
+    clearStoragePassword();
+    endBackupSession();
     setProvider(null);
     setError(null);
   }, []);

@@ -10,7 +10,12 @@
 //
 // IMPORTANT: never reuse `rand` across attribute leaves for the same event (see
 // contract.service.ts#computeAttributeLeaf's warning) — generate a fresh random value per field.
-const PRIVATE_ATTRIBUTE_DRAFT_PREFIX = "adasouls:midnight:privateAttributeDraft:";
+//
+// These drafts are included in the encrypted backup (backup.ts), which is what covers the
+// "localStorage cleared" case above once the organizer has backed up.
+import { markBackupDirty } from "./backup-status";
+
+export const PRIVATE_ATTRIBUTE_DRAFT_PREFIX = "adasouls:midnight:privateAttributeDraft:";
 
 export type PrivateAttributeDraft = {
   fieldName: string; // human-readable label, shown back to the organizer (not on-chain)
@@ -28,6 +33,7 @@ export function savePrivateAttributeDraft(
   draft: PrivateAttributeDraft,
 ): void {
   window.localStorage.setItem(draftKey(eventIdHex, fieldIdHex), JSON.stringify(draft));
+  markBackupDirty();
 }
 
 export function getPrivateAttributeDraft(
