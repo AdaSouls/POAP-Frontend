@@ -825,6 +825,19 @@ select option,
   word-break: break-all;
 }
 
+.blockchain-field-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.blockchain-field-link:hover,
+.blockchain-field-link:focus-visible {
+  color: var(--text-on-glass);
+  text-decoration-style: solid;
+}
+
 .blockchain-field-copy {
   flex-shrink: 0;
 }

@@ -149,10 +149,27 @@ describe('PoapCard Component', () => {
         type: 'SHOW_BLOCKCHAIN_INFO',
         payload: expect.objectContaining({
           fields: expect.arrayContaining([
-            expect.objectContaining({ key: 'tx', value: 'tx-hash-42', copyable: true }),
+            expect.objectContaining({
+              key: 'tx',
+              value: 'tx-hash-42',
+              copyable: true,
+              href: 'https://www.midnightexplorer.com/transactions/tx-hash-42',
+            }),
           ]),
         }),
       });
+    });
+
+    it('never shows the organizer-key copy badge to the holder', async () => {
+      const dispatch = jest.fn();
+      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue, drawerDispatch: dispatch });
+
+      await userEvent.click(screen.getByRole('button', { name: /view blockchain info/i }));
+
+      const { fields } = dispatch.mock.calls.find(([a]) => a.type === 'SHOW_BLOCKCHAIN_INFO')[0].payload;
+      const issuer = fields.find((f) => f.key === 'issuer');
+      expect(issuer.copyable).toBeFalsy();
+      expect(issuer.hint).toBeUndefined();
     });
 
     it('shows no proof message when the token has no mint tx yet', () => {

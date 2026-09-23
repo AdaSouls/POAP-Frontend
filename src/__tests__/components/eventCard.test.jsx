@@ -138,9 +138,66 @@ describe('EventCard Component', () => {
         payload: expect.objectContaining({
           fields: expect.arrayContaining([
             expect.objectContaining({ key: 'eventId', value: mockEvent.eventId }),
-            expect.objectContaining({ key: 'organizer', value: mockEvent.issuerPk, copyable: true }),
+            expect.objectContaining({ key: 'organizer', value: mockEvent.issuerPk }),
           ]),
         }),
+      });
+    });
+
+    it('links Block, Tx and Contract Address to midnightexplorer.com', async () => {
+      const dispatch = jest.fn();
+      const event = { ...mockEvent, createdTx: 'dd'.repeat(32) };
+      renderWithProviders(<EventCard event={event} isExpanded />, { drawerDispatch: dispatch });
+
+      await userEvent.click(screen.getByRole('button', { name: /view blockchain info/i }));
+
+      const { fields } = dispatch.mock.calls.find(([a]) => a.type === 'SHOW_BLOCKCHAIN_INFO')[0].payload;
+      const byKey = Object.fromEntries(fields.map((f) => [f.key, f]));
+      expect(byKey.block.href).toBe('https://www.midnightexplorer.com/blocks/42');
+      expect(byKey.tx.href).toBe(`https://www.midnightexplorer.com/transactions/${'dd'.repeat(32)}`);
+      expect(byKey.contractAddress.href).toBe(
+        `https://www.midnightexplorer.com/contracts/${process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS}`,
+      );
+      expect(byKey.eventId.href).toBeUndefined();
+    });
+
+    // The organizer-key copy badge (hint + copy button) is only for the organizer of a Credential —
+    // the one case where the key has to be handed to the recipient (push-mint via mintTo).
+    describe('organizer key badge', () => {
+      const openInfo = async (event, variant, waitForName) => {
+        const dispatch = jest.fn();
+        renderWithProviders(<EventCard event={event} variant={variant} isExpanded />, { drawerDispatch: dispatch });
+        if (waitForName) await screen.findAllByText(waitForName);
+        await userEvent.click(screen.getByRole('button', { name: /view blockchain info/i }));
+        const { fields } = dispatch.mock.calls.find(([a]) => a.type === 'SHOW_BLOCKCHAIN_INFO')[0].payload;
+        return fields.find((f) => f.key === 'organizer');
+      };
+
+      it('is shown to the organizer of a credential event', async () => {
+        global.fetch = jest.fn().mockResolvedValue({
+          ok: true,
+          json: jest.fn().mockResolvedValue({ name: 'Diploma', category: 'credential' }),
+        });
+        const event = { ...privateMockEvent, metadataURI: 'https://example.com/meta-credential-key-manage.json' };
+        const organizer = await openInfo(event, 'manage', 'Diploma');
+        expect(organizer).toEqual(expect.objectContaining({ copyable: true, hint: expect.any(String) }));
+      });
+
+      it('is not shown to the organizer of a non-credential event', async () => {
+        const organizer = await openInfo(mockEvent, 'manage');
+        expect(organizer.copyable).toBeFalsy();
+        expect(organizer.hint).toBeUndefined();
+      });
+
+      it('is never shown to a subscriber, even for a credential event', async () => {
+        global.fetch = jest.fn().mockResolvedValue({
+          ok: true,
+          json: jest.fn().mockResolvedValue({ name: 'Diploma', category: 'credential' }),
+        });
+        const event = { ...mockEvent, metadataURI: 'https://example.com/meta-credential-key-explore.json' };
+        const organizer = await openInfo(event, 'explore', 'Diploma');
+        expect(organizer.copyable).toBeFalsy();
+        expect(organizer.hint).toBeUndefined();
       });
     });
 

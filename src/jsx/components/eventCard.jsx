@@ -10,6 +10,7 @@ import { getEventStatus, getEventStatusLabel } from "../../utils/poapHelpers";
 import { getEvent, getTokensByEvent } from "../../midnight/indexer.service";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
+import { explorerBlockUrl, explorerContractUrl, explorerTxUrl } from "../../utils/midnightExplorer";
 import { getClaimActionLabel, getSubscriberListLabel, getTaxonomyEntries } from "../constants/eventCategories";
 
 const truncateHex = (hex) => {
@@ -96,27 +97,43 @@ const EventCard = forwardRef(({
   // Raw blockchain data lives behind this popup now, not inline — see BlockchainInfoModal.jsx.
   // deactivatedBlock only exists once the event's been deactivated, contractAddress is the same
   // constant for every event/token so it's added here rather than being part of any event.* data.
+  // Block/Tx/Contract rows deep-link into midnightexplorer.com. Event ID and Organizer are values
+  // inside this contract's own ledger state, not chain-level objects, so the explorer has no page
+  // for them — they stay plain text.
+  // The organizer-key copy badge only matters for Credentials: those are push-minted (mintTo), so
+  // the organizer has to hand this key to the recipient for them to generate their per-issuer key
+  // (Get My Key). Subscribers (variant="explore") and self-claimed event types never need it.
+  const showOrganizerKeyBadge = variant === "manage" && metadata?.category === "credential";
   const openBlockchainInfoDrawer = () => {
+    const contractAddress = process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS;
     const fields = [
       { key: "eventId", label: "Event ID", value: event.eventId },
-      {
-        key: "organizer",
-        label: "Organizer",
-        value: event.issuerPk,
-        copyable: true,
-        copyAriaLabel: "Copy organizer key",
-        hint: "Share this with a subscriber so they can generate their own key for you (My Subscriptions → Get My Key).",
-      },
-      { key: "block", label: "Block", value: event.createdBlock ?? "N/A" },
-      { key: "tx", label: "Tx", value: event.createdTx },
+      showOrganizerKeyBadge
+        ? {
+            key: "organizer",
+            label: "Organizer",
+            value: event.issuerPk,
+            copyable: true,
+            copyAriaLabel: "Copy organizer key",
+            hint: "Share this with the credential recipient so they can generate their own key for you (My Subscriptions → Get My Key).",
+          }
+        : { key: "organizer", label: "Organizer", value: event.issuerPk },
+      { key: "block", label: "Block", value: event.createdBlock ?? "N/A", href: explorerBlockUrl(event.createdBlock) },
+      { key: "tx", label: "Tx", value: event.createdTx, href: explorerTxUrl(event.createdTx) },
     ];
     if (!event.isActive && event.deactivatedBlock) {
-      fields.push({ key: "deactivatedBlock", label: "Deactivated At Block", value: event.deactivatedBlock });
+      fields.push({
+        key: "deactivatedBlock",
+        label: "Deactivated At Block",
+        value: event.deactivatedBlock,
+        href: explorerBlockUrl(event.deactivatedBlock),
+      });
     }
     fields.push({
       key: "contractAddress",
       label: "Contract Address",
-      value: process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS,
+      value: contractAddress,
+      href: explorerContractUrl(contractAddress),
       copyable: true,
     });
     dispatch({ type: "SHOW_BLOCKCHAIN_INFO", payload: { title: "Blockchain Info", fields } });

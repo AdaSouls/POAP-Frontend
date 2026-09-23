@@ -54,6 +54,7 @@ export default function BlockchainInfoModal() {
             key={field.key}
             label={field.label}
             value={field.value}
+            href={field.href}
             hint={field.hint}
             copied={copiedField === field.key}
             onCopy={field.copyable ? () => copyField(field.key, field.value) : undefined}

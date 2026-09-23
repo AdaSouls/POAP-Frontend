@@ -8,6 +8,7 @@ import CategoryBadge from "./CategoryBadge";
 import { getClaimActionLabel } from "../constants/eventCategories";
 import { getEvent } from "../../midnight/indexer.service";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
+import { explorerBlockUrl, explorerContractUrl, explorerTxUrl } from "../../utils/midnightExplorer";
 import {
   getTokenVisibility,
   setTokenVisibility,
@@ -126,31 +127,40 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
   // Raw blockchain data (Token ID / Owner / Issuer / Event ID / Block / Tx / Burned Block / Burned
   // Tx) lives behind this popup now, not inline — see BlockchainInfoModal.jsx. Burned fields only
-  // apply once poap.isBurned; contractAddress is the same constant for every token.
+  // apply once poap.isBurned; contractAddress is the same constant for every token. Block/Tx/
+  // Contract rows deep-link into midnightexplorer.com. The Issuer row is plain text here on
+  // purpose: the organizer-key copy badge is organizer-only (credential events, eventCard.jsx) —
+  // a holder never needs to hand this key to anyone.
   const openBlockchainInfoDrawer = () => {
+    const contractAddress = process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS;
     const fields = [
       { key: "tokenId", label: "Token ID", value: String(poap.tokenId) },
       { key: "owner", label: "Owner", value: poap.ownerPk, copyable: true },
-      {
-        key: "issuer",
-        label: "Issuer",
-        value: poap.issuerPkHex,
-        copyable: true,
-        copyAriaLabel: "Copy organizer key",
-        hint: "Use this to generate your own key for this organizer (My Subscriptions → Get My Key).",
-      },
+      { key: "issuer", label: "Issuer", value: poap.issuerPkHex },
       { key: "eventId", label: "Event ID", value: poap.firstEventId },
-      { key: "block", label: "Block", value: poap.mintedBlock ?? "N/A" },
-      { key: "tx", label: "Tx", value: poap.mintedTx, copyable: true },
+      { key: "block", label: "Block", value: poap.mintedBlock ?? "N/A", href: explorerBlockUrl(poap.mintedBlock) },
+      { key: "tx", label: "Tx", value: poap.mintedTx, href: explorerTxUrl(poap.mintedTx), copyable: true },
     ];
     if (poap.isBurned) {
-      fields.push({ key: "burnedBlock", label: "Burned At Block", value: poap.burnedBlock ?? "N/A" });
-      fields.push({ key: "burnedTx", label: "Burned Tx", value: poap.burnedTx, copyable: true });
+      fields.push({
+        key: "burnedBlock",
+        label: "Burned At Block",
+        value: poap.burnedBlock ?? "N/A",
+        href: explorerBlockUrl(poap.burnedBlock),
+      });
+      fields.push({
+        key: "burnedTx",
+        label: "Burned Tx",
+        value: poap.burnedTx,
+        href: explorerTxUrl(poap.burnedTx),
+        copyable: true,
+      });
     }
     fields.push({
       key: "contractAddress",
       label: "Contract Address",
-      value: process.env.REACT_APP_MIDNIGHT_CONTRACT_ADDRESS,
+      value: contractAddress,
+      href: explorerContractUrl(contractAddress),
       copyable: true,
     });
     dispatch({ type: "SHOW_BLOCKCHAIN_INFO", payload: { title: "Blockchain Info", fields } });

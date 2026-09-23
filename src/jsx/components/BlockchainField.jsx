@@ -7,7 +7,9 @@ import { Check, Copy, Info } from "lucide-react";
 // as the primary cue and the hex value as supporting detail. The copy button (when supplied) sits
 // directly in the row next to the value instead of pinned to the far edge of a flex-grow paragraph,
 // so it stays visually attached to what it copies even once the hex wraps across multiple lines.
-export default function BlockchainField({ label, value, onCopy, copied, hint, copyAriaLabel }) {
+// href (optional) turns the value into an external link — used for the midnightexplorer.com deep
+// links (see utils/midnightExplorer.js).
+export default function BlockchainField({ label, value, href, onCopy, copied, hint, copyAriaLabel }) {
   if (!value) return null;
   const copyButton = onCopy && (
     <button
@@ -26,7 +28,20 @@ export default function BlockchainField({ label, value, onCopy, copied, hint, co
     <div className="blockchain-field">
       <div className="blockchain-field-row">
         <p className="blockchain-field-value">
-          <span className="blockchain-field-label">{label}:</span> {value}
+          <span className="blockchain-field-label">{label}:</span>{" "}
+          {href ? (
+            <a
+              className="blockchain-field-link"
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {value}
+            </a>
+          ) : (
+            value
+          )}
         </p>
         {/* When there's a hint, the copy button lives there instead (see below) — right-margined
             in that same box rather than sitting next to the raw hex up here. */}
