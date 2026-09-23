@@ -453,7 +453,7 @@ const HeroSection = React.forwardRef(({ scrollerRef }, ref) => {
             contract that can represent far more than event badges, while your wallet identity is
             derived locally and shared with an organizer only when you choose to.
           </p>
-          <Link to="/app" className="btn btn-dual-cta">
+          <Link to="/app" className="btn btn-dual-cta btn-glow-border">
             Get Started
           </Link>
         </motion.div>

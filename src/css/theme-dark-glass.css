@@ -2908,9 +2908,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .index-scroll-hint {
-  margin-top: 40px;
+  margin-top: 80px;
   color: var(--text-on-glass-muted);
   display: flex;
+  justify-content: center;
 }
 
 /* No box — no border, no background, no blur — per explicit feedback: just the text, sitting
@@ -2952,6 +2953,98 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--text-on-solid);
   background: rgba(74, 92, 106, 0.5);
   border-color: var(--palette-5);
+}
+
+/* Both "Get Started" buttons (index.jsx hero + landingNav.jsx header) — two separate light arcs, one per role color (organizer
+   #b24bf3, subscriber #3ecf8e), half a turn apart, chasing each other around the border. The ring is a rotating conic-gradient on
+   ::before, masked down to just the 1.5px border band (content-box XOR border-box), so it sits over
+   the button's own static border without touching the glass fill. --cta-glow-angle is registered
+   via @property so the browser can interpolate it; without that it would jump, not rotate. */
+@property --cta-glow-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.btn-glow-border {
+  position: relative;
+}
+
+.btn-glow-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--cta-glow-angle),
+    transparent 0deg,
+    #b24bf3 60deg,
+    transparent 100deg,
+    transparent 180deg,
+    #3ecf8e 240deg,
+    transparent 280deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  animation: cta-glow-spin 3s linear infinite;
+}
+
+@keyframes cta-glow-spin {
+  to {
+    --cta-glow-angle: 360deg;
+  }
+}
+
+/* Header "Get Started" only (landingNav.jsx) — on hover, the same two role-colored lights also glow
+   INSIDE the button as soft blurred blobs. Needs a real clipping wrapper (.btn-glow-fill, overflow:
+   hidden) because a blur on a pseudo-element bleeds past its own box and can't clip itself; the
+   blurred gradient lives on its ::before. Its animation runs all the time and only opacity toggles
+   on hover, so the inner lights stay in step with the border's arcs instead of restarting at 0deg. */
+.btn-glow-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none;
+}
+
+.btn-glow-fill::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    from var(--cta-glow-angle),
+    transparent 0deg,
+    rgba(178, 75, 243, 0.55) 60deg,
+    transparent 100deg,
+    transparent 180deg,
+    rgba(62, 207, 142, 0.55) 240deg,
+    transparent 280deg,
+    transparent 360deg
+  );
+  filter: blur(12px);
+  animation: cta-glow-spin 3s linear infinite;
+}
+
+.btn-glow-hover:hover .btn-glow-fill {
+  opacity: 1;
+}
+
+.btn-glow-label {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-glow-border::before,
+  .btn-glow-fill::before {
+    animation: none;
+  }
 }
 
 .btn-dual-cta.connected {

@@ -74,8 +74,9 @@ const LandingNav = () => (
           <LandingRolesDropdown />
         </nav>
 
-        <Link to="/app" className="btn btn-dual-cta">
-          Get Started
+        <Link to="/app" className="btn btn-dual-cta btn-glow-border btn-glow-hover">
+          <span className="btn-glow-fill" aria-hidden="true" />
+          <span className="btn-glow-label">Get Started</span>
         </Link>
       </div>
     </div>
