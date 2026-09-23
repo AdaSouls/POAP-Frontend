@@ -175,7 +175,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   // "Active" said nothing about how you got this POAP — same category-aware verb the explore-events
   // grid uses once claimed (Followed/Attended/Subscribed, see getClaimActionLabel), since every card
   // on this page is by definition already-held (no "Claimable" state exists here).
-  const poapStatusBadgeClass = poap.isBurned ? "badge bg-secondary" : "badge status-badge-active";
+  const poapStatusBadgeClass = poap.isBurned ? "badge bg-secondary" : "badge status-badge-held";
   const poapStatusLabel = poap.isBurned ? "Burned" : claimLabel.done;
 
   return (

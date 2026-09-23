@@ -153,7 +153,7 @@ const EventCard = forwardRef(({
   };
 
   const statusBadgeClass = alreadyHeld
-    ? "badge status-badge-active"
+    ? "badge status-badge-held"
     : {
         active: "badge status-badge-active",
         expired: "badge bg-danger",

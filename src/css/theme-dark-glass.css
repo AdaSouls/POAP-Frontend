@@ -722,6 +722,17 @@ select option,
   color: var(--role-accent, #2ecc71);
 }
 
+/* "Already done" state for a subscriber — Claimed/Followed/Attended/Subscribed (the .done verb
+   from getClaimActionLabel). Deliberately muted: a light, neutral gray instead of the role accent,
+   so an event the viewer already holds reads as settled rather than as a call to action. Lighter
+   than .bg-secondary's #74788d below so it never gets confused with Inactive. */
+.card-event .status-badge-held,
+.card-poap .status-badge-held {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(214, 218, 230, 0.45);
+  color: #c9cdd8;
+}
+
 /* Every other status/semantic badge on event/POAP cards (collapsed + expanded, including the
    embedded event-preview mini-card inside an expanded poapCard.jsx) — same outline treatment as
    .status-badge-active above: colored border, transparent fill, text in that same color, instead
