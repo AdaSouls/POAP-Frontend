@@ -324,7 +324,7 @@ export default function CreateEvent() {
         ? BigInt(Math.floor(new Date(expirationDate).getTime() / 1000))
         : 0n;
 
-      loadingFunction("Creating Event", `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
+      loadingFunction("Creating Event", "Preparing transaction…", "");
 
       const { txHash } = await provider.service.createEvent(
         label,

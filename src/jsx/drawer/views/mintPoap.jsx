@@ -125,7 +125,7 @@ export default function MintPoap() {
         documentImage: documentImageUri,
       });
 
-      loadingFunction("Minting POAP", `Please confirm the transaction in your ${midnight.provider.wallet} wallet…`, "");
+      loadingFunction("Minting POAP", "Preparing transaction…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(mintEvent.eventId, "hex"));
       const recipientPk = Uint8Array.from(Buffer.from(recipientPkHex.trim(), "hex"));
       const { txHash } = await midnight.provider.service.mintTo(

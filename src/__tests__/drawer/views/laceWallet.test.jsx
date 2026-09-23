@@ -52,6 +52,30 @@ describe('LaceWallet drawer view', () => {
     expect(connect).toHaveBeenCalledWith(oneAmApi);
   });
 
+  it('waits for a locked wallet to be unlocked and retries the connection on its own', async () => {
+    discoverCompatibleWallets.mockResolvedValue([oneAmApi]);
+    const lockedError = Object.assign(new Error('locked'), { name: 'LaceLockedError' });
+    const connect = jest
+      .fn()
+      .mockRejectedValueOnce(lockedError)
+      .mockResolvedValueOnce({ address: 'aa'.repeat(32) });
+    const drawerValue = {
+      ...mockDrawerContext,
+      midnight: { ...mockDrawerContext.midnight, connect },
+    };
+    renderWithProviders(<LaceWallet />, { drawerValue });
+
+    await userEvent.click(await screen.findByRole('button', { name: /connect 1am/i }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/1am wallet is locked/i);
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    // Retry fires after UNLOCK_RETRY_INTERVAL_MS with no further click from the user.
+    await waitFor(() => expect(connect).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+  });
+
   it('shows a not-found message when no compatible wallet is detected', async () => {
     discoverCompatibleWallets.mockResolvedValue([]);
     renderWithProviders(<LaceWallet />);

@@ -8,6 +8,7 @@ import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-p
 import type { ConnectedAPI, InitialAPI } from '@midnight-ntwrk/dapp-connector-api';
 import { Transaction, type FinalizedTransaction, type TransactionId } from '@midnight-ntwrk/ledger-v8';
 import { createPoapPrivateState, createWitnesses, type PoapPrivateState } from './witnesses';
+import { setTxPhase, trackTxPhase } from './tx-status';
 import type { ImpureCircuits } from './contract/managed/poap/contract/index.js';
 
 export type PoapCircuitId = keyof ImpureCircuits<unknown>;
@@ -61,7 +62,22 @@ export class LaceLockedError extends Error {
 }
 
 function isLaceLockedError(error: unknown): boolean {
-  return error instanceof Error && /locked/i.test(error.message);
+  if (!error || typeof error !== 'object') return false;
+  const { message, reason } = error as { message?: unknown; reason?: unknown };
+  return [message, reason].some((text) => typeof text === 'string' && /locked|unlock/i.test(text));
+}
+
+// A connect() that fails faster than any human could have seen and clicked "reject" on an approval
+// popup — and isn't explicitly flagged as a user rejection — means the wallet never showed one
+// (locked, no account loaded yet). 1am's exact locked-state error isn't documented, so this is the
+// fallback when its message doesn't say "locked".
+const IMMEDIATE_REJECTION_MS = 1_500;
+const USER_REJECTION_CODES = ['Rejected', 'PermissionRejected'];
+
+function isImmediateNonUserRejection(error: unknown, startedAt: number): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && USER_REJECTION_CODES.includes(code)) return false;
+  return Date.now() - startedAt < IMMEDIATE_REJECTION_MS;
 }
 
 // Every Midnight-compatible wallet we've tried, by its dapp-connector-api `rdns` — used both to
@@ -153,8 +169,10 @@ export async function connectToWalletForNetwork(api: InitialAPI, networkId: stri
   console.log('[connectToWallet] connecting to', api.name, api.rdns, 'on', networkId);
 
   let connectedApi: ConnectedAPI;
+  let connectStartedAt = Date.now();
   try {
     console.log('[connectToWallet] calling api.connect()…');
+    connectStartedAt = Date.now();
     const connectPromise = api.connect(networkId);
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('timed out waiting for wallet authorization')), WALLET_ENABLE_TIMEOUT_MS),
@@ -163,6 +181,12 @@ export async function connectToWalletForNetwork(api: InitialAPI, networkId: stri
     console.log('[connectToWallet] api.connect() resolved');
   } catch (error) {
     console.log('[connectToWallet] api.connect() failed:', error);
+    // 1am (unlike Lace) rejects connect() outright while locked instead of opening its own unlock
+    // popup, and — like every wallet — can't be forced open from the page. Distinguish that from a
+    // real user rejection so laceWallet.jsx can wait for the unlock and retry on its own.
+    if (isLaceLockedError(error) || isImmediateNonUserRejection(error, connectStartedAt)) {
+      throw new LaceLockedError();
+    }
     throw new LaceNotAuthorizedError();
   }
 
@@ -213,6 +237,40 @@ function logFiberFailure(label: string, error: unknown): void {
   }
 }
 
+// 1am auto-locks (or its extension background goes idle) some time after connecting, and in that
+// state balanceUnsealedTransaction/submitTransaction fail with a bare "Request failed" instead of
+// opening the wallet's own window — the user had to open the extension by hand and click Create
+// again, re-running the whole ZK proof. Retrying just the wallet call gets the wallet to show its
+// unlock window (same behavior observed for connect(), see laceWallet.jsx), and once unlocked the
+// retry goes through with the already-proven transaction. Only transport/lock-shaped failures are
+// retried; a real user rejection or any other error is rethrown immediately.
+const WALLET_CALL_RETRY_INTERVAL_MS = 2_000;
+const WALLET_CALL_RETRY_MAX_MS = 180_000;
+
+function isRetryableWalletError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const { message, reason, code } = error as { message?: unknown; reason?: unknown; code?: unknown };
+  if (typeof code === 'string' && USER_REJECTION_CODES.includes(code)) return false;
+  if (code === 'Disconnected') return true;
+  return [message, reason].some((text) => typeof text === 'string' && /request failed|locked|unlock/i.test(text));
+}
+
+async function withWalletRetry<T>(label: string, call: () => Promise<T>): Promise<T> {
+  const started = Date.now();
+  for (;;) {
+    try {
+      return await call();
+    } catch (error) {
+      if (!isRetryableWalletError(error) || Date.now() - started > WALLET_CALL_RETRY_MAX_MS) {
+        logFiberFailure(label, error);
+        throw error;
+      }
+      console.log(`[${label}] wallet call failed, likely locked — retrying:`, error);
+      await new Promise((resolve) => setTimeout(resolve, WALLET_CALL_RETRY_INTERVAL_MS));
+    }
+  }
+}
+
 function hexToUint8Array(hex: string): Uint8Array {
   const matches = hex.match(/.{1,2}/g);
   return new Uint8Array((matches ?? []).map((byte) => parseInt(byte, 16)));
@@ -240,6 +298,7 @@ export async function buildProviders(connection: WalletConnection) {
     accountId: shieldedAddress.shieldedAddress,
   });
   const rawPublicDataProvider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri);
+  const rawProofProvider = httpClientProofProvider(PROOF_SERVER_URL, zkConfigProvider);
 
   return {
     privateStateProvider: {
@@ -254,12 +313,20 @@ export async function buildProviders(connection: WalletConnection) {
       },
     },
     zkConfigProvider,
-    proofProvider: httpClientProofProvider(PROOF_SERVER_URL, zkConfigProvider),
+    // Each stage below also reports itself to tx-status.ts, which drives TxStatusPopup.jsx.
+    proofProvider: {
+      ...rawProofProvider,
+      proveTx(...args: Parameters<typeof rawProofProvider.proveTx>) {
+        return trackTxPhase('proving', () => rawProofProvider.proveTx(...args));
+      },
+    },
     publicDataProvider: {
       ...rawPublicDataProvider,
       async watchForTxData(...args: Parameters<typeof rawPublicDataProvider.watchForTxData>) {
         try {
-          return await rawPublicDataProvider.watchForTxData(...args);
+          const txData = await trackTxPhase('confirming', () => rawPublicDataProvider.watchForTxData(...args));
+          setTxPhase('confirmed');
+          return txData;
         } catch (error) {
           logFiberFailure('publicDataProvider.watchForTxData', error);
           throw error;
@@ -271,13 +338,9 @@ export async function buildProviders(connection: WalletConnection) {
       getEncryptionPublicKey: () => shieldedAddress.shieldedEncryptionPublicKey,
       async balanceTx(tx: UnboundTransaction): Promise<FinalizedTransaction> {
         const serializedStr = uint8ArrayToHex(tx.serialize());
-        let result: { tx: string };
-        try {
-          result = await connectedApi.balanceUnsealedTransaction(serializedStr);
-        } catch (error) {
-          logFiberFailure('walletProvider.balanceTx', error);
-          throw error;
-        }
+        const result = await trackTxPhase('approving', () =>
+          withWalletRetry('walletProvider.balanceTx', () => connectedApi.balanceUnsealedTransaction(serializedStr)),
+        );
         const resultBytes = hexToUint8Array(result.tx);
         return Transaction.deserialize('signature', 'proof', 'binding', resultBytes) as FinalizedTransaction;
       },
@@ -287,12 +350,9 @@ export async function buildProviders(connection: WalletConnection) {
         const serializedStr = uint8ArrayToHex(tx.serialize());
         // submitTransaction returns void in this API generation — the wallet no longer hands back
         // a transaction id, so we derive it locally from the transaction we already have.
-        try {
-          await connectedApi.submitTransaction(serializedStr);
-        } catch (error) {
-          logFiberFailure('midnightProvider.submitTx', error);
-          throw error;
-        }
+        await trackTxPhase('submitting', () =>
+          withWalletRetry('midnightProvider.submitTx', () => connectedApi.submitTransaction(serializedStr)),
+        );
         return tx.identifiers()[0];
       },
     },

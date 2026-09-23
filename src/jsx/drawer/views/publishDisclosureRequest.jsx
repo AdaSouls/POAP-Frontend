@@ -86,7 +86,7 @@ export default function PublishDisclosureRequest() {
       const eventIdBytes = Uint8Array.from(Buffer.from(disclosureEvent.eventId, "hex"));
       const fieldIdBytes = Uint8Array.from(Buffer.from(fieldId, "hex"));
 
-      loadingFunction("Publishing Disclosure Request", `Please confirm the transaction in your ${midnight.provider.wallet} wallet…`, "");
+      loadingFunction("Publishing Disclosure Request", "Preparing transaction…", "");
       await midnight.provider.service.publishDisclosureRequest(label, eventIdBytes, fieldIdBytes, tree.rootBytes);
 
       loadingFunction("Publishing Disclosure Request", "Waiting for the indexer to pick it up…", "");

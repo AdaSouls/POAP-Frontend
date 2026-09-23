@@ -11,6 +11,8 @@ import loadingGif from "../../../images/loading.gif";
 // Disconnect button — the card's own reveal (bottom "Connected — 0x…" row + white border) is
 // timed to happen at that same flip, not at the moment the fill starts, per explicit design.
 const SUCCESS_ANIMATION_MS = 2400;
+const UNLOCK_RETRY_INTERVAL_MS = 2000;
+const UNLOCK_WAIT_MAX_MS = 180_000;
 
 export default function LaceWallet() {
   const { midnight } = useDrawer();
@@ -68,17 +70,57 @@ export default function LaceWallet() {
 
   const selectedWallet = wallets.find((wallet) => wallet.rdns === selectedRdns) ?? null;
 
+  // Set while the selected wallet is locked: no page can open a wallet extension's own popup (by
+  // design), so instead of making the user unlock it and click Connect again, keep retrying in the
+  // background until the unlock lands, the user cancels, or UNLOCK_WAIT_MAX_MS runs out.
+  const [waitingUnlock, setWaitingUnlock] = useState(false);
+
+  const attemptConnect = async () => {
+    const newProviderState = await midnight.connect(selectedWallet);
+    dispatch({ type: "UPDATE_MIDNIGHT_WALLET", payload: newProviderState });
+    // Drawer stays open on purpose — the success/connected animation below is the point.
+  };
+
   const onConnect = async () => {
     if (!selectedWallet) return;
     setLocalError(null);
     try {
-      const newProviderState = await midnight.connect(selectedWallet);
-      dispatch({ type: "UPDATE_MIDNIGHT_WALLET", payload: newProviderState });
-      // Drawer stays open on purpose — the success/connected animation below is the point.
+      await attemptConnect();
     } catch (err) {
-      setLocalError(err);
+      if (err?.name === "LaceLockedError") setWaitingUnlock(true);
+      else setLocalError(err);
     }
   };
+
+  useEffect(() => {
+    if (!waitingUnlock) return undefined;
+    let cancelled = false;
+    const started = Date.now();
+    (async () => {
+      while (!cancelled) {
+        await new Promise((resolve) => setTimeout(resolve, UNLOCK_RETRY_INTERVAL_MS));
+        if (cancelled) return;
+        try {
+          await attemptConnect();
+          if (!cancelled) setWaitingUnlock(false);
+          return;
+        } catch (err) {
+          if (cancelled) return;
+          if (err?.name !== "LaceLockedError" || Date.now() - started > UNLOCK_WAIT_MAX_MS) {
+            setWaitingUnlock(false);
+            setLocalError(err);
+            return;
+          }
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Retry loop is keyed only on entering/leaving the waiting state; attemptConnect closes over
+    // the wallet that was selected when it started, which is the one the user is unlocking.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingUnlock]);
 
   const onDisconnect = () => {
     midnight.disconnect();
@@ -86,7 +128,8 @@ export default function LaceWallet() {
     closeDrawer();
   };
 
-  const errorToShow = localError ?? midnight?.error;
+  const errorToShow = waitingUnlock ? null : localError ?? midnight?.error;
+  const selectedWalletName = selectedWallet ? getWalletDisplayName(selectedWallet) : "Midnight";
   // Card reveal (bottom "Connected — 0x…" row, white border, matching divider line) fires the
   // moment the button first says "Connected" (phase "success"), not delayed until it later flips
   // to the actual Disconnect button (phase "connected") — both phases share this same look, only
@@ -175,6 +218,16 @@ export default function LaceWallet() {
             )
           )}
 
+          {waitingUnlock && (
+            <div className="alert alert-info mt-3 d-flex align-items-center" role="status">
+              <img src={loadingGif} width="16" height="16" alt="" className="mr-2" />
+              <span>
+                Your {selectedWalletName} wallet is locked. Click the {selectedWalletName} extension icon in
+                your browser toolbar and unlock it — AdaSouls will connect automatically.
+              </span>
+            </div>
+          )}
+
           {errorToShow && (
             <div className="alert alert-danger mt-3" role="alert">
               {errorToShow.message === "LaceNotFoundError" || errorToShow.name === "LaceNotFoundError"
@@ -182,9 +235,9 @@ export default function LaceWallet() {
                 : errorToShow.name === "LaceVersionMismatchError"
                   ? errorToShow.message
                   : errorToShow.name === "LaceNotAuthorizedError"
-                    ? `AdaSouls is not authorized by your ${selectedWallet ? getWalletDisplayName(selectedWallet) : "Midnight"} wallet. Approve the connection request in the extension.`
+                    ? `AdaSouls is not authorized by your ${selectedWalletName} wallet. Approve the connection request in the extension.`
                     : errorToShow.name === "LaceLockedError"
-                      ? `Your ${selectedWallet ? getWalletDisplayName(selectedWallet) : "Midnight"} wallet is locked. Open the extension icon, unlock it with your password, then try connecting again.`
+                      ? `Your ${selectedWalletName} wallet is still locked (or set to a different network). Unlock it, check it's on the right network, then try connecting again.`
                       : errorToShow.name === "ConnectTimeoutError"
                         ? errorToShow.message
                         : errorToShow.message ?? "Something went wrong connecting to your wallet."}
@@ -206,6 +259,10 @@ export default function LaceWallet() {
           >
             <span className="wallet-connect-btn-fill" aria-hidden="true" />
             <span className="wallet-connect-btn-label">{phase === "connected" ? "Disconnect" : "Connected"}</span>
+          </button>
+        ) : waitingUnlock ? (
+          <button className="btn btn-outline-light" onClick={() => setWaitingUnlock(false)}>
+            Cancel
           </button>
         ) : (
           <button

@@ -1,6 +1,7 @@
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { CheckCircle2 } from "lucide-react";
+import { finishProgress, pushProgressStep } from "../../midnight/tx-status";
 
 const MySwal = withReactContent(Swal);
 
@@ -31,6 +32,7 @@ const successTitle = (text) => (
 );
 
 export const succesfullBlockchainCreation = (title, message, link) => {
+  if (finishProgress({ kind: "success", title, message })) return;
   MySwal.fire({
     ...GLASS_ALERT_OPTIONS,
     title: successTitle(title),
@@ -55,18 +57,11 @@ export const succesfullMessage = (title, message) => {
   })
 };
 
+// No sweetalert of its own anymore: every loading message is a step in the single progress popup
+// (TxStatusPopup.jsx / tx-status.ts), which then carries on through the transaction's own stages
+// and ends with this flow's success/error result in that same card.
 export const loadingFunction = (title, message) => {
-  MySwal.fire({
-    ...GLASS_ALERT_OPTIONS,
-    title: title,
-    icon: "info",
-    text: message,
-    didOpen: () => {
-      let child = MySwal.getContainer().querySelector(".swal2-title");
-      let parent = child.parentElement;
-      parent.classList.add("p-2");
-    },
-  })
+  pushProgressStep(title, message);
 };
 export const informationFunction = (title, message) => {
   MySwal.fire({
@@ -83,6 +78,7 @@ export const informationFunction = (title, message) => {
 };
 
 export const errorFunction = (title, message, link) => {
+  if (finishProgress({ kind: "error", title, message })) return;
   MySwal.fire({
     ...GLASS_ALERT_OPTIONS,
     title: title,

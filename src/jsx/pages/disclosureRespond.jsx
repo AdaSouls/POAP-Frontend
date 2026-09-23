@@ -50,7 +50,7 @@ export default function DisclosureRespond() {
     if (!midnight?.provider || !request) return;
     setSubmitting(true);
     try {
-      loadingFunction("Responding", `Please confirm the transaction in your ${midnight.provider.wallet} wallet…`, "");
+      loadingFunction("Responding", "Preparing transaction…", "");
       const result = await buildAndSubmitDisclosureProof({
         service: midnight.provider.service,
         requestId: Uint8Array.from(Buffer.from(requestId, "hex")),

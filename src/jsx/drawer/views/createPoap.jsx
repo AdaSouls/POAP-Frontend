@@ -68,7 +68,7 @@ export default function CreatePoap() {
 
     setLoading(true);
     try {
-      loadingFunction(claimLabel.loading, `Please confirm the transaction in your ${provider.wallet} wallet…`, "");
+      loadingFunction(claimLabel.loading, "Preparing transaction…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
       const { txHash } = await provider.service.claim(eventIdBytes, isSoulbound);
 

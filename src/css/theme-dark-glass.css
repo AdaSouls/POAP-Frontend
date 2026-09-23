@@ -2955,7 +2955,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border-color: var(--palette-5);
 }
 
-/* Both "Get Started" buttons (index.jsx hero + landingNav.jsx header) — two separate light arcs, one per role color (organizer
+/* Header "Get Started" button (landingNav.jsx) — two separate light arcs, one per role color (organizer
    #b24bf3, subscriber #3ecf8e), half a turn apart, chasing each other around the border. The ring is a rotating conic-gradient on
    ::before, masked down to just the 1.5px border band (content-box XOR border-box), so it sits over
    the button's own static border without touching the glass fill. --cta-glow-angle is registered
@@ -3379,3 +3379,165 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   max-width: 32ch;
 }
 
+
+/* Progress popup (TxStatusPopup.jsx / tx-status.ts) — the one card every create/claim/mint flow
+   runs in, from its first loading message to its final result. Same liquid-glass surface and
+   width as the form popups (.drawer.drawer-modal: 92% / max 480px, 20px radius) but only as tall
+   as its content, and like them it doesn't dim the page — the backdrop is transparent, only there
+   to block clicks while work is in flight. z-index above swal2's own container (1060) and the
+   form popup it usually opens over. */
+.tx-status-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1070;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.tx-status-popup {
+  position: relative;
+  width: 92%;
+  max-width: 480px;
+  padding: 28px 28px 22px;
+  border-radius: 20px;
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  color: var(--text-on-glass);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: tx-status-fade-in 0.2s ease-out;
+}
+
+/* .wallet-modal-close is built to sit vertically centered on a .drawer-header row (top:50% +
+   translateY(-50%)) — here there's no header row, so that transform would park it half above
+   the card's top edge. Plain inset instead, level with the title. */
+.tx-status-popup .tx-status-close {
+  top: 20px;
+  right: 20px;
+  transform: none;
+}
+
+.tx-status-title {
+  margin: 0;
+  padding: 0 40px; /* keeps a long title clear of the close button */
+  font-size: 1.15rem;
+  color: var(--text-on-glass);
+}
+
+/* Two rows tall: the live step on the lower row, the step that just finished dimmed on the row
+   above it. Fixed height so the card never changes size as steps come and go. */
+.tx-status-stage {
+  position: relative;
+  width: 100%;
+  height: 96px;
+  margin: 14px 0 10px;
+  overflow: hidden;
+}
+
+/* Row positions are transform offsets from the stage's vertical middle; the SAME element
+   transitions between them as its role changes (current -> previous -> exiting). Duration must
+   match SHIFT_MS in tx-status.ts. */
+.tx-status-step {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+.tx-status-step.is-current {
+  transform: translateY(-10%);
+  opacity: 1;
+  animation: tx-status-step-enter 0.4s ease;
+}
+
+.tx-status-step.is-previous {
+  transform: translateY(-140%);
+  opacity: 0.35;
+}
+
+.tx-status-step.is-exiting {
+  transform: translateY(-270%);
+  opacity: 0;
+}
+
+.tx-status-step-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tx-status-step-icon svg {
+  animation: tx-status-pop 0.3s ease-out;
+}
+
+.tx-status-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-on-glass-muted);
+}
+
+.tx-status-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 6px;
+  animation: tx-status-fade-in 0.25s ease-out;
+}
+
+.tx-status-result-message {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-on-glass-muted);
+  word-break: break-all;
+}
+
+@keyframes tx-status-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes tx-status-step-enter {
+  from {
+    transform: translateY(120%);
+    opacity: 0;
+  }
+}
+
+@keyframes tx-status-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-status-popup,
+  .tx-status-step,
+  .tx-status-result,
+  .tx-status-step-icon svg {
+    animation: none;
+    transition: none;
+  }
+}
