@@ -5,6 +5,7 @@
 // no identity check — whoever holds the (value, rand) opening IS the authorized prover, and that's
 // this browser's own private-attribute-drafts.ts cache, by design).
 import type { PoapContractService } from './contract.service';
+import { txHashOf } from './tx-result';
 import { computeAttributeLeaf } from './contract.service';
 import { buildMerkleTree, type MerklePathResult } from './merkle';
 import { encodeAttributeValue } from './attribute-value-codec';
@@ -30,7 +31,7 @@ function bytesFromHex(value: string): Uint8Array {
 
 export async function buildAndSubmitDisclosureProof(
   params: BuildAndSubmitDisclosureProofParams,
-): Promise<{ txHash: string }> {
+): Promise<{ txHash: string | null }> {
   const { service, requestId, eventId, fieldId, members, once } = params;
   const eventIdHex = hex(eventId);
   const fieldIdHex = hex(fieldId);
@@ -80,8 +81,8 @@ export async function buildAndSubmitDisclosureProof(
   const setTree = await buildMerkleTree(encodedMembers, 16);
   const setPath: MerklePathResult = setTree.pathForLeaf(valueBytes);
 
-  if (once) {
-    return service.proveAttributeMembershipOnce(requestId, valueBytes, randBytes, attributePath, setPath);
-  }
-  return service.proveAttributeMembership(requestId, valueBytes, randBytes, attributePath, setPath);
+  const result = once
+    ? await service.proveAttributeMembershipOnce(requestId, valueBytes, randBytes, attributePath, setPath)
+    : await service.proveAttributeMembership(requestId, valueBytes, randBytes, attributePath, setPath);
+  return { txHash: txHashOf(result) };
 }

@@ -7,6 +7,7 @@ import eventOwnerIcon from '../../../icons/svg/collection-owner.svg';
 import { useEventMetadata } from '../../hooks/useEventMetadata';
 import Tooltip from '../../components/Tooltip';
 import { getClaimActionLabel, getTaxonomyEntries } from '../../constants/eventCategories';
+import { txHashOf } from "../../../midnight/tx-result";
 
 // Claiming a POAP on Midnight is a single self-service call — claim(eventId, isSoulbound) mints a
 // brand-new token scoped to (holder, event); calling it again for the same event the same wallet
@@ -70,7 +71,7 @@ export default function CreatePoap() {
     try {
       loadingFunction(claimLabel.loading, "Preparing transaction…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
-      const { txHash } = await provider.service.claim(eventIdBytes, isSoulbound);
+      const txHash = txHashOf(await provider.service.claim(eventIdBytes, isSoulbound));
 
       succesfullBlockchainCreation(`${claimLabel.done} Successfully`, `Transaction: ${txHash}`, "");
       closeDrawer();

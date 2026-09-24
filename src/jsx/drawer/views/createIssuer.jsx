@@ -11,6 +11,7 @@ import {
   errorFunction,
   loadingFunction,
 } from "../../toasts/sweetAlerts";
+import { txHashOf } from "../../../midnight/tx-result";
 
 // registerIssuer(issuerPk) is admin-only on-chain (poap.compact: `assert is_admin()`) — there is no
 // self-service "become an organizer" flow on Midnight, unlike the old Paima-backed signup form.
@@ -44,7 +45,7 @@ export default function CreateIssuer() {
     try {
       loadingFunction("Registering Issuer", "Preparing transaction…", "");
       const issuerPk = Uint8Array.from(Buffer.from(issuerPkHex.trim(), "hex"));
-      const { txHash } = await midnight.provider.service.registerIssuer(issuerPk);
+      const txHash = txHashOf(await midnight.provider.service.registerIssuer(issuerPk));
 
       succesfullBlockchainCreation("Issuer Registered", `Transaction: ${txHash}`, "");
       closeDrawer();
