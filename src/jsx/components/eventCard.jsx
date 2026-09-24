@@ -160,7 +160,7 @@ const EventCard = forwardRef(({
   };
 
   // "Ask for Proof of Ownership" — the organizer publishes a plain request for this event once, so
-  // holders can run "Prove I Own This POAP" (poapCard.jsx) with one signature and without
+  // holders can run "Prove Ownership" (poapCard.jsx) with one signature and without
   // publishing a request from their own caller_pk (see src/midnight/ownership-proof.ts). Costs the
   // organizer nothing privacy-wise: their pk is already public as this event's organizer.
   // null = still checking, true/false once the indexer answered.

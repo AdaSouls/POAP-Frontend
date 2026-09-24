@@ -140,7 +140,7 @@ export default function PublishDisclosureRequest() {
       succesfullBlockchainCreation(
         "Disclosure Request Published",
         isCredentialField
-          ? "Holders can now answer it from their POAP (Anonymous Proofs)."
+          ? "Holders can now answer it from their POAP (Prove a Private Detail)."
           : `Request ID: ${requestId}`,
         "",
       );
@@ -231,7 +231,7 @@ export default function PublishDisclosureRequest() {
               <div className="col-12 mt-2">
                 <div className="alert alert-success m-0" role="status">
                   Published. Holders whose {selectedField?.label} is one of these values can prove it
-                  from their POAP card (Anonymous Proofs), without revealing it.
+                  from their POAP card (Prove a Private Detail), without revealing it.
                 </div>
               </div>
             )}

@@ -23,9 +23,9 @@ en vivo. La sección "Checklist" al final lista lo que más importa confirmar.
 | Ver los datos privados propios | Card expandida del POAP → "Private details" | Fan |
 | Habilitar pruebas de tenencia | Card del evento → "Ask for Proof of Ownership" | Productora |
 | Preguntar por un dato privado | Card del evento → "Ask for a Disclosure" | Productora |
-| Prueba de tenencia (revela el token) (B6) | Card del POAP → "Prove I Own This POAP" | Fan |
-| Prueba anónima de asistencia | Card del POAP → "Anonymous Proofs" | Fan |
-| Prueba anónima sobre un dato privado | Card del POAP → "Anonymous Proofs" | Fan |
+| Prueba de tenencia (revela el token) (B6) | Card del POAP → "Prove Ownership" | Fan |
+| Prueba anónima de tenencia | Card del POAP → "Prove Ownership Anonymously" | Fan |
+| Prueba anónima sobre un dato privado | Card del POAP → "Prove a Private Detail" | Fan |
 | Comprobante único + verificación sin wallet (B8) | Al final de cada prueba → link `/app/verify` | Cualquiera |
 
 ---
@@ -101,39 +101,46 @@ puede leerlos: van cifrados con una clave que se deriva de tu identidad.
 ## Parte 5 — La productora habilita las pruebas (perfil A)
 
 16. En el evento expandido → **Ask for Proof of Ownership** → firma → debe quedar
-    **"Proof of Ownership Enabled"**. Este pedido sirve para la prueba de tenencia y para la
-    prueba anónima de asistencia.
+    **"Proof of Ownership Enabled"**. Este pedido sirve para Prove Ownership y para Prove
+    Ownership Anonymously.
 17. **Ask for a Disclosure** → en "Attribute" elige **`Sector (each credential)`** → valores
     aceptados `Campo` y `Platea` → **Publish Request** → firma.
 
-**Qué comprobar:** el mensaje dice que los holders ya pueden responder desde su POAP (Anonymous
-Proofs). Ya no hace falta mandar ningún link.
+**Qué comprobar:** el mensaje dice que los holders ya pueden responder desde su POAP (Prove a
+Private Detail). Ya no hace falta mandar ningún link.
 
 ## Parte 6 — En la puerta, el fan prueba (perfil B)
 
 Expande la entrada en My Subscriptions. Hay tres pruebas posibles; haz las tres.
 
 **6a. Prueba de tenencia (revela qué entrada es)**
-18. **Prove I Own This POAP** → debe decir "the organizer published: **1 signature**" →
+18. **Prove Ownership** → debe decir "the organizer published: **1 signature**" →
     **Generate Proof** → firma.
-19. Aparece el **comprobante**: "Proof of ownership", "Owns POAP #N", el evento, la hora, el hash
+19. Aparece el **comprobante**: "Ownership proof", "Owns POAP #N", el evento, la hora, el hash
     y un **link de verificación**. Cópialo.
 
-**6b. Prueba anónima de asistencia (no revela la entrada ni la wallet)**
-20. **Anonymous Proofs** → aparece "Holds a valid POAP of this event · Asked by the organizer" →
+**6b. Prueba anónima de tenencia (no revela la entrada ni la wallet)**
+20. **Prove Ownership Anonymously** → aparece "Holds a valid POAP of this event · Asked by the organizer" →
     **Prove** → firma.
-21. Comprobante: "Anonymous proof of attendance". **No** muestra número de token.
+21. Comprobante: "Anonymous ownership proof". **No** muestra número de token.
 
 **6c. Prueba anónima sobre un dato privado**
-22. **Anonymous Proofs** → aparece "Sector is one of: Campo, Platea" → **Prove** → firma.
-23. Comprobante: "Anonymous proof about a private detail". Demuestra que el sector está en esa
+22. **Prove a Private Detail** (solo aparece en credenciales con datos privados) → aparece "Sector is one of: Campo, Platea" → **Prove** → firma.
+23. Comprobante: "Private detail proof". Demuestra que el sector está en esa
     lista **sin decir cuál** ni qué entrada es.
+
+**6d. Historial de pruebas en la entrada**
+24. Cierra el popup. La entrada muestra el badge **"Proven · <fecha de hoy>"**: en la tarjeta
+    cerrada, junto a Soulbound, y en la expandida. Pasando el mouse, dice qué prueba fue y a qué hora.
+25. Expandida, aparece **Proof history** con las tres pruebas (la más nueva arriba), cada una con
+    su botón **Verify**, que abre la página de verificación de esa transacción.
+26. Solo lo ve el fan: la productora (perfil A) y la página pública de colección no lo muestran.
 
 ## Parte 7 — Seguridad verifica sin wallet (incógnito)
 
-24. Abre cada link de verificación en una ventana de incógnito, sin conectar nada.
-25. Debe decir **"Valid: …"** con el tipo de prueba correcto, el bloque y la hora.
-26. Prueba también pegar el hash de la transacción de **creación del evento**: debe decir
+27. Abre cada link de verificación en una ventana de incógnito, sin conectar nada.
+28. Debe decir **"Valid: …"** con el tipo de prueba correcto, el bloque y la hora.
+29. Prueba también pegar el hash de la transacción de **creación del evento**: debe decir
     **"Not a proof"**.
 
 ---
@@ -142,7 +149,7 @@ Expande la entrada en My Subscriptions. Hay tres pruebas posibles; haz las tres.
 
 **A. Valor que no está en la lista**
 - **A**: Ask for a Disclosure → `Sector (each credential)` → valores `Platea` y `VIP`.
-- **B**: en Anonymous Proofs esa pregunta aparece con "Your value isn't one of the accepted ones"
+- **B**: en Prove a Private Detail esa pregunta aparece con "Your value isn't one of the accepted ones"
   y el botón **Prove desactivado**. No se envía nada a la cadena.
 
 **B. Código viejo, sin clave de cifrado (link de respaldo)**
@@ -156,9 +163,9 @@ Expande la entrada en My Subscriptions. Hay tres pruebas posibles; haz las tres.
 
 **C. Sin pedido del organizador**
 - En un evento donde la productora **no** tocó "Ask for Proof of Ownership":
-  - **Prove I Own This POAP** pide **2 firmas** y muestra el aviso ámbar (tu ID queda ligado a esa
+  - **Prove Ownership** pide **2 firmas** y muestra el aviso ámbar (tu ID queda ligado a esa
     entrada). La segunda vez pide 1 sola.
-  - **Anonymous Proofs** dice que nadie pidió una prueba todavía. El fan nunca publica pedidos
+  - **Prove Ownership Anonymously** dice que el organizador todavía no habilitó las pruebas. El fan nunca publica pedidos
     propios para las pruebas anónimas, así que no hay costo de privacidad.
 
 **D. Backup**
@@ -166,11 +173,22 @@ Expande la entrada en My Subscriptions. Hay tres pruebas posibles; haz las tres.
 - En un perfil nuevo, con la misma wallet, restaura con el recovery code → la entrada debe
   mostrar sus datos privados (o volver a bajarlos cifrados: la clave se deriva de la identidad
   restaurada).
+- Si ya hiciste la Parte 6, la entrada restaurada también debe traer el badge **"Proven"** y el
+  **Proof history** (viajan en el backup).
 
 **E. Atributos del evento (el flujo anterior, para Event/Follow)**
 - En eventos Event o Follow, el paso de atributos sigue pidiendo **nombre y valor**, iguales para
   todos. Las preguntas sobre esos atributos las responde el navegador del organizador con el link
   de "Ask for a Disclosure" (ya no los holders).
+
+**F. Pruebas de tenencia en un Event o Subscription (sin credencial)**
+- **A**: crea un evento **Event** o **Subscription** (sin datos privados) → expandido → **Ask for
+  Proof of Ownership** → firma.
+- **B**: reclámalo (Subscribe/Attend) → en My Subscriptions, expandido, aparecen **Prove Ownership**
+  y **Prove Ownership Anonymously**, y **no** aparece Prove a Private Detail.
+- Haz las dos pruebas: cada una firma una vez, muestra su comprobante ("Ownership proof" /
+  "Anonymous ownership proof") y queda en el **Proof history** con el badge "Proven".
+- Abre los dos links de verificación en incógnito: deben decir **"Valid: …"** con el nombre correcto.
 
 ---
 
@@ -188,6 +206,10 @@ Lo que los tests no pueden cubrir y hay que confirmar acá:
       record on-chain", el problema está ahí; avísame con el error de la consola.
 - [ ] **Parte 7:** el link de verificación encuentra la transacción. Si dice que no existe, el hash
       que guarda el comprobante no coincide con el que usa el indexer de Midnight.
+- [ ] **Parte 6d:** el badge "Proven" aparece al cerrar el popup, sin recargar la página.
+- [ ] **Variante D:** el historial de pruebas vuelve con la restauración.
+- [ ] **Variante F:** las dos pruebas de tenencia funcionan en un POAP reclamado (Event/Subscription),
+      no solo en credenciales.
 - [ ] **Variante A:** el botón queda desactivado y no se firma nada.
 - [ ] **Variante B:** el link de respaldo guarda los datos solo en la wallet correcta.
 

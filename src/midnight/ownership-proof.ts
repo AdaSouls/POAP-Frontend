@@ -1,4 +1,4 @@
-// "Prove I Own This POAP" (B6) — proveTokenOwnership(requestId, tokenId) in poap.compact.
+// "Prove Ownership" (B6) — proveTokenOwnership(requestId, tokenId) in poap.compact.
 //
 // The circuit proves the caller's holder_pk(issuer) owns tokenId, the token isn't burned, and it
 // belongs to the request's event. It needs a published DisclosureRequest for that event but never

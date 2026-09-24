@@ -1,0 +1,68 @@
+import { readProofDetails } from '../../midnight/proof-transcript';
+
+// Same shape as a real proveTokenOwnership transcript read off the local devnet (2026-09-24):
+// member(requestId) → idx[requestId] popeq record → member(tokenId) → ...
+const bytes = (hex: string) => Uint8Array.from(Buffer.from(hex, 'hex'));
+const atom = (length: number) => ({ tag: 'atom', value: { tag: 'bytes', length } });
+const cell = (hex: string, length: number) => ({
+  push: { storage: false, value: { tag: 'cell', content: { value: [bytes(hex)], alignment: [atom(length)] } } },
+});
+const ledgerField = (index: string) => ({
+  idx: {
+    cached: false,
+    pushPath: false,
+    path: [
+      { tag: 'value', value: { value: [bytes('01')], alignment: [atom(1)] } },
+      { tag: 'value', value: { value: [bytes(index)], alignment: [atom(1)] } },
+    ],
+  },
+});
+const keyedBy = (hex: string) => ({
+  idx: { cached: false, pushPath: false, path: [{ tag: 'value', value: { value: [bytes(hex)], alignment: [atom(32)] } }] },
+});
+
+const REQUEST = 'a2'.repeat(32);
+const VERIFIER = 'f0'.repeat(32);
+const EVENT = '4d'.repeat(32);
+
+function program({ tokenIdLe }: { tokenIdLe?: string } = {}) {
+  const ops: any[] = [
+    { dup: { n: 0 } },
+    ledgerField('0b'),
+    cell(REQUEST, 32),
+    'member',
+    { popeq: { cached: true, result: { value: [bytes('01')], alignment: [atom(1)] } } },
+    { dup: { n: 0 } },
+    ledgerField('0b'),
+    keyedBy(REQUEST),
+    // Trailing zero bytes are dropped: an all-zero fieldId/setRoot is an empty atom.
+    { popeq: { cached: false, result: { value: [bytes(VERIFIER), bytes(EVENT), bytes(''), bytes('')], alignment: [atom(32), atom(32), atom(32), atom(32)] } } },
+  ];
+  if (tokenIdLe !== undefined) ops.push({ dup: { n: 0 } }, cell(tokenIdLe, 8), 'member');
+  return ops;
+}
+
+describe('readProofDetails', () => {
+  it('reads the request, its event and the token of an ownership proof', () => {
+    expect(readProofDetails(program({ tokenIdLe: '' }))).toEqual({
+      requestId: REQUEST,
+      verifierPk: VERIFIER,
+      eventId: EVENT,
+      fieldId: '0'.repeat(64),
+      setRoot: '0'.repeat(64),
+      tokenId: 0n,
+    });
+  });
+
+  it('reads the token id little-endian', () => {
+    expect(readProofDetails(program({ tokenIdLe: '0501' }))?.tokenId).toBe(261n);
+  });
+
+  it('has no token for an anonymous proof', () => {
+    expect(readProofDetails(program())?.tokenId).toBeNull();
+  });
+
+  it('returns null for a transcript without a request lookup', () => {
+    expect(readProofDetails([{ dup: { n: 0 } }, 'member'])).toBeNull();
+  });
+});

@@ -3,6 +3,7 @@ import { X, Info } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../../contexts/drawer/drawer.provider";
 import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../../toasts/sweetAlerts";
 import { findOwnershipRequest, proveOwnership } from "../../../midnight/ownership-proof";
+import { addProofRecord } from "../../../midnight/proof-history";
 import ProofReceipt from "../../components/ProofReceipt";
 import loadingGif from "../../../images/loading.gif";
 
@@ -55,7 +56,16 @@ export default function ProveOwnership() {
             step === "publish" ? "Publishing the proof request (1 of 2)…" : choice.requestId ? "Preparing transaction…" : "Generating the proof (2 of 2)…",
           ),
       });
-      setResult({ ...proof, provenAt: new Date() });
+      const provenAt = new Date();
+      setResult({ ...proof, provenAt });
+      if (token.holderPk) {
+        addProofRecord(token.holderPk, token.tokenId, {
+          kind: "proveTokenOwnership",
+          question: ownershipQuestion,
+          txHash: proof.txHash ?? null,
+          provenAt: provenAt.toISOString(),
+        });
+      }
       succesfullBlockchainCreation("Ownership Proven", proof.txHash ? `Transaction: ${proof.txHash}` : "", "");
     } catch (error) {
       console.error("Error proving ownership:", error);
@@ -66,6 +76,7 @@ export default function ProveOwnership() {
   };
 
   const signatures = choice?.source === "new" ? 2 : 1;
+  const ownershipQuestion = token ? `Owns POAP #${String(token.tokenId)}` : "";
 
   return (
     <div className="d-flex flex-column w-100 drawer-modal-inner">
@@ -73,7 +84,7 @@ export default function ProveOwnership() {
         <button className="btn wallet-modal-close" onClick={closeDrawer} aria-label="close">
           <X size={15} />
         </button>
-        <h4 className="text-center w-100 m-0 font-weight-semibold">Prove I Own This POAP</h4>
+        <h4 className="text-center w-100 m-0 font-weight-semibold">Prove Ownership</h4>
       </div>
 
       <div className="drawer-body">
@@ -84,7 +95,7 @@ export default function ProveOwnership() {
         ) : !token ? null : result ? (
           <ProofReceipt
             kind="proveTokenOwnership"
-            question={`Owns POAP #${String(token.tokenId)}`}
+            question={ownershipQuestion}
             eventName={token.eventName}
             tokenId={token.tokenId}
             txHash={result.txHash}

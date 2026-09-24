@@ -9,7 +9,8 @@ const SHOW_DELAY_MS = 500;
 // can't sample the real page behind it in Chromium, so it has to leave the DOM subtree it was
 // triggered from. Wraps its single child via cloneElement (not an extra wrapper element) so it
 // doesn't disturb the trigger's own flex layout inside .inner-header-row-right etc.
-const Tooltip = ({ label, children, placement = "bottom" }) => {
+// multiline: wraps a sentence-long label at a max width instead of one long line.
+const Tooltip = ({ label, children, placement = "bottom", multiline = false }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
   const triggerRef = useRef(null);
@@ -79,7 +80,7 @@ const Tooltip = ({ label, children, placement = "bottom" }) => {
       {open &&
         pos &&
         createPortal(
-          <div className="app-tooltip" style={{ ...pos, transform: "translateX(-50%)" }} role="tooltip">
+          <div className={`app-tooltip${multiline ? " is-multiline" : ""}`} style={{ ...pos, transform: "translateX(-50%)" }} role="tooltip">
             {label}
           </div>,
           document.body,

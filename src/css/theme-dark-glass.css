@@ -456,6 +456,14 @@ h1, h2, h3, h4, h5, h6,
   color: var(--text-on-solid);
 }
 
+/* style.css's template rule `.form-control[readonly]` (higher specificity than .form-control above)
+   paints read-only inputs #e9ecef — light text on light gray, unreadable. Read-only inputs here are
+   copyable links (ProofReceipt.jsx's verify link, mintPoap.jsx's delivery link): keep them dark. */
+.form-control[readonly] {
+  background: var(--solid-bg);
+  color: var(--text-on-solid);
+}
+
 .form-control::placeholder,
 .form-select::placeholder {
   color: var(--text-on-solid-muted);
@@ -912,6 +920,12 @@ select option,
   color: #34c38f;
 }
 
+/* Same shield as the ownership seal, blurred: the anonymous proof doesn't say which POAP it was. */
+.poap-seal-icon-anonymous {
+  filter: blur(1.6px);
+  opacity: 0.85;
+}
+
 /* poapCard.jsx's expanded card, right column: wraps the embedded "parent event" preview (styled
    like that event's own collapsed eventCard.jsx tile, just narrower) — same flat glass-block
    treatment as .poap-preview-card/.drawer-modal-preview-card, so every nested "card" in this
@@ -1077,7 +1091,129 @@ select option,
   color: var(--text-on-glass);
 }
 
-/* One answerable request in the Anonymous Proofs popup (holderProofs.jsx). */
+/* /app/verify (verifyProof.jsx) — a certificate: one card centered in the viewport (below the
+   fixed 68px header, see .content-body), big seal on top, facts, and the search at its foot. */
+.verify-proof-page {
+  min-height: calc(100vh - 68px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.verify-proof-card {
+  width: 100%;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 32px 28px 24px;
+}
+
+.verify-proof-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.verify-proof-title {
+  margin-top: 6px !important;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.verify-proof-valid-badge {
+  background: transparent;
+  border: 1px solid #34c38f;
+  color: #34c38f;
+  font-size: 11px;
+  padding: 3px 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.verify-proof-facts {
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.verify-proof-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--glass-border);
+}
+
+@media (max-width: 575px) {
+  .verify-proof-card {
+    padding: 24px 16px 18px;
+  }
+}
+
+.verify-proof-event {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.verify-proof-event-thumb {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg-hover);
+}
+
+.verify-proof-event-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* "Proven · <date>" on a POAP the holder has proven from this browser (poapCard.jsx, proof-history.ts).
+   Same outline treatment as .status-badge-active: the role accent, transparent fill. */
+.card-poap .poap-proven-badge {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--role-accent, #2ecc71);
+  color: var(--role-accent, #2ecc71);
+  cursor: pointer;
+}
+
+/* Proof history block in the expanded POAP card — same box as .credential-private-details. */
+.proof-history {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.proof-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-hover);
+}
+
+/* One answerable request in the anonymous-proof popups (holderProofs.jsx). */
 .holder-proof-item {
   display: flex;
   align-items: center;
@@ -2482,6 +2618,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   -webkit-backdrop-filter: blur(var(--glass-blur-sm));
   border: 1px solid var(--glass-border);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.app-tooltip.is-multiline {
+  white-space: normal;
+  width: max-content;
+  max-width: 280px;
+  text-align: center;
+  line-height: 1.4;
 }
 
 .filter-bar {

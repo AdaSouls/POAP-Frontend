@@ -4,24 +4,24 @@
 // sees them — the chain's indexer is the only source. A successful transaction IS the proof: every
 // failure path in these circuits is an assert, so a failed proof never lands on-chain.
 //
-// Limitation: the circuit's arguments (which request, which token) aren't decoded here. The
-// receipt states them; the verifier matches the time and the question they asked.
+// Which request, event and token a proof was about is read from the transaction's own public
+// transcript (proof-transcript.ts), not from the receipt.
 
 const GRAPHQL_URL = process.env.REACT_APP_MIDNIGHT_INDEXER_GRAPHQL_URL || 'http://localhost:8088/api/v4/graphql';
 
 export const PROOF_KINDS: Record<string, { title: string; description: string; isProof: boolean }> = {
   proveTokenOwnership: {
-    title: 'Proof of ownership',
+    title: 'Ownership proof',
     description: 'The holder of a specific POAP proved they own it. The token is revealed; the wallet is not.',
     isProof: true,
   },
   proveEventAttendance: {
-    title: 'Anonymous proof of attendance',
+    title: 'Anonymous ownership proof',
     description: 'Someone proved they hold a valid POAP of the event, without revealing which one or their wallet.',
     isProof: true,
   },
   proveCredentialAttribute: {
-    title: 'Anonymous proof about a private detail',
+    title: 'Private detail proof',
     description:
       "Someone proved a private detail of their credential is one of the accepted values, without revealing the value, the credential or their wallet.",
     isProof: true,
@@ -44,9 +44,12 @@ export type ProofLookup =
       status: 'found';
       hash: string;
       blockHeight: number | null;
+      blockHash: string | null;
       timestamp: number | null; // ms
       entryPoint: string | null;
       isOurContract: boolean;
+      succeeded: boolean | null; // null when the indexer doesn't say
+      raw: string | null; // hex, the serialized transaction (for proof-transcript.ts)
     };
 
 export async function lookupProofTransaction(txHash: string, contractAddress: string): Promise<ProofLookup> {
@@ -54,8 +57,10 @@ export async function lookupProofTransaction(txHash: string, contractAddress: st
   const query = `query ($hash: HexEncoded!) {
     transactions(offset: { hash: $hash }) {
       hash
-      block { height timestamp }
+      raw
+      block { height hash timestamp }
       contractActions { address __typename ... on ContractCall { entryPoint } }
+      ... on RegularTransaction { transactionResult { status } }
     }
   }`;
   const response = await fetch(GRAPHQL_URL, {
@@ -73,9 +78,12 @@ export async function lookupProofTransaction(txHash: string, contractAddress: st
     status: 'found',
     hash: tx.hash,
     blockHeight: tx.block?.height ?? null,
+    blockHash: tx.block?.hash ?? null,
     timestamp: tx.block?.timestamp ?? null,
     entryPoint: call?.entryPoint ?? null,
     isOurContract: Boolean(call && call.address?.toLowerCase() === contractAddress?.toLowerCase()),
+    succeeded: tx.transactionResult?.status ? tx.transactionResult.status === 'SUCCESS' : null,
+    raw: tx.raw ?? null,
   };
 }
 

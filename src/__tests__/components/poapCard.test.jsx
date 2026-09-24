@@ -166,11 +166,34 @@ describe('PoapCard Component', () => {
       });
     });
 
+    it('shows an ownership seal and a blurred anonymous seal once proofs were made', () => {
+      const owned = { ...poap, ownerPk: 'dd'.repeat(32) };
+      const key = `adasouls:midnight:proofs:${owned.ownerPk}:42`;
+      window.localStorage.setItem(
+        key,
+        JSON.stringify([
+          { kind: 'proveEventAttendance', question: 'Holds a valid POAP of this event', txHash: 'a1'.repeat(32), provenAt: '2026-09-24T20:00:00.000Z' },
+          { kind: 'proveTokenOwnership', question: 'Owns POAP #42', txHash: 'b2'.repeat(32), provenAt: '2026-09-23T20:00:00.000Z' },
+        ]),
+      );
+      renderWithProviders(<PoapCard poap={owned} isExpanded />, { drawerValue });
+
+      expect(screen.getByText('Ownership proven')).toBeInTheDocument();
+      const anonymous = screen.getByText('Ownership proven anonymously').closest('.poap-verified-seal-card');
+      expect(anonymous.querySelector('.poap-seal-icon-anonymous')).not.toBeNull();
+    });
+
+    it('shows no proof seals before any proof', () => {
+      renderWithProviders(<PoapCard poap={{ ...poap, ownerPk: 'dd'.repeat(32) }} isExpanded />, { drawerValue });
+      expect(screen.queryByText('Ownership proven')).not.toBeInTheDocument();
+      expect(screen.queryByText('Ownership proven anonymously')).not.toBeInTheDocument();
+    });
+
     it('opens the ownership proof popup for this token', async () => {
       const dispatch = jest.fn();
       renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue, drawerDispatch: dispatch });
 
-      await userEvent.click(screen.getByRole('button', { name: /prove i own this poap/i }));
+      await userEvent.click(screen.getByRole('button', { name: /^prove ownership$/i }));
 
       expect(dispatch).toHaveBeenCalledWith({
         type: 'SHOW_PROVE_OWNERSHIP',
@@ -366,16 +389,29 @@ describe('PoapCard Component', () => {
       expect(await screen.findByText(/hasn't sent this credential's private details/i)).toBeInTheDocument();
     });
 
-    it('opens Anonymous Proofs with the token, its fields and its details', async () => {
+    it('opens Prove a Private Detail with the token, its fields and its details', async () => {
       loadCredentialPackage.mockResolvedValue(PKG);
       const dispatch = jest.fn();
       renderWithProviders(<PoapCard poap={credentialPoap} isExpanded />, connected(dispatch));
       await screen.findByRole('button', { name: /show private details/i });
 
-      await userEvent.click(screen.getByRole('button', { name: /anonymous proofs/i }));
+      await userEvent.click(screen.getByRole('button', { name: /prove a private detail/i }));
       expect(dispatch).toHaveBeenCalledWith({
         type: 'SHOW_HOLDER_PROOFS',
-        payload: expect.objectContaining({ credentialFields: FIELDS, pkg: PKG, eventName: 'Recital' }),
+        payload: expect.objectContaining({ mode: 'detail', credentialFields: FIELDS, pkg: PKG, eventName: 'Recital' }),
+      });
+    });
+
+    it('opens Prove Ownership Anonymously with the credential details it needs', async () => {
+      loadCredentialPackage.mockResolvedValue(PKG);
+      const dispatch = jest.fn();
+      renderWithProviders(<PoapCard poap={credentialPoap} isExpanded />, connected(dispatch));
+      await screen.findByRole('button', { name: /show private details/i });
+
+      await userEvent.click(screen.getByRole('button', { name: /prove ownership anonymously/i }));
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_HOLDER_PROOFS',
+        payload: expect.objectContaining({ mode: 'ownership', pkg: PKG }),
       });
     });
   });

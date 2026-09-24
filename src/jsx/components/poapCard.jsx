@@ -1,10 +1,11 @@
 import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Award, BadgeCheck, Calendar, Database, Eye, EyeOff, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
+import { Award, BadgeCheck, Calendar, Database, ExternalLink, Eye, EyeOff, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import CategoryBadge from "./CategoryBadge";
+import Tooltip from "./Tooltip";
 import { getClaimActionLabel } from "../constants/eventCategories";
 import { getEvent } from "../../midnight/indexer.service";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
@@ -17,6 +18,8 @@ import {
 } from "../../midnight/collection-share";
 import { loadCredentialPackage } from "../../midnight/holder-proofs";
 import { decodeValueHex } from "../../midnight/credential-store";
+import { getProofHistory, PROOF_HISTORY_EVENT } from "../../midnight/proof-history";
+import { PROOF_KINDS, verifyUrl } from "../../midnight/proof-verification";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -198,10 +201,12 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExpanded, service, credentialFields.length, poap.tokenId, poap.isBurned]);
 
-  const openHolderProofs = () => {
+  // mode: "ownership" (Prove Ownership Anonymously) or "detail" (Prove a Private Detail).
+  const openHolderProofs = (mode) => {
     dispatch({
       type: "SHOW_HOLDER_PROOFS",
       payload: {
+        mode,
         token: holderToken,
         eventName: eventMetadata?.name || null,
         credentialFields,
@@ -218,11 +223,36 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
         tokenId: poap.tokenId,
         eventId: poap.firstEventId,
         issuerPkHex: poap.issuerPkHex,
+        holderPk: poap.ownerPk,
         isBurned: poap.isBurned,
         eventName: eventMetadata?.name || null,
       },
     });
   };
+
+  // Proofs made from this POAP in this browser (proof-history.ts) — newest first. Refreshed when a
+  // proof popup records a new one.
+  const [proofHistory, setProofHistory] = useState(() => getProofHistory(poap.ownerPk, poap.tokenId));
+  useEffect(() => {
+    const refresh = () => setProofHistory(getProofHistory(poap.ownerPk, poap.tokenId));
+    refresh();
+    window.addEventListener(PROOF_HISTORY_EVENT, refresh);
+    return () => window.removeEventListener(PROOF_HISTORY_EVENT, refresh);
+  }, [poap.ownerPk, poap.tokenId]);
+  const lastProof = proofHistory[0] || null;
+  const lastOwnershipProof = proofHistory.find((record) => record.kind === "proveTokenOwnership") || null;
+  const lastAnonymousProof = proofHistory.find((record) => record.kind === "proveEventAttendance") || null;
+  const proofBadge = lastProof && (
+    <Tooltip
+      multiline
+      label={`Last proof: ${PROOF_KINDS[lastProof.kind]?.title || "Proof"} · ${new Date(lastProof.provenAt).toLocaleString()}. Only you see this.`}
+    >
+      <span className="badge poap-proven-badge" style={{ fontSize: "10px", padding: "2px 8px" }}>
+        <ShieldCheck size={10} className="mr-1" />
+        Proven · {formatDateToDDMMYYYY(lastProof.provenAt)}
+      </span>
+    </Tooltip>
+  );
 
   // No "pending"/claim state exists for a POAP — mintTo() (organizer push-mint) and claim()
   // (self-mint) both leave the token already owned by the recipient the instant the transaction
@@ -334,15 +364,16 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                         {poapStatusLabel}
                       </span>
                     </div>
-                    {poap.isSoulbound && (
-                      <div className="d-flex align-items-center mb-2">
-                        <span
-                          className="badge bg-info mr-2"
-                          style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
-                          title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
-                        >
-                          Soulbound
-                        </span>
+                    {(poap.isSoulbound || proofBadge) && (
+                      <div className="d-flex align-items-center flex-wrap mb-2" style={{ gap: "6px" }}>
+                        {poap.isSoulbound && (
+                          <Tooltip multiline label="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet.">
+                            <span className="badge bg-info" style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}>
+                              Soulbound
+                            </span>
+                          </Tooltip>
+                        )}
+                        {proofBadge}
                       </div>
                     )}
 
@@ -388,13 +419,11 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                 <div style={textStyle}>
                   {poap.isSoulbound && (
                     <div className="mb-2">
-                      <span
-                        className="badge bg-info"
-                        style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}
-                        title="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet."
-                      >
-                        Soulbound
-                      </span>
+                      <Tooltip multiline label="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet.">
+                        <span className="badge bg-info" style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}>
+                          Soulbound
+                        </span>
+                      </Tooltip>
                       <small className="text-muted d-block mt-1">
                         Marked non-transferable by you at claim time — the contract does not enforce
                         this restriction on-chain yet.
@@ -460,7 +489,51 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                           </dl>
                         ) : null}
                         <p className="m-0 mt-2 small text-muted">
-                          Only you can see these. Anonymous Proofs lets you prove one without revealing it.
+                          Only you can see these. Prove a Private Detail lets you prove one without revealing it.
+                        </p>
+                      </div>
+                      <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
+                    </>
+                  )}
+
+                  {proofHistory.length > 0 && (
+                    <>
+                      <div className="proof-history">
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <span className="d-flex align-items-center small font-weight-semibold">
+                            <ShieldCheck size={14} className="mr-2" />
+                            Proof history
+                          </span>
+                          {proofBadge}
+                        </div>
+                        <ul className="list-unstyled m-0 d-flex flex-column" style={{ gap: "8px" }}>
+                          {proofHistory.map((record) => (
+                            <li key={`${record.provenAt}-${record.txHash}`} className="proof-history-item">
+                              <div style={{ minWidth: 0 }}>
+                                <p className="m-0 small font-weight-semibold">
+                                  {PROOF_KINDS[record.kind]?.title || "Proof"}
+                                </p>
+                                <p className="m-0 small text-muted text-truncate">{record.question}</p>
+                                <p className="m-0 small text-muted">{new Date(record.provenAt).toLocaleString()}</p>
+                              </div>
+                              {record.txHash && (
+                                <a
+                                  href={verifyUrl(record.txHash)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-card-detail-action btn-sm flex-shrink-0"
+                                >
+                                  <ExternalLink size={14} className="mr-2" />
+                                  Verify
+                                </a>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="m-0 mt-2 small text-muted">
+                          Only you see this list — it's kept in this browser and in your backup. Each proof
+                          stays on-chain; anyone can check it with its Verify link. It shows you held this
+                          POAP at that moment; prove again to show you still do.
                         </p>
                       </div>
                       <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
@@ -484,19 +557,35 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                         disabled={!midnight?.provider}
                       >
                         <ShieldCheck size={14} className="mr-2" />
-                        Prove I Own This POAP
+                        Prove Ownership
                       </button>
                     )}
                     {!poap.isBurned && (
-                      <button
-                        type="button"
-                        className="btn btn-card-detail-action btn-sm"
-                        onClick={openHolderProofs}
-                        disabled={!midnight?.provider || credentialStatus === "loading"}
-                      >
-                        <EyeOff size={14} className="mr-2" />
-                        Anonymous Proofs
-                      </button>
+                      <Tooltip multiline label="Proves you hold a POAP of this event without revealing which one.">
+                        <button
+                          type="button"
+                          className="btn btn-card-detail-action btn-sm"
+                          onClick={() => openHolderProofs("ownership")}
+                          // A credential's leaf includes its private-details root, so wait for them.
+                          disabled={!midnight?.provider || credentialStatus === "loading"}
+                        >
+                          <EyeOff size={14} className="mr-2" />
+                          Prove Ownership Anonymously
+                        </button>
+                      </Tooltip>
+                    )}
+                    {!poap.isBurned && credentialFields.length > 0 && (
+                      <Tooltip multiline label="Proves one of your private details matches a question, without revealing it.">
+                        <button
+                          type="button"
+                          className="btn btn-card-detail-action btn-sm"
+                          onClick={() => openHolderProofs("detail")}
+                          disabled={!midnight?.provider || credentialStatus === "loading"}
+                        >
+                          <Lock size={14} className="mr-2" />
+                          Prove a Private Detail
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 </div>
@@ -543,6 +632,36 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     <p className="text-muted small mb-0">No mint transaction found for this token.</p>
                   )}
                 </div>
+
+                {/* One seal per kind of ownership proof the holder has made (proof-history.ts),
+                    newest date. Same shield for both; blurred for the anonymous one. Owner-only. */}
+                {[
+                  { record: lastOwnershipProof, title: "Ownership proven", blurred: false },
+                  { record: lastAnonymousProof, title: "Ownership proven anonymously", blurred: true },
+                ]
+                  .filter(({ record }) => record)
+                  .map(({ record, title, blurred }) => (
+                    <div key={title} className="poap-verified-seal-card mt-2">
+                      <ShieldCheck
+                        size={36}
+                        className={`poap-verified-seal-icon flex-shrink-0${blurred ? " poap-seal-icon-anonymous" : ""}`}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <p className="m-0 font-weight-semibold">{title}</p>
+                        <p className="m-0 text-muted small">
+                          Last proof {new Date(record.provenAt).toLocaleString()}
+                          {record.txHash && (
+                            <>
+                              {" · "}
+                              <a href={verifyUrl(record.txHash)} target="_blank" rel="noopener noreferrer" className="text-white">
+                                Verify <ExternalLink size={11} />
+                              </a>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
 
                 <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
 

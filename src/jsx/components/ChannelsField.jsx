@@ -36,7 +36,13 @@ export default function ChannelsField({ values, onChange }) {
           <input
             type="text"
             className="form-control"
-            placeholder={channel.type === "other" ? "e.g. Signal — @handle" : "e.g. contact@event.com"}
+            placeholder={
+              channel.type === "other"
+                ? "e.g. Signal — @handle"
+                : channel.type === "instagram"
+                  ? "e.g. @yourevent"
+                  : "e.g. contact@event.com"
+            }
             aria-label="Channel value"
             value={channel.value}
             onChange={(event) => updateChannel(index, { value: event.target.value })}

@@ -8,6 +8,7 @@ import {
   proveAttribute,
   valueQualifies,
 } from "../../../midnight/holder-proofs";
+import { addProofRecord } from "../../../midnight/proof-history";
 import ProofReceipt from "../../components/ProofReceipt";
 import loadingGif from "../../../images/loading.gif";
 
@@ -20,15 +21,37 @@ const questionFor = (item) =>
       ? `${item.label} is one of: ${item.members.join(", ")}`
       : `${item.label} (accepted values not published)`;
 
-// Anonymous proofs from the holder's own POAP (poapCard.jsx → SHOW_HOLDER_PROOFS). Lists the
-// requests published for this event that the holder can answer — plain ones (attendance) and ones
-// about one of the credential's private fields — and answers them with one signature each. The
-// holder never publishes a request here, so nothing ties the proof to their caller_pk. Ends in the
-// shared receipt (B8). Logic: src/midnight/holder-proofs.ts.
+// Two modes, one per button on the POAP card:
+//   "ownership" — Prove Ownership Anonymously: plain requests (proveEventAttendance), "I hold a
+//                 valid POAP of this event" without saying which;
+//   "detail"    — Prove a Private Detail: questions about one of the credential's private fields.
+const MODES = {
+  ownership: {
+    kind: "attendance",
+    title: "Prove Ownership Anonymously",
+    intro:
+      "Proves you hold a valid POAP of this event without revealing which one is yours or your wallet. Each proof takes one signature.",
+    empty:
+      "The organizer hasn't enabled proofs on this event yet. They can do it from their event card (Ask for Proof of Ownership).",
+  },
+  detail: {
+    kind: "attribute",
+    title: "Prove a Private Detail",
+    intro:
+      "Proves one of your credential's private details matches what was asked, without revealing the value, which credential is yours or your wallet. Each proof takes one signature.",
+    empty: "Nobody has asked a question about this credential's private details yet.",
+  },
+};
+
+// Anonymous proofs from the holder's own POAP (poapCard.jsx → SHOW_HOLDER_PROOFS, ctx.mode picks
+// which ones). Lists the requests published for this event that the holder can answer and answers
+// them with one signature each. The holder never publishes a request here, so nothing ties the
+// proof to their caller_pk. Ends in the shared receipt (B8). Logic: src/midnight/holder-proofs.ts.
 export default function HolderProofs() {
   const { midnight, holderProofsContext: ctx } = useDrawer();
   const dispatch = useDrawerDispatch();
   const service = midnight?.provider?.service;
+  const mode = MODES[ctx?.mode] || MODES.ownership;
 
   const [items, setItems] = useState(null);
   const [loadError, setLoadError] = useState(null);
@@ -40,7 +63,7 @@ export default function HolderProofs() {
     let cancelled = false;
     listAnswerableRequests(ctx.token.eventId, ctx.credentialFields || [])
       .then((found) => {
-        if (!cancelled) setItems(found);
+        if (!cancelled) setItems(found.filter((item) => item.kind === mode.kind));
       })
       .catch((error) => {
         console.error("Error loading requests:", error);
@@ -49,7 +72,7 @@ export default function HolderProofs() {
     return () => {
       cancelled = true;
     };
-  }, [ctx, service]);
+  }, [ctx, service, mode.kind]);
 
   const closeDrawer = () => dispatch({ type: "CLOSE_DRAWER" });
 
@@ -61,11 +84,18 @@ export default function HolderProofs() {
         item.kind === "attendance"
           ? await proveAttendance(service, ctx.token, item.request.requestId, ctx.pkg)
           : await proveAttribute(service, ctx.token, item.request, item.members, ctx.pkg);
-      setReceipt({
+      const record = {
         kind: item.kind === "attendance" ? "proveEventAttendance" : "proveCredentialAttribute",
         question: questionFor(item),
         txHash,
         provenAt: new Date(),
+      };
+      setReceipt(record);
+      // Kept in this browser only: nothing on-chain links an anonymous proof back to the token.
+      addProofRecord(ctx.token.holderPk, ctx.token.tokenId, {
+        ...record,
+        txHash: txHash ?? null,
+        provenAt: record.provenAt.toISOString(),
       });
       succesfullBlockchainCreation("Proof Submitted", txHash ? `Transaction: ${txHash}` : "", "");
     } catch (error) {
@@ -84,7 +114,7 @@ export default function HolderProofs() {
         <button className="btn wallet-modal-close" onClick={closeDrawer} aria-label="close">
           <X size={15} />
         </button>
-        <h4 className="text-center w-100 m-0 font-weight-semibold">Anonymous Proofs</h4>
+        <h4 className="text-center w-100 m-0 font-weight-semibold">{mode.title}</h4>
       </div>
 
       <div className="drawer-body">
@@ -98,11 +128,7 @@ export default function HolderProofs() {
           <div className="d-flex flex-column" style={{ gap: "12px" }}>
             <div className="info-hint-card m-0">
               <EyeOff size={16} />
-              <p>
-                These proofs reveal neither which POAP is yours nor your wallet — only that the
-                holder of <em>some</em> valid POAP of this event answered. Each one takes one
-                signature.
-              </p>
+              <p>{mode.intro}</p>
             </div>
 
             {loadError ? (
@@ -115,10 +141,7 @@ export default function HolderProofs() {
                 Looking for requests on this event…
               </p>
             ) : items.length === 0 ? (
-              <p className="text-muted small m-0">
-                Nobody has asked for a proof on this event yet. The organizer can publish one from
-                their event card (Ask for Proof of Ownership, or Ask for a Disclosure on a private field).
-              </p>
+              <p className="text-muted small m-0">{mode.empty}</p>
             ) : (
               <ul className="list-unstyled m-0 d-flex flex-column" style={{ gap: "10px" }}>
                 {items.map((item) => {

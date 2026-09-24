@@ -120,15 +120,28 @@ export async function buildMerkleTree(leaves: Uint8Array[], depth: number): Prom
 
   const realDigests = await Promise.all(leaves.map(leafDigestField));
   const padding = capacity - leaves.length;
-  const paddingDigest = padding > 0 ? await zeroLeafDigest() : null;
 
+  // Every padding leaf has the same digest, so a subtree made only of padding hashes to the same
+  // value at each level: compute it once per level (paddingAt) and only hash the nodes that have a
+  // real leaf under them. Same root and paths as hashing all 2**depth leaves, but a depth-16 set of
+  // a few values takes ~depth hashes instead of 65,535 — which froze the page on the main thread.
+  const paddingAt: bigint[] = new Array(depth + 1);
+  if (padding > 0) {
+    paddingAt[0] = await zeroLeafDigest();
+    for (let level = 1; level <= depth; level++) {
+      paddingAt[level] = transientHash(FIELD_PAIR, [paddingAt[level - 1], paddingAt[level - 1]]);
+    }
+  }
+
+  // levels[level] holds only the nodes with at least one real leaf below; the rest are paddingAt.
   const levels: bigint[][] = new Array(depth + 1);
-  levels[0] = realDigests.concat(paddingDigest !== null ? new Array(padding).fill(paddingDigest) : []);
+  levels[0] = realDigests;
+  const nodeAt = (level: number, index: number): bigint =>
+    index < levels[level].length ? levels[level][index] : paddingAt[level];
   for (let level = 1; level <= depth; level++) {
-    const prev = levels[level - 1];
-    const next: bigint[] = new Array(prev.length / 2);
+    const next: bigint[] = new Array(Math.ceil(levels[level - 1].length / 2));
     for (let k = 0; k < next.length; k++) {
-      next[k] = transientHash(FIELD_PAIR, [prev[2 * k], prev[2 * k + 1]]);
+      next[k] = transientHash(FIELD_PAIR, [nodeAt(level - 1, 2 * k), nodeAt(level - 1, 2 * k + 1)]);
     }
     levels[level] = next;
   }
@@ -141,7 +154,7 @@ export async function buildMerkleTree(leaves: Uint8Array[], depth: number): Prom
     const path: MerkleTreePathEntryArg[] = [];
     let i = index;
     for (let level = 0; level < depth; level++) {
-      const sibling = levels[level][i ^ 1];
+      const sibling = nodeAt(level, i ^ 1);
       const goesLeft = i % 2 === 0;
       path.push({ sibling: { field: sibling }, goes_left: goesLeft });
       i = i >> 1;

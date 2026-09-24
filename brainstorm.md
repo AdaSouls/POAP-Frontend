@@ -320,13 +320,22 @@ público/privado del contrato.
   sponsors. Es lo primero que simplificaría si hay que recortar alcance.
 
 ### Límites del producto terminado (lo que vería un usuario real)
-1. **Dónde se generan las pruebas.** El proof server recibe los datos privados de la llamada,
-   incluida `local_sk`. En producción hay tres opciones y ninguna está resuelta:
-   - que cada usuario corra un proof server propio (Docker) — imposible para el público general;
-   - uno alojado por nosotros — vería la identidad privada de cada usuario, rompe la promesa;
-   - el proving de la wallet (`getProvingProvider` de la dApp connector API) — la única compatible
-     con la privacidad; hoy la app no la usa (`providers.ts` fija un proof server local).
-   Es **bloqueante** para producción.
+1. **Dónde se generan las pruebas — DECIDIDO 2026-09-24: proof server alojado por nosotros
+   (con Matías).** No es local de cada usuario (Docker es imposible para el público y no existe en
+   el celular). El proving "de la wallet" tampoco era alternativa: en agosto `getProvingProvider()`
+   de Lace mandaba los datos al servidor remoto de Midnight (ver comentario en `providers.ts`).
+   Consecuencia: **el operador del proof server ve en claro los datos privados de cada prueba** —
+   la `local_sk` de cada usuario (con ella podría calcular sus seudónimos por organizador) y los
+   valores de las credenciales que se prueban. La cadena y los demás usuarios siguen sin ver nada;
+   la privacidad pasa a depender de confiar en AdaSouls. Requisitos para que sea aceptable:
+   - sin registros de los cuerpos de los pedidos (solo métricas);
+   - HTTPS y CORS limitado a nuestro dominio;
+   - control de abuso (límite por IP o token de sesión): probar es caro en CPU;
+   - capacidad para picos (cientos de pruebas a la vez en una puerta);
+   - a futuro, correrlo en un entorno aislado (TEE / confidential computing) para que ni nosotros
+     podamos leer los datos;
+   - ajustar textos que prometen más de lo que se cumple frente al operador ("Only you can see
+     these", "your wallet is not revealed") o explicarlo en la política de privacidad.
 2. **Intercambio de claves a mano.** Para emitir una credencial, holder y organizador se pasan
    claves por fuera de la app (chat, mail). Con una persona se tolera; con cien entradas no.
 3. **Pruebas sin momento.** Un pedido se puede reutilizar y la verificación no lee los argumentos,
@@ -354,8 +363,10 @@ público/privado del contrato.
 ---
 
 ## Mejoras propuestas (orden sugerido, después de la prueba en vivo)
-1. **Proving desde la wallet** (resuelve el límite 1). Usar el proving provider de la dApp
-   connector API en vez del proof server local; mantener el local solo como opción de desarrollo.
+1. **Proof server de producción** (límite 1; infraestructura con Matías). En el frontend alcanza con
+   apuntar `REACT_APP_MIDNIGHT_PROOF_SERVER_URL` a la URL alojada; el trabajo está en el servidor
+   (sin logs, CORS, límites, escala) y en ajustar los textos de privacidad. El local queda solo
+   para desarrollo.
 2. **QR para el intercambio de claves** (límite 2). El holder muestra un QR o un link con su código;
    Mint POAP lo lee y rellena el destinatario.
 3. **Pedidos en el momento** (límites 3 y 4). Una pantalla de verificador: genera un pedido nuevo,
@@ -373,3 +384,39 @@ público/privado del contrato.
 Para la demo del Hito 5 alcanza con el flujo de Credential (recital o título) tal como está; las
 mejoras 1 a 3 son las que separan la demo de un piloto con usuarios reales.
 
+
+---
+
+## Ideas para más adelante (2026-09-24, conversadas, sin diseñar)
+
+### Validez / vencimiento
+Un campo opcional **"Validity"** en el evento (horas, días, meses, años o sin vencimiento) que el POAP
+cruza con una fecha para mostrar **"Active until …"** o **"Expired"**. Según la categoría, el plazo
+se cuenta desde una fecha distinta:
+
+- **Subscription: desde la última prueba de tenencia.** Tener el POAP no te hace suscriptor activo;
+  probarlo cada tanto sí. El suscriptor renueva cuando quiere, probando de nuevo (una transacción,
+  con costo de DUST). Es una señal de confianza, no un control de pago. El organizador conserva el
+  corte: si quema el POAP, ya no se puede volver a probar y queda vencido. Funciona también con la
+  prueba anónima, porque la validez es del evento y no del token. Base ya hecha: el historial de
+  pruebas (`proof-history.ts`).
+- **Credential (matrícula médica por N años, licencia de conducir por 5): desde la emisión.** El
+  holder no puede autorrenovarse: renueva el emisor, que emite una credencial nueva; puede revocar
+  antes quemándola. La hora de emisión sale del `mintedBlock` del token y la hora del bloque del
+  indexer de Midnight.
+
+Piezas: campo en el asistente y la metadata; badge en el POAP; vigencia de cada prueba en el
+historial; y en `/app/verify`, "valid until … / expired". Esto último necesita leer de la
+transacción el pedido (`requestId`), que dice de qué evento es, para que no se pueda falsificar
+pasando otro evento por la URL.
+
+Relacionado: habilitar **"solo por invitación"** también en Event y Subscription (hoy solo existe en
+Credential), para membresías pagas donde renueva el organizador. Y la ventana de N horas desde la
+entrada a un evento, con renovación, necesita un check-in de un solo uso en el contrato (a
+conversar con Matías).
+
+### "Ask for Proof of Ownership" automático
+Hoy es un paso manual del organizador. Si lo olvida, sus holders no tienen prueba anónima de
+tenencia, y Prove Ownership les pide 2 firmas y vincula su wallet con el token. Opciones: publicarlo
+automáticamente al crear el evento (una firma más en ese momento), o al menos un aviso en la tarjeta
+del evento mientras no esté publicado.

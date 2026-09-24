@@ -45,7 +45,7 @@ describe('ProveOwnership drawer view', () => {
     expect(screen.getByText(/the organizer published/i)).toBeInTheDocument();
     await userEvent.click(button);
 
-    await waitFor(() => expect(screen.getByText(/^proof of ownership$/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/^ownership proof$/i)).toBeInTheDocument());
     expect(screen.getByText(/owns poap #5/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue(/\/app\/verify\?tx=abab/)).toBeInTheDocument();
     expect(service.publishDisclosureRequest).not.toHaveBeenCalled();
@@ -66,7 +66,7 @@ describe('ProveOwnership drawer view', () => {
     expect(screen.getByText(/links\s+that ID to this token/i)).toBeInTheDocument();
     await userEvent.click(button);
 
-    await waitFor(() => expect(screen.getByText(/^proof of ownership$/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/^ownership proof$/i)).toBeInTheDocument());
     expect(service.publishDisclosureRequest).toHaveBeenCalledTimes(1);
   });
 });

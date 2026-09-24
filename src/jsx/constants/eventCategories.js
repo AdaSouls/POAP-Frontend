@@ -182,6 +182,7 @@ export const CHANNEL_TYPES = [
   { value: "telegram", label: "Telegram" },
   { value: "whatsapp", label: "WhatsApp" },
   { value: "discord", label: "Discord" },
+  { value: "instagram", label: "Instagram" },
   { value: "social", label: "Social media" },
   OTHER_OPTION,
 ];

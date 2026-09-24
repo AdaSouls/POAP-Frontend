@@ -19,21 +19,33 @@ const TOKEN = { tokenId: 4, eventId: 'aa'.repeat(32), issuerPk: ORGANIZER, holde
 const PKG = { fields: [{ fieldId: SECTOR, label: 'Sector', valueHex: '00', randHex: '00' }] };
 const request = (id, fieldId = '0'.repeat(64)) => ({ requestId: id, verifierPk: ORGANIZER, eventId: TOKEN.eventId, fieldId });
 
-function renderView() {
+function renderView(mode = 'ownership') {
   return renderWithProviders(<HolderProofs />, {
     drawerValue: {
       ...mockDrawerContext,
       midnight: { ...mockDrawerContext.midnight, provider: { address: 'ee'.repeat(32), service: {} } },
-      holderProofsContext: { token: TOKEN, eventName: 'Recital', credentialFields: [{ fieldId: SECTOR, label: 'Sector' }], pkg: PKG },
+      holderProofsContext: { mode, token: TOKEN, eventName: 'Recital', credentialFields: [{ fieldId: SECTOR, label: 'Sector' }], pkg: PKG },
     },
   });
 }
 
 describe('HolderProofs drawer view', () => {
-  it('explains when nobody has asked for a proof yet', async () => {
+  it('explains when the organizer has not enabled proofs yet', async () => {
     listAnswerableRequests.mockResolvedValue([]);
     renderView();
-    expect(await screen.findByText(/nobody has asked for a proof/i)).toBeInTheDocument();
+    expect(await screen.findByText(/hasn't enabled proofs on this event yet/i)).toBeInTheDocument();
+  });
+
+  it('shows only the questions of its own mode', async () => {
+    listAnswerableRequests.mockResolvedValue([
+      { kind: 'attendance', request: request('11'.repeat(32)) },
+      { kind: 'attribute', request: request('22'.repeat(32), SECTOR), label: 'Sector', members: ['Campo'] },
+    ]);
+    valueQualifies.mockReturnValue(true);
+    renderView('detail');
+    expect(await screen.findByText('Sector is one of: Campo')).toBeInTheDocument();
+    expect(screen.queryByText('Holds a valid POAP of this event')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /prove a private detail/i })).toBeInTheDocument();
   });
 
   it('answers an attendance request anonymously and shows the receipt', async () => {
@@ -43,7 +55,7 @@ describe('HolderProofs drawer view', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /^prove$/i }));
 
-    await waitFor(() => expect(screen.getByText(/anonymous proof of attendance/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/anonymous ownership proof/i)).toBeInTheDocument());
     expect(proveAttendance).toHaveBeenCalledWith({}, TOKEN, '11'.repeat(32), PKG);
     expect(screen.getByText('Holds a valid POAP of this event')).toBeInTheDocument();
     expect(screen.queryByText(/^token$/i)).not.toBeInTheDocument();
@@ -54,12 +66,12 @@ describe('HolderProofs drawer view', () => {
     listAnswerableRequests.mockResolvedValue([item]);
     valueQualifies.mockReturnValue(true);
     proveAttribute.mockResolvedValue({ txHash: 'cd'.repeat(32) });
-    renderView();
+    renderView('detail');
 
     expect(await screen.findByText('Sector is one of: Campo, Platea')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /^prove$/i }));
 
-    await waitFor(() => expect(screen.getByText(/anonymous proof about a private detail/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/private detail proof/i)).toBeInTheDocument());
     expect(proveAttribute).toHaveBeenCalledWith({}, TOKEN, item.request, ['Campo', 'Platea'], PKG);
   });
 
@@ -68,7 +80,7 @@ describe('HolderProofs drawer view', () => {
       { kind: 'attribute', request: request('22'.repeat(32), SECTOR), label: 'Sector', members: ['Platea'] },
     ]);
     valueQualifies.mockReturnValue(false);
-    renderView();
+    renderView('detail');
 
     expect(await screen.findByText(/your value isn't one of the accepted ones/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^prove$/i })).toBeDisabled();
