@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MySubscriptions from '../../jsx/pages/mySubscriptions';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
-import { getEvent, getTokensByOwner } from '../../midnight/indexer.service';
+import { getAllEvents, getEvent, getTokensByOwner } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
 
@@ -94,6 +94,22 @@ describe('MySubscriptions page', () => {
     await waitFor(() => {
       expect(screen.getByText(/POAP #7/i)).toBeInTheDocument();
     });
+  });
+
+  it('shows a token from an organizer whose event was created after the app loaded its event list', async () => {
+    // poapEvents (loaded once at startup) doesn't know this issuer yet — the page's own fresh
+    // getAllEvents() on each poll is what makes the new claim show up without a reload.
+    const NEW_ISSUER_PK = 'dd'.repeat(32);
+    getAllEvents.mockResolvedValue([{ issuerPk: NEW_ISSUER_PK }]);
+    getTokensByOwner.mockResolvedValue([mockToken({ tokenId: 9, issuerPk: NEW_ISSUER_PK })]);
+    const getHolderPkHex = jest.fn().mockResolvedValue(HOLDER_PK);
+    renderWithProviders(<MySubscriptions />, { drawerValue: connectedDrawerValue({ events: [], getHolderPkHex }) });
+
+    await waitFor(() => {
+      expect(screen.getByText(/POAP #9/i)).toBeInTheDocument();
+    });
+    expect(getHolderPkHex).toHaveBeenCalledWith(Uint8Array.from(Buffer.from(NEW_ISSUER_PK, 'hex')));
+    getAllEvents.mockReset();
   });
 
   it('shows empty state when no POAPs are found', async () => {

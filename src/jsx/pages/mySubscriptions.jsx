@@ -9,6 +9,7 @@ import walletStatus from "../../images/collections/wallet-status.png";
 import loadingGif from "../../images/loading.gif";
 import { getTokenVisibility, encodeShareableCollection, buildShareUrl } from "../../midnight/collection-share";
 import { getMyTokens } from "../../midnight/my-tokens";
+import { getAllEvents } from "../../midnight/indexer.service";
 
 const REFRESH_INTERVAL_MS = 5000;
 
@@ -74,8 +75,18 @@ const MySubscriptions = () => {
     }
 
     try {
+      // Fresh event list on every poll, not just the app-wide poapEvents (loaded once at startup in
+      // router.jsx): getMyTokens only asks the indexer about issuers found in this list, so a token
+      // from an organizer whose first event was created after startup would otherwise never show
+      // up here until a full page reload.
+      let events = poapEvents;
+      try {
+        events = (await getAllEvents()) || poapEvents;
+      } catch (error) {
+        console.error("Error refreshing events:", error);
+      }
       const { privateState } = await provider.service.getState();
-      const tokens = await getMyTokens(provider.service, poapEvents, privateState.tokens || {});
+      const tokens = await getMyTokens(provider.service, events, privateState.tokens || {});
       setMyPoaps(tokens);
     } catch (error) {
       console.error("Error fetching POAPs:", error);
