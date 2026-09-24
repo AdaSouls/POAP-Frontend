@@ -235,13 +235,22 @@ export class PoapContractService {
   // fallback to the event's own metadataURI/privateMetadataCommit, so callers that want to mirror
   // the event (the common case) must pass ev.metadataURI/ev.privateMetadataCommit explicitly. The
   // defaults below (empty URI, all-zero commit) mean "this token has no metadata", not "inherit".
+  // credentialAttributesRoot commits this recipient's own private attributes into the credential
+  // (poap.compact's credentials tree, proven later via proveCredentialAttribute); all-zero = none.
   async mintTo(
     eventId: Uint8Array,
     recipientPk: Uint8Array,
     tokenMetadataURI: string = '',
     tokenPrivateMetadataCommit: Uint8Array = new Uint8Array(32),
+    credentialAttributesRoot: Uint8Array = new Uint8Array(32),
   ) {
-    return this.deployedContract.callTx.mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit);
+    return this.deployedContract.callTx.mintTo(
+      eventId,
+      recipientPk,
+      tokenMetadataURI,
+      tokenPrivateMetadataCommit,
+      credentialAttributesRoot,
+    );
   }
 
   // ── Selective disclosure ──────────────────────────────────────────────────

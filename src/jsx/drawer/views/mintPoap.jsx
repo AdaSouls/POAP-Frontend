@@ -27,7 +27,7 @@ const STEP_DOCUMENT = 2;
 const STEP_ICON = 3;
 const LAST_STEP = STEP_ICON;
 
-// mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit) — the organizer-only
+// mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit, credentialAttributesRoot) — the organizer-only
 // push-mint circuit (poap.compact) — is the counterpart to createPoap.jsx's self-service claim():
 // instead of the recipient claiming their own token, the organizer mints a brand-new one directly
 // to a recipient's per-issuer holder pk. Always opened pre-filled with a specific event
