@@ -1,8 +1,9 @@
 # Brainstorm — Selective disclosure respondida por el suscriptor + respaldo cifrado
 
-Estado: **EN CURSO — el backend ya llegó (2026-09-24)**. Matías entregó los circuitos de tenencia y
-de atributos por credencial (`4614b96`); el frontend está resincronizado y desplegado en la devnet
-local. Ver **"Plan actualizado (2026-09-24)"** al final — reemplaza el orden del plan del 23/09.
+Estado: **CONSTRUIDO, FALTA PROBAR EN VIVO (2026-09-24)**. Los pasos 1 a 4 del "Plan actualizado"
+están implementados y subidos (`9cf1c075`): B6, B7 + entrega cifrada, pruebas anónimas y B8. La
+prueba en vivo sigue `prueba_de_credenciales.md`. Al final: **"Análisis de producto"** (la app
+evaluada como si ya estuviera en producción) y **"Mejoras propuestas"**.
 Target: Catalyst Hito 5 (2026-10-30).
 
 ## Objetivo
@@ -245,4 +246,130 @@ Todo off-chain, lo resolvemos nosotros, sin cambios de contrato:
 ### Antes de empezar B6 — ✅ hecho 2026-09-24 (A1 y emisión de credencial con `mintTo` probados en vivo)
 - Prueba manual rápida: conectar (paso de bienvenida + recovery code nuevo = prueba de A1), crear un
   evento Credential y emitir una credencial con `mintTo` (firma nueva).
+
+### Estado al cierre del 2026-09-24 (noche)
+Implementado, con tests (357/362, los 5 de siempre), commit `9cf1c075`, **sin probar en vivo**:
+1. ✅ B6 — "Prove I Own This POAP" + "Ask for Proof of Ownership" del organizador (1 firma, sin
+   exponer el `caller_pk` del holder).
+2. ✅ B8 — comprobante único (`ProofReceipt.jsx`) + `/app/verify` sin wallet (GraphQL del indexer
+   de Midnight).
+3. ✅ Clave de cifrado en "Get My Key" + B7 + entrega cifrada. Decisiones tomadas:
+   - En Credential, el paso de campos privados define solo nombres (`credentialAttributeFields`);
+     los valores se cargan por persona en Mint POAP. Event/Follow siguen con valores por evento.
+   - La clave X25519 se **deriva** de `local_sk` + organizador (no se guarda; la cubre el backup;
+     distinta por organizador). Código: `<holderPk>.<clave>`.
+   - Entrega por `server/` → `/api/credential-delivery`; respaldo con link `#fragmento`.
+4. ✅ Pruebas anónimas desde el POAP (`proveEventAttendance` / `proveCredentialAttribute`), siempre
+   contra pedidos ajenos. Los valores aceptados de cada pregunta se publican en `/api/disclosure-sets`.
+5. Pendiente: A3 + A4 (predicados y campos con tipo).
+6. A2 (kit a nivel evento): **descartado por ahora** — los campos por credencial cubren el caso.
+
+---
+
+## Análisis de producto (2026-09-24) — la app como si ya estuviera en producción
+
+Supuesto: producto terminado y desplegado en mainnet. Frontend, proxy de Pinata e indexer POAP
+alojados por nosotros; los usuarios solo tienen su navegador y su wallet. Lo que es propio del
+entorno local (devnet, explorer que no abre, etc.) no cuenta.
+
+### Qué ofrece que no ofrece un POAP en otra cadena
+- **Seudónimo por organizador** (`holder_pk`): dos organizadores no pueden cruzar a sus asistentes.
+  En un POAP de Ethereum la wallet queda públicamente atada a cada evento.
+- **Pruebas anónimas**: "tengo una credencial de este evento" o "mi sector está en esta lista", sin
+  decir cuál credencial ni qué wallet.
+- **Datos privados por credencial**: la cadena guarda solo la raíz; los valores viajan cifrados y
+  nuestro server no puede leerlos.
+- **Verificación sin wallet**: quien recibe la prueba abre un link.
+- **Revocación**: el emisor puede quemar una credencial y las pruebas dejan de pasar.
+
+Es el argumento de "por qué Midnight" para el Hito 5: todo lo anterior depende de la dualidad
+público/privado del contrato.
+
+### Casos de uso reales por tipo de evento
+
+**Event (cualquiera lo reclama: "Attend")**
+- Meetups y conferencias como **reputación portable**: "fui a 5 town halls de Catalyst" para entrar
+  a un canal de alumni o votar en un grant, con prueba anónima de asistencia. El seudónimo evita
+  que se arme un historial de todos los eventos de una persona.
+- Talleres y hackatones: "participé" como llave para la siguiente edición o un descuento.
+- **No sirve** cuando el POAP da algo de valor (cupos, premios): cualquiera con el link reclama, y
+  con varias wallets reclama varias veces (el propio contrato lo documenta).
+
+**Subscription / Follow (membresía continua)**
+- Clubes de fans, comunidades pagas, newsletters premium: "soy miembro de X" ante un sponsor, sin
+  que el sponsor sepa quién es ni vea sus otras membresías. Es el caso más natural para la prueba
+  anónima de asistencia.
+- Membresías por temporada, usando el vencimiento del evento.
+- **Falta**: niveles y renovaciones (hoy cada nivel sería otro evento).
+
+**Credential (emitida a una persona, con datos privados)** — donde está el mayor valor
+- **Entradas con asiento**: tenencia en la puerta, "sector ∈ {Campo}" para una zona, revocación
+  por reventa o reembolso.
+- **Títulos y certificados**: "me recibí en X" y "nota ∈ {A, B}" ante un empleador, sin mostrar
+  nombre ni el resto del certificado; recursos humanos verifica con el link.
+- **Matrículas y licencias profesionales**: "matrícula vigente" sin dar el número; si se revoca,
+  las pruebas dejan de pasar.
+- **Credenciales de empleado / control de acceso**: "área ∈ {Ingeniería, Operaciones}" para entrar
+  a un piso sin registrar quién entró.
+- **Edad o residencia** emitidas por alguien de confianza (club, municipio), hoy por categorías.
+- En todos, la confianza está en el emisor: la prueba dice "X certificó esto", no que el dato sea
+  cierto en el mundo. Para títulos, entradas y licencias es justo lo que se quiere.
+
+**Atributos a nivel de evento (Event / Follow)**
+- Prueban cosas del evento ("fue en la UE"), no de la persona. Sirven sobre todo para reportes a
+  sponsors. Es lo primero que simplificaría si hay que recortar alcance.
+
+### Límites del producto terminado (lo que vería un usuario real)
+1. **Dónde se generan las pruebas.** El proof server recibe los datos privados de la llamada,
+   incluida `local_sk`. En producción hay tres opciones y ninguna está resuelta:
+   - que cada usuario corra un proof server propio (Docker) — imposible para el público general;
+   - uno alojado por nosotros — vería la identidad privada de cada usuario, rompe la promesa;
+   - el proving de la wallet (`getProvingProvider` de la dApp connector API) — la única compatible
+     con la privacidad; hoy la app no la usa (`providers.ts` fija un proof server local).
+   Es **bloqueante** para producción.
+2. **Intercambio de claves a mano.** Para emitir una credencial, holder y organizador se pasan
+   claves por fuera de la app (chat, mail). Con una persona se tolera; con cien entradas no.
+3. **Pruebas sin momento.** Un pedido se puede reutilizar y la verificación no lee los argumentos,
+   así que un comprobante viejo se puede volver a mostrar. En una puerta, alguien podría presentar
+   la prueba de otro. Falta que el verificador genere un pedido nuevo en el momento.
+4. **Nada se "consume".** No hay prueba de un solo uso para tenencia o asistencia: sirve para
+   demostrar, no para validar una entrada una sola vez.
+5. **Reclamo abierto en eventos públicos.** Sin códigos de reclamo, un Event o Follow no puede
+   limitar quién lo obtiene.
+6. **Solo "está en esta lista".** Sin rangos ni comparaciones (A3): "edad ≥ 18" se resuelve con
+   categorías.
+7. **El anonimato depende del tamaño del evento.** Con pocas credenciales emitidas, "alguien de
+   este evento" identifica a la persona. La interfaz no lo advierte.
+8. **Cada prueba es una transacción.** Cuesta DUST y tarda lo que tarde la red; el verificador
+   espera la confirmación.
+9. **Recuperación.** Si el usuario pierde el navegador y el recovery code, pierde su identidad en
+   el contrato: sus POAPs siguen existiendo pero ya no puede probar que son suyos.
+10. **Servicios propios en el medio.** Si el proxy de Pinata o el indexer POAP caen, la app no lista
+    ni entrega nada (los tokens siguen en la cadena). El proxy ve metadatos: quién sube, cuándo y
+    con qué `lookupId`, aunque no el contenido.
+11. **Onboarding de wallet.** Instalar Lace o 1am, tener NIGHT, generar DUST y esperar la
+    sincronización antes de la primera firma: es la barrera de entrada más alta para el público
+    general, y no depende de nosotros.
+
+---
+
+## Mejoras propuestas (orden sugerido, después de la prueba en vivo)
+1. **Proving desde la wallet** (resuelve el límite 1). Usar el proving provider de la dApp
+   connector API en vez del proof server local; mantener el local solo como opción de desarrollo.
+2. **QR para el intercambio de claves** (límite 2). El holder muestra un QR o un link con su código;
+   Mint POAP lo lee y rellena el destinatario.
+3. **Pedidos en el momento** (límites 3 y 4). Una pantalla de verificador: genera un pedido nuevo,
+   muestra un QR, el holder responde a ese pedido y la pantalla se actualiza sola al confirmarse.
+   Para "un solo uso" haría falta una variante de tenencia con nullifier en el contrato (pedido a
+   Matías).
+4. **A3 — rangos y comparaciones** (límite 6), y A4 — campos con tipo (fecha, número).
+5. **Códigos de reclamo** para Event/Follow (límite 5): links de un solo uso generados por el
+   organizador. Probablemente necesita soporte en el contrato.
+6. **Aviso de anonimato** (límite 7): mostrar cuántas credenciales vivas tiene el evento antes de
+   una prueba anónima.
+7. **Resiliencia** (límite 10): varios gateways de IPFS y un modo de solo lectura cuando el indexer
+   POAP no responde.
+
+Para la demo del Hito 5 alcanza con el flujo de Credential (recital o título) tal como está; las
+mejoras 1 a 3 son las que separan la demo de un piloto con usuarios reales.
 
