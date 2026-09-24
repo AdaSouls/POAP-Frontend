@@ -1041,6 +1041,13 @@ select option,
   opacity: 0.5;
 }
 
+/* In a popup footer (e.g. laceWallet.jsx's Cancel while waiting on unlock) it sits where the
+   Connect/Disconnect button normally is — take the footer buttons' size, not the compact card one. */
+.drawer-footer .btn-card-detail-action {
+  padding: 12px 20px;
+  border-radius: 2rem;
+}
+
 /* Border tinted with whichever role (--role-accent, from the .role-organizer/.role-subscriber
    ancestor — myEvents.jsx/organizerDashboard.jsx vs. exploreEvents.jsx/mySubscriptions.jsx) the
    surrounding page is currently in, same variable .badge-count-outline/.btn-role-cta already use
@@ -3643,6 +3650,35 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .header-horizontal .header-backup-chip:hover {
   background: rgba(241, 180, 76, 0.16);
+}
+
+/* Automatic backup in progress: icon-only circle, neutral instead of amber, with a spinning arc
+   on its border. Keeps the text chip's margins, so it sits in the same spot. */
+.header-horizontal .header-backup-chip.is-syncing {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  justify-content: center;
+  border-color: var(--glass-border);
+  background: var(--glass-bg-hover);
+  color: var(--text-on-glass-muted);
+}
+
+.header-horizontal .header-backup-chip.is-syncing::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--accent-blue);
+  animation: header-backup-spin 0.9s linear infinite;
+}
+
+@keyframes header-backup-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .header-horizontal .header-backup-chip ~ .header-cta {

@@ -3,10 +3,17 @@
 // SDK-free and dependency-free on purpose — private-attribute-drafts.ts and providers.ts both mark
 // changes through here, and backup.ts itself imports those modules.
 
-export type BackupStatus = {
+type StoredBackupStatus = {
   lastBackupAt: string | null;
   dirty: boolean;
   autoBackup: boolean;
+};
+
+// `syncing` (an upload is scheduled or running) and `syncFailed` (the last one failed) only
+// describe this page's session, so they're kept in memory and never persisted.
+export type BackupStatus = StoredBackupStatus & {
+  syncing: boolean;
+  syncFailed: boolean;
 };
 
 type BackupContext = { coinPublicKey: string; contractAddress: string };
@@ -14,9 +21,10 @@ type BackupContext = { coinPublicKey: string; contractAddress: string };
 const STATUS_PREFIX = 'adasouls:backup:';
 // Auto cloud backup is on unless the user turned it off: the key lives in this browser, so
 // there's nothing to ask for and no reason to wait for a manual first backup.
-const EMPTY: BackupStatus = { lastBackupAt: null, dirty: false, autoBackup: true };
+const EMPTY: StoredBackupStatus = { lastBackupAt: null, dirty: false, autoBackup: true };
 
 let context: BackupContext | null = null;
+let sync = { syncing: false, syncFailed: false };
 const statusListeners = new Set<(status: BackupStatus | null) => void>();
 const dirtyListeners = new Set<() => void>();
 
@@ -24,31 +32,42 @@ function storageKey(ctx: BackupContext): string {
   return `${STATUS_PREFIX}${ctx.coinPublicKey}:${ctx.contractAddress}`;
 }
 
-function read(ctx: BackupContext): BackupStatus {
+function readStored(ctx: BackupContext): StoredBackupStatus {
   try {
     const raw = window.localStorage.getItem(storageKey(ctx));
-    return raw ? { ...EMPTY, ...(JSON.parse(raw) as Partial<BackupStatus>) } : EMPTY;
+    if (!raw) return EMPTY;
+    const { lastBackupAt, dirty, autoBackup } = { ...EMPTY, ...(JSON.parse(raw) as Partial<StoredBackupStatus>) };
+    return { lastBackupAt, dirty, autoBackup };
   } catch {
     return EMPTY;
   }
 }
 
-function write(patch: Partial<BackupStatus>): void {
+function read(ctx: BackupContext): BackupStatus {
+  return { ...readStored(ctx), ...sync };
+}
+
+function emit(): void {
+  const status = getBackupStatus();
+  statusListeners.forEach((listener) => listener(status));
+}
+
+function write(patch: Partial<StoredBackupStatus>): void {
   if (!context) return;
-  const next = { ...read(context), ...patch };
+  const next = { ...readStored(context), ...patch };
   try {
     window.localStorage.setItem(storageKey(context), JSON.stringify(next));
   } catch {
     // Storage full/blocked: the status is a convenience, the backup itself doesn't depend on it.
   }
-  statusListeners.forEach((listener) => listener(next));
+  emit();
 }
 
 // Set once a wallet finishes connecting, cleared on disconnect. Nothing is tracked without one.
 export function setBackupContext(next: BackupContext | null): void {
   context = next;
-  const status = getBackupStatus();
-  statusListeners.forEach((listener) => listener(status));
+  sync = { syncing: false, syncFailed: false };
+  emit();
 }
 
 export function getBackupContext(): BackupContext | null {
@@ -68,6 +87,12 @@ export function markBackupDirty(): void {
 
 export function markBackedUp(): void {
   write({ lastBackupAt: new Date().toISOString(), dirty: false });
+}
+
+// backup.ts reports its cloud uploads here so the header can show "saving" instead of a warning.
+export function setBackupSync(next: { syncing: boolean; syncFailed?: boolean }): void {
+  sync = { syncing: next.syncing, syncFailed: next.syncFailed ?? false };
+  emit();
 }
 
 export function setAutoBackup(enabled: boolean): void {

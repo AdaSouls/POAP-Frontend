@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Wallet, ChevronUp, ChevronDown, Award, PlusCircle, ShieldAlert } from "lucide-react";
+import { Wallet, ChevronUp, ChevronDown, Award, PlusCircle, ShieldAlert, Shield } from "lucide-react";
 import logo from "../../images/logo.png";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
@@ -173,7 +173,10 @@ const Header = () => {
   const [backupStatus, setBackupStatus] = useState(null);
   useEffect(() => subscribeBackupStatus(setBackupStatus), []);
   const codeSaved = useRecoveryCodeSaved(midnight.provider?.service?.walletCoinPublicKey);
-  const backupWarning = !midnight.provider
+  // While an automatic backup is pending/uploading the chip collapses to an icon with a spinner
+  // instead of a warning — it only turns back into text if that upload fails.
+  const backupSyncing = !!midnight.provider && codeSaved !== false && !!backupStatus?.syncing;
+  const backupWarning = !midnight.provider || backupSyncing
     ? null
     : codeSaved === false
       ? "Save recovery code"
@@ -218,6 +221,19 @@ const Header = () => {
               </NavLink>
             ))}
           </nav>
+
+          {backupSyncing && (
+            <Tooltip label="Saving encrypted backup…">
+              <button
+                type="button"
+                className="header-backup-chip is-syncing"
+                onClick={() => dispatch({ type: "SHOW_BACKUP" })}
+                aria-label="Saving encrypted backup"
+              >
+                <Shield size={14} />
+              </button>
+            </Tooltip>
+          )}
 
           {backupWarning && (
             <button

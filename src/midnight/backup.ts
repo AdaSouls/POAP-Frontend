@@ -7,6 +7,7 @@ import {
   markBackupDirty,
   onBackupDirty,
   setBackupContext,
+  setBackupSync,
 } from './backup-status';
 import {
   getStoragePassword,
@@ -311,11 +312,18 @@ function requireSession(): BackupSession {
 export async function backupNow({ cloud, file }: { cloud: boolean; file: boolean }): Promise<BackupEnvelope> {
   const { provider, privateStateKey, coinPublicKey, contractAddress, networkId } = requireSession();
   const password = getStoragePassword();
-  const envelope = await createBackup(provider, privateStateKey, password, { networkId, contractAddress });
-  if (cloud) await uploadCloudBackup(await computeBackupLookupId(password, coinPublicKey), envelope);
-  if (file) downloadBackupFile(envelope);
-  markBackedUp();
-  return envelope;
+  if (cloud) setBackupSync({ syncing: true });
+  try {
+    const envelope = await createBackup(provider, privateStateKey, password, { networkId, contractAddress });
+    if (cloud) await uploadCloudBackup(await computeBackupLookupId(password, coinPublicKey), envelope);
+    if (file) downloadBackupFile(envelope);
+    markBackedUp();
+    if (cloud) setBackupSync({ syncing: false });
+    return envelope;
+  } catch (error) {
+    if (cloud) setBackupSync({ syncing: false, syncFailed: true });
+    throw error;
+  }
 }
 
 // Restores into the connected wallet's store. `recoveryCode` is the one the backup was made with.
@@ -346,8 +354,13 @@ export async function restoreIntoSession(
 
 function scheduleAutoBackup(): void {
   clearTimeout(autoBackupTimer);
+  // The debounce counts as "saving" too — that's when the header shows the syncing icon.
+  if (getBackupStatus()?.autoBackup) setBackupSync({ syncing: true });
   autoBackupTimer = setTimeout(() => {
-    if (!session || !hasStoragePassword() || !getBackupStatus()?.autoBackup) return;
+    if (!session || !hasStoragePassword() || !getBackupStatus()?.autoBackup) {
+      setBackupSync({ syncing: false });
+      return;
+    }
     backupNow({ cloud: true, file: false }).catch((error) => {
       // Stays "dirty", so the header keeps showing "Backup outdated" and the user can retry by hand.
       console.error('[backup] automatic cloud backup failed:', error);
