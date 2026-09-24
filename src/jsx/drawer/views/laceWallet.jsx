@@ -143,6 +143,8 @@ export default function LaceWallet() {
 
   const errorToShow = waitingUnlock || passwordRequest ? null : localError ?? midnight?.error;
   const selectedWalletName = selectedWallet ? getWalletDisplayName(selectedWallet) : "Midnight";
+  // "1am Wallet" already ends in "wallet" — avoid "Your 1am Wallet wallet is locked".
+  const selectedWalletNoun = /wallet$/i.test(selectedWalletName) ? selectedWalletName : `${selectedWalletName} wallet`;
   // Card reveal (bottom "Connected — 0x…" row, white border, matching divider line) fires the
   // moment the button first says "Connected" (phase "success"), not delayed until it later flips
   // to the actual Disconnect button (phase "connected") — both phases share this same look, only
@@ -248,11 +250,13 @@ export default function LaceWallet() {
             )
           )}
 
-          {waitingUnlock && (
+          {/* The retry loop keeps waitingUnlock set until connect() fully resolves — including the
+              identity step, which only shows up once the wallet is already unlocked. */}
+          {waitingUnlock && !passwordRequest && (
             <div className="alert alert-info mt-3 d-flex align-items-center" role="status">
               <img src={loadingGif} width="16" height="16" alt="" className="mr-2" />
               <span>
-                Your {selectedWalletName} wallet is locked. Click the {selectedWalletName} extension icon in
+                Your {selectedWalletNoun} is locked. Click the {selectedWalletName} extension icon in
                 your browser toolbar and unlock it — AdaSouls will connect automatically.
               </span>
             </div>
@@ -265,9 +269,9 @@ export default function LaceWallet() {
                 : errorToShow.name === "LaceVersionMismatchError"
                   ? errorToShow.message
                   : errorToShow.name === "LaceNotAuthorizedError"
-                    ? `AdaSouls is not authorized by your ${selectedWalletName} wallet. Approve the connection request in the extension.`
+                    ? `AdaSouls is not authorized by your ${selectedWalletNoun}. Approve the connection request in the extension.`
                     : errorToShow.name === "LaceLockedError"
-                      ? `Your ${selectedWalletName} wallet is still locked (or set to a different network). Unlock it, check it's on the right network, then try connecting again.`
+                      ? `Your ${selectedWalletNoun} is still locked (or set to a different network). Unlock it, check it's on the right network, then try connecting again.`
                       : errorToShow.name === "ConnectTimeoutError"
                         ? errorToShow.message
                         : errorToShow.message ?? "Something went wrong connecting to your wallet."}
