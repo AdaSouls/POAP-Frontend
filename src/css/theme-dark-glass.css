@@ -1119,16 +1119,11 @@ select option,
   background: var(--glass-bg-light);
   /* Border back to flat and uniform — same as .header-nav-dropdown-menu, no per-side bevel
      coloring (tried border-style: outset/inset and per-side border-color; neither read well,
-     especially with this border-radius). The bevel/volume comes only from the box-shadow pair
-     below: straight top/bottom now (no horizontal offset — this isn't a corner-to-corner diagonal
-     anymore, just light overhead / dark underneath), bigger reach (6px blur) but lower opacity
-     than the diagonal version, so it's felt more than seen. The outer shadow is unrelated — that's
-     the panel floating above the page, not part of the bevel. */
+     especially with this border-radius). No inset top-light/bottom-shadow bevel either — dropped
+     from every popup (this one, .swal2-glass-popup, .tx-status-popup) to match the flat event
+     cards; only the outer shadow remains, the panel floating above the page. */
   border: 1px solid var(--glass-border);
-  box-shadow:
-    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
-    0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   /* translate() stays constant between closed/open — only opacity animates, no grow/shrink. */
   transform: translate(-50%, -50%);
   opacity: 0;
@@ -1692,7 +1687,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* SweetAlert2 popups (sweetAlerts.jsx) — same liquid-glass surface as the wallet-connect popup
-   above (.drawer.drawer-modal): same border-radius, background, blur, border, and bevel/outer
+   above (.drawer.drawer-modal): same border-radius, background, blur, border, and outer
    shadow. sweetalert2 injects its own default (white, square-cornered) runtime styles, so every
    visual property needs an explicit override here rather than relying on inheritance — applied
    via the `customClass: { popup: "swal2-glass-popup" }` option each Swal.fire() call passes.
@@ -1704,10 +1699,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  box-shadow:
-    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
-    0 8px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   color: var(--text-on-glass);
   /* swal2's own default padding is uneven by design (0 on the popup itself, then each of
      .swal2-icon/.swal2-title/.swal2-html-container carries its own bespoke margin) — which is
@@ -3430,10 +3422,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  box-shadow:
-    inset 0 3px 6px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -3px 6px 0 rgba(0, 0, 0, 0.2),
-    0 8px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   color: var(--text-on-glass);
   display: flex;
   flex-direction: column;
@@ -3663,6 +3652,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 /* Recovery code (backupRestore.jsx) — amber until the user confirms they saved it. */
 .recovery-code-box {
   margin-top: 12px;
+  margin-bottom: 16px;
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid var(--glass-border);
@@ -3690,13 +3680,84 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   word-break: break-all;
 }
 
+/* Drop the body's bottom margin so the space under "Restore from a backup" is just the popup's
+   20px padding — matching the 20px between it and the separator above. */
+.drawer.drawer-modal .drawer-body.backup-restore-body {
+  margin-bottom: 0;
+}
+
+/* The popup's bottom bevel shadow visually eats a few px, so the link needs a little extra room
+   below to read as centered between the separator and the edge. */
+.backup-restore-link {
+  margin-bottom: 6px;
+}
+
+/* Back up to cloud / Download encrypted file — two equal columns. */
+.backup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.backup-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .recovery-code-input {
   font-family: SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 0.06em;
 }
 
-/* "Save your recovery code" in the connected wallet popup (laceWallet.jsx). */
-.btn-card-detail-action.is-attention {
+/* Backup & Restore pill, vertically centered on the connected wallet card's right edge (laceWallet.jsx), outside the name block — icon only at
+   rest; on hover/focus the label slides out to the right of the icon. Anchored to the card's right
+   edge, so the pill grows leftward while the text reveals left-to-right. Amber (.is-attention)
+   until the recovery code is confirmed saved. */
+.wallet-backup-btn {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: var(--glass-bg-hover);
+  border: 1px solid var(--glass-border);
+  color: var(--text-on-glass) !important;
+  line-height: 1;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.wallet-backup-btn-label {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font-size: 13px;
+  text-transform: none; /* .card-button .top-area capitalizes every word */
+  transition: max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
+}
+
+.wallet-backup-btn:hover .wallet-backup-btn-label,
+.wallet-backup-btn:focus-visible .wallet-backup-btn-label {
+  max-width: 200px;
+  margin-left: 8px;
+  opacity: 1;
+}
+
+.wallet-backup-btn:hover {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: var(--text-on-solid) !important;
+}
+
+.wallet-backup-btn.is-attention {
   border-color: #f1b44c;
   color: #f1b44c !important;
 }
+
+.wallet-backup-btn.is-attention:hover {
+  background: rgba(241, 180, 76, 0.16);
+  color: #f1b44c !important;
+}
+

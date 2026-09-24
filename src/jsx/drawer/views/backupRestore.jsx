@@ -120,7 +120,7 @@ Keep it private. With it (and your wallet) you can restore your AdaSouls identit
         </h4>
       </div>
 
-      <div className="drawer-body">
+      <div className="drawer-body backup-restore-body">
         {restored ? (
           <div className="alert alert-success mb-0" role="status">
             Backup restored. Connect your wallet again to use the restored identity — this browser now uses
@@ -138,7 +138,7 @@ Keep it private. With it (and your wallet) you can restore your AdaSouls identit
 
             {recoveryCode && (
               <div className={"recovery-code-box" + (codeSaved ? "" : " is-unsaved")}>
-                <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="d-flex align-items-center justify-content-between mb-3">
                   <span className="recovery-code-label">Recovery code</span>
                   <span className="d-flex" style={{ gap: "6px" }}>
                     <button
@@ -160,7 +160,7 @@ Keep it private. With it (and your wallet) you can restore your AdaSouls identit
                 <code className="recovery-code-value">
                   {codeVisible ? recoveryCode : recoveryCode.replace(/[0-9A-Z]/g, "•")}
                 </code>
-                <div className="form-check mt-2">
+                <div className="form-check form-switch share-toggle-row mt-3 mb-0">
                   <input
                     id="recovery-code-saved"
                     type="checkbox"
@@ -180,8 +180,8 @@ Keep it private. With it (and your wallet) you can restore your AdaSouls identit
               {statusText}
             </div>
 
-            <div className="d-flex flex-wrap mt-3" style={{ gap: "8px" }}>
-              <button type="button" className="btn btn-gradient btn-sm" onClick={() => runBackup("cloud")} disabled={Boolean(busy)}>
+            <div className="backup-actions mt-3">
+              <button type="button" className="btn btn-card-detail-action btn-sm" onClick={() => runBackup("cloud")} disabled={Boolean(busy)}>
                 {busy === "cloud" ? (
                   <img src={loadingGif} width="14" height="14" alt="" className="mr-2" />
                 ) : (
@@ -199,7 +199,7 @@ Keep it private. With it (and your wallet) you can restore your AdaSouls identit
               </button>
             </div>
 
-            <div className="form-check mt-3">
+            <div className="form-check form-switch share-toggle-row mt-3 mb-0">
               <input
                 id="auto-backup"
                 type="checkbox"
@@ -219,10 +219,10 @@ Keep it private. With it (and your wallet) you can restore your AdaSouls identit
               </div>
             )}
 
-            <hr style={{ marginTop: "18px", marginBottom: "14px" }} />
+            <hr style={{ marginTop: "18px", marginBottom: "20px" }} />
 
             {!restoreOpen ? (
-              <button type="button" className="btn btn-link btn-sm p-0" onClick={() => setRestoreOpen(true)}>
+              <button type="button" className="btn btn-link btn-sm p-0 d-inline-flex align-items-center align-self-center backup-restore-link" onClick={() => setRestoreOpen(true)}>
                 <RotateCcw size={13} className="mr-1" />
                 Restore from a backup
               </button>

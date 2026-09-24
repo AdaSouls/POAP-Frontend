@@ -120,7 +120,7 @@ export default function IdentityStep({ request }) {
                 Without the recovery code, the identity stored here can't be opened. Starting over creates a new
                 identity: POAPs and events tied to the old one won't show up for this wallet anymore.
               </p>
-              <button type="button" className="btn btn-outline-light btn-sm" onClick={continueAsNew} disabled={submitting}>
+              <button type="button" className="btn btn-card-detail-action btn-sm" onClick={continueAsNew} disabled={submitting}>
                 Start over with a new identity
               </button>
             </div>

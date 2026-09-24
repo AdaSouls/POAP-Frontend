@@ -182,6 +182,21 @@ export default function LaceWallet() {
                     <p className="mb-0 text-muted">Midnight Network wallet</p>
                   </div>
                 </div>
+                {phase === "connected" && (
+                  // Icon-only pill, vertically centered on the card's right edge; hovering reveals
+                  // its label.
+                  <button
+                    type="button"
+                    className={"btn wallet-backup-btn" + (codeSaved === false ? " is-attention" : "")}
+                    onClick={openBackup}
+                    aria-label={codeSaved === false ? "Save your recovery code" : "Backup & Restore"}
+                  >
+                    {codeSaved === false ? <ShieldAlert size={17} /> : <ShieldCheck size={17} />}
+                    <span className="wallet-backup-btn-label" aria-hidden="true">
+                      {codeSaved === false ? "Save your recovery code" : "Backup & Restore"}
+                    </span>
+                  </button>
+                )}
                 {midnight?.connecting && <img src={loadingGif} width="18" height="18" alt="" />}
               </div>
               <div className="bottom-area border-top align-content-center">
@@ -233,20 +248,6 @@ export default function LaceWallet() {
             )
           )}
 
-          {phase === "connected" && (
-            codeSaved === false ? (
-              <button type="button" className="btn btn-card-detail-action btn-sm mt-3 align-self-start is-attention" onClick={openBackup}>
-                <ShieldAlert size={14} className="mr-2" />
-                Save your recovery code
-              </button>
-            ) : (
-              <button type="button" className="btn btn-card-detail-action btn-sm mt-3 align-self-start" onClick={openBackup}>
-                <ShieldCheck size={14} className="mr-2" />
-                Backup &amp; Restore
-              </button>
-            )
-          )}
-
           {waitingUnlock && (
             <div className="alert alert-info mt-3 d-flex align-items-center" role="status">
               <img src={loadingGif} width="16" height="16" alt="" className="mr-2" />
@@ -290,11 +291,11 @@ export default function LaceWallet() {
             <span className="wallet-connect-btn-label">{phase === "connected" ? "Disconnect" : "Connected"}</span>
           </button>
         ) : passwordRequest ? (
-          <button className="btn btn-outline-light" onClick={cancelPasswordRequest}>
+          <button className="btn btn-card-detail-action" onClick={cancelPasswordRequest}>
             Cancel
           </button>
         ) : waitingUnlock ? (
-          <button className="btn btn-outline-light" onClick={() => setWaitingUnlock(false)}>
+          <button className="btn btn-card-detail-action" onClick={() => setWaitingUnlock(false)}>
             Cancel
           </button>
         ) : (
