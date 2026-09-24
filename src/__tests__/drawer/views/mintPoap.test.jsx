@@ -4,7 +4,18 @@ import userEvent from '@testing-library/user-event';
 import MintPoap from '../../../jsx/drawer/views/mintPoap';
 import { mockDrawerContext, renderWithProviders } from '../../../testUtils';
 import { uploadImageToIPFS, uploadJSONToIPFS } from '../../../services/ipfs.service';
+import {
+  buildCredentialAttributes,
+  deliverCredentialPackage,
+  packageToLinkFragment,
+} from '../../../midnight/credential-delivery';
 
+// credential-delivery pulls in the compiled contract (WASM), unloadable under Jest.
+jest.mock('../../../midnight/credential-delivery', () => ({
+  buildCredentialAttributes: jest.fn().mockResolvedValue({ fields: [], root: new Uint8Array(32) }),
+  deliverCredentialPackage: jest.fn(),
+  packageToLinkFragment: jest.fn(() => 'fragment'),
+}));
 jest.mock('../../../services/ipfs.service', () => ({
   uploadImageToIPFS: jest.fn(),
   uploadJSONToIPFS: jest.fn(),
@@ -55,6 +66,7 @@ describe('MintPoap drawer view', () => {
     global.URL.revokeObjectURL = jest.fn();
     uploadImageToIPFS.mockResolvedValue('ipfs://Qmimage');
     uploadJSONToIPFS.mockResolvedValue('ipfs://Qmtoken');
+    buildCredentialAttributes.mockResolvedValue({ fields: [], root: new Uint8Array(32) });
   });
 
   it('shows a fallback message when no event is selected', () => {
@@ -128,6 +140,8 @@ describe('MintPoap drawer view', () => {
       Uint8Array.from(Buffer.from(mintEvent.eventId, 'hex')),
       Uint8Array.from(Buffer.from(validRecipientPkHex, 'hex')),
       'ipfs://Qmtoken',
+      new Uint8Array(32),
+      new Uint8Array(32),
     );
   });
 
@@ -208,6 +222,76 @@ describe('MintPoap drawer view', () => {
       expect(uploadJSONToIPFS).toHaveBeenCalledWith(
         expect.objectContaining({ organization: { name: 'AdaSouls Inc.' } }),
       );
+    });
+  });
+  describe('private details (credential fields)', () => {
+    const FIELDS = [
+      { fieldId: '01'.repeat(32), label: 'Sector' },
+      { fieldId: '02'.repeat(32), label: 'Seat' },
+    ];
+    const ROOT = new Uint8Array(32).fill(5);
+    const COMMITTED = [{ fieldId: FIELDS[0].fieldId, label: 'Sector', valueHex: 'aa', randHex: 'bb' }];
+
+    async function renderWithFields(uri, mintTo) {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ name: 'Recital', credentialAttributeFields: FIELDS }),
+      });
+      const eventWithFields = { ...mintEvent, metadataURI: uri };
+      const view = renderWithProviders(<MintPoap />, {
+        drawerValue: { ...buildDrawerValue(mintTo), mintEvent: eventWithFields },
+      });
+      await waitFor(() => expect(view.container.querySelectorAll('.step-dot')).toHaveLength(4));
+      return view;
+    }
+
+    async function fillAndMint(code) {
+      await userEvent.type(screen.getByLabelText(/Recipient's Key/i), code);
+      await clickNext();
+      await userEvent.type(screen.getByLabelText('Sector'), 'Campo');
+      await clickNext();
+      await userEvent.upload(screen.getByLabelText(/Credential Image/i), makeFile('ticket.png'));
+      await clickNext();
+      await clickMint();
+    }
+
+    it('commits the values as a root in mintTo and sends them encrypted to the key in the code', async () => {
+      buildCredentialAttributes.mockResolvedValue({ fields: COMMITTED, root: ROOT });
+      deliverCredentialPackage.mockResolvedValue(undefined);
+      const mintTo = jest.fn().mockResolvedValue({ public: { txHash: '0xabc' } });
+      await renderWithFields('https://example.com/meta-fields-encrypted.json', mintTo);
+
+      await fillAndMint(`${validRecipientPkHex}.${'dd'.repeat(32)}`);
+
+      await waitFor(() => expect(deliverCredentialPackage).toHaveBeenCalled());
+      expect(buildCredentialAttributes).toHaveBeenCalledWith(FIELDS, { [FIELDS[0].fieldId]: 'Campo' });
+      expect(mintTo).toHaveBeenCalledWith(
+        expect.any(Uint8Array),
+        Uint8Array.from(Buffer.from(validRecipientPkHex, 'hex')),
+        'ipfs://Qmtoken',
+        new Uint8Array(32),
+        ROOT,
+      );
+      const [pkg, key] = deliverCredentialPackage.mock.calls[0];
+      expect(key).toBe('dd'.repeat(32));
+      expect(pkg).toMatchObject({
+        eventId: mintEvent.eventId,
+        holderPk: validRecipientPkHex,
+        credAttrRoot: '05'.repeat(32),
+        fields: COMMITTED,
+      });
+    });
+
+    it('falls back to a private link when the code has no encryption key', async () => {
+      buildCredentialAttributes.mockResolvedValue({ fields: COMMITTED, root: ROOT });
+      packageToLinkFragment.mockReturnValue('fragment');
+      const mintTo = jest.fn().mockResolvedValue({ public: { txHash: '0xabc' } });
+      await renderWithFields('https://example.com/meta-fields-link.json', mintTo);
+
+      await fillAndMint(validRecipientPkHex);
+
+      expect(await screen.findByDisplayValue(/\/app\/credential#fragment$/)).toBeInTheDocument();
+      expect(deliverCredentialPackage).not.toHaveBeenCalled();
     });
   });
 });

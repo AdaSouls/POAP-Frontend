@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Chart from "react-apexcharts";
-import { Award, Calendar, Database, ImageOff, Info, Lock, Ticket, X } from "lucide-react";
+import { Award, BadgeCheck, Calendar, Database, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
@@ -9,6 +9,8 @@ import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import { getEventStatus, getEventStatusLabel } from "../../utils/poapHelpers";
 import { getEvent, getTokensByEvent } from "../../midnight/indexer.service";
 import { useEventMetadata } from "../hooks/useEventMetadata";
+import { findOwnershipRequest, publishOwnershipRequest } from "../../midnight/ownership-proof";
+import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../toasts/sweetAlerts";
 import CategoryBadge from "./CategoryBadge";
 import { explorerBlockUrl, explorerContractUrl, explorerTxUrl } from "../../utils/midnightExplorer";
 import { getClaimActionLabel, getSubscriberListLabel, getTaxonomyEntries } from "../constants/eventCategories";
@@ -144,12 +146,61 @@ const EventCard = forwardRef(({
   // Only shown when the event actually committed at least one private attribute at creation time
   // (createEvent.jsx's private-attributes step publishes the {fieldId, label} list here, never the
   // value itself).
-  const privateAttributeFields = metadata?.privateAttributeFields || [];
+  // Credential events add per-credential fields (createEvent.jsx → credentialAttributeFields):
+  // questions about those are answered by each HOLDER, anonymously (holderProofs.jsx).
+  const privateAttributeFields = [
+    ...(metadata?.privateAttributeFields || []).map((field) => ({ ...field, kind: "event" })),
+    ...(metadata?.credentialAttributeFields || []).map((field) => ({ ...field, kind: "credential" })),
+  ];
   const openPublishDisclosureRequestDrawer = () => {
     dispatch({
       type: "PUBLISH_DISCLOSURE_REQUEST",
       payload: { eventId: event.eventId, fields: privateAttributeFields },
     });
+  };
+
+  // "Ask for Proof of Ownership" — the organizer publishes a plain request for this event once, so
+  // holders can run "Prove I Own This POAP" (poapCard.jsx) with one signature and without
+  // publishing a request from their own caller_pk (see src/midnight/ownership-proof.ts). Costs the
+  // organizer nothing privacy-wise: their pk is already public as this event's organizer.
+  // null = still checking, true/false once the indexer answered.
+  const isOwnEvent = variant === "manage" && Boolean(provider?.address) && provider.address === event.issuerPk;
+  const [ownershipRequestPublished, setOwnershipRequestPublished] = useState(null);
+  const [publishingOwnershipRequest, setPublishingOwnershipRequest] = useState(false);
+
+  useEffect(() => {
+    if (!isExpanded || !isOwnEvent) return undefined;
+    let cancelled = false;
+    findOwnershipRequest({ eventIdHex: event.eventId, organizerPkHex: event.issuerPk, myPkHex: provider.address })
+      .then((choice) => {
+        if (!cancelled) setOwnershipRequestPublished(choice.source === "organizer");
+      })
+      .catch((error) => {
+        console.error("Error loading ownership requests:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isExpanded, isOwnEvent, event.eventId, event.issuerPk, provider?.address]);
+
+  const askForProofOfOwnership = async () => {
+    if (!provider?.service) return;
+    setPublishingOwnershipRequest(true);
+    try {
+      loadingFunction("Asking for Proof of Ownership", "Preparing transaction…", "");
+      const { txHash } = await publishOwnershipRequest(provider.service, event.eventId);
+      setOwnershipRequestPublished(true);
+      succesfullBlockchainCreation(
+        "Proof of Ownership Enabled",
+        `Holders of this POAP can now prove they own it with one signature.${txHash ? ` Transaction: ${txHash}` : ""}`,
+        "",
+      );
+    } catch (error) {
+      console.error("Error publishing ownership request:", error);
+      errorFunction("Error", error.message || "Failed to publish the request. Please try again.", "");
+    } finally {
+      setPublishingOwnershipRequest(false);
+    }
   };
 
   const statusBadgeClass = alreadyHeld
@@ -537,6 +588,28 @@ const EventCard = forwardRef(({
                     <Database size={14} className="mr-2" />
                     View Blockchain Info
                   </button>
+
+                  {isOwnEvent &&
+                    (ownershipRequestPublished ? (
+                      <span
+                        className="btn btn-card-detail-action btn-sm ml-2 disabled"
+                        title="Holders can prove they hold this POAP (by token, or anonymously) with one signature."
+                      >
+                        <BadgeCheck size={14} className="mr-2" />
+                        Proof of Ownership Enabled
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-card-detail-action btn-sm ml-2"
+                        onClick={askForProofOfOwnership}
+                        disabled={ownershipRequestPublished === null || publishingOwnershipRequest}
+                        title="Publish a request so holders can prove they hold this POAP — by token, or anonymously — with one signature."
+                      >
+                        <ShieldCheck size={14} className="mr-2" />
+                        Ask for Proof of Ownership
+                      </button>
+                    ))}
 
                   {privateAttributeFields.length > 0 && (
                     <button

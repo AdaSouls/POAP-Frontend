@@ -5,7 +5,11 @@ import PublishDisclosureRequest from '../../../jsx/drawer/views/publishDisclosur
 import { mockDrawerContext, renderWithProviders } from '../../../testUtils';
 import { getDisclosureRequestsByVerifier } from '../../../midnight/indexer.service';
 import { buildMerkleTree } from '../../../midnight/merkle';
+import { publishRequestSet } from '../../../midnight/disclosure-sets';
 
+jest.mock('../../../midnight/disclosure-sets', () => ({
+  publishRequestSet: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('../../../midnight/indexer.service', () => ({
   getDisclosureRequestsByVerifier: jest.fn(),
 }));
@@ -83,6 +87,27 @@ describe('PublishDisclosureRequest drawer view', () => {
     expect(buildMerkleTree).toHaveBeenCalledWith([expect.any(Uint8Array), expect.any(Uint8Array)], 16);
 
     expect(await screen.findByText(new RegExp(`requestId=${'ee'.repeat(32)}`))).toBeInTheDocument();
+  });
+
+  it('for a per-credential field: uses the returned requestId and publishes the accepted values for holders', async () => {
+    const requestIdBytes = new Uint8Array(32).fill(0xee);
+    const publishDisclosureRequest = jest
+      .fn()
+      .mockResolvedValue({ public: { txHash: '0xabc' }, private: { result: requestIdBytes } });
+    publishRequestSet.mockResolvedValue(undefined);
+    const drawerValue = buildDrawerValue({ publishDisclosureRequest });
+    drawerValue.disclosureEvent = { eventId: EVENT_ID_HEX, fields: [{ ...FIELD, label: 'Sector', kind: 'credential' }] };
+    renderWithProviders(<PublishDisclosureRequest />, { drawerValue });
+
+    const memberInputs = screen.getAllByLabelText('Candidate value');
+    await userEvent.type(memberInputs[0], 'Campo');
+    await userEvent.type(memberInputs[1], 'Platea');
+    await userEvent.click(screen.getByRole('button', { name: /^publish request$/i }));
+
+    expect(await screen.findByText(/holders whose sector is one of these values/i)).toBeInTheDocument();
+    expect(publishRequestSet).toHaveBeenCalledWith('ee'.repeat(32), ['Campo', 'Platea']);
+    expect(getDisclosureRequestsByVerifier).not.toHaveBeenCalled();
+    expect(screen.queryByText(/requestId=/)).not.toBeInTheDocument();
   });
 
   it('rejects submission with no candidate values', async () => {

@@ -14,6 +14,7 @@ import {
 } from './providers';
 import { deriveCallerPk, deriveHolderPk, type PoapPrivateState, type TokenRecord } from './witnesses';
 import type { MerkleTreePathArg } from './merkle';
+import { deriveEncryptionKeyPair, type EncryptionKeyPair } from './credential-crypto';
 
 export type PoapProviders = Awaited<ReturnType<typeof buildProviders>>;
 
@@ -61,6 +62,18 @@ export function computeAttributeLeaf(
   rand: Uint8Array,
 ): Uint8Array {
   return pureCircuits.computeAttributeLeaf(eventId, fieldId, value, rand);
+}
+
+// Per-credential private attributes (B7) — see credential-delivery.ts. Both are pure circuits, so
+// the leaves computed here are exactly what mintTo's credentials tree and proveCredentialAttribute
+// check. holderPk in computeCredentialLeaf is the recipient's holder_pk(organizer), the same value
+// mintTo received (holder_secret_pk inside the contract is that same hash, just not disclosed).
+export function computeCredentialAttrLeaf(fieldId: Uint8Array, value: Uint8Array, rand: Uint8Array): Uint8Array {
+  return pureCircuits.computeCredentialAttrLeaf(fieldId, value, rand);
+}
+
+export function computeCredentialLeaf(eventId: Uint8Array, holderPk: Uint8Array, credAttrRoot: Uint8Array): Uint8Array {
+  return pureCircuits.computeCredentialLeaf(eventId, holderPk, credAttrRoot);
 }
 
 export type PoapState = {
@@ -160,6 +173,12 @@ export class PoapContractService {
   // globally-correlatable value and would result in an unrecoverable mint if used here by mistake.
   async getHolderPkHex(issuerId: Uint8Array): Promise<string> {
     return Buffer.from(deriveHolderPk(this.privateState.secretKey, issuerId)).toString('hex');
+  }
+
+  // X25519 key pair for receiving credential attributes from this organizer — derived from
+  // local_sk like holder_pk, so it needs no storage of its own. See credential-crypto.ts.
+  async getEncryptionKeyPair(issuerId: Uint8Array): Promise<EncryptionKeyPair> {
+    return deriveEncryptionKeyPair(this.privateState.secretKey, issuerId);
   }
 
   async claim(eventId: Uint8Array, isSoulbound: boolean) {
@@ -302,6 +321,32 @@ export class PoapContractService {
   ) {
     return this.deployedContract.callTx.proveAttributeMembershipOnce(
       requestId, value, rand, attributePath, setMembershipPath,
+    );
+  }
+
+  // Public proof of holding: reveals tokenId (not the wallet), against a published request for
+  // the token's event. Stateless like proveAttributeMembership. See ownership-proof.ts.
+  async proveTokenOwnership(requestId: Uint8Array, tokenId: bigint) {
+    return this.deployedContract.callTx.proveTokenOwnership(requestId, tokenId);
+  }
+
+  // Anonymous: "I hold a live credential of this request's event", without saying which.
+  // credPath comes from the ledger (credential-delivery.ts#credentialPathOnChain).
+  async proveEventAttendance(requestId: Uint8Array, credAttrRoot: Uint8Array, credPath: MerkleTreePathArg) {
+    return this.deployedContract.callTx.proveEventAttendance(requestId, credAttrRoot, credPath);
+  }
+
+  // Anonymous + predicate over one of THIS holder's credential attributes (B7).
+  async proveCredentialAttribute(
+    requestId: Uint8Array,
+    value: Uint8Array,
+    rand: Uint8Array,
+    attributePath: MerkleTreePathArg,
+    setMembershipPath: MerkleTreePathArg,
+    credPath: MerkleTreePathArg,
+  ) {
+    return this.deployedContract.callTx.proveCredentialAttribute(
+      requestId, value, rand, attributePath, setMembershipPath, credPath,
     );
   }
 

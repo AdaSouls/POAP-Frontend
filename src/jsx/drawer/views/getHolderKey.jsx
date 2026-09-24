@@ -5,6 +5,7 @@ import {
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
 import { errorFunction } from "../../toasts/sweetAlerts";
+import { formatHolderCode } from "../../../midnight/credential-crypto";
 
 // getHolderPk(issuerId) is a per-organizer pseudonym (poap.compact) — deliberately DIFFERENT from
 // the caller pk shown as "your address" everywhere else in the app. It's the only value an
@@ -12,6 +13,11 @@ import { errorFunction } from "../../toasts/sweetAlerts";
 // in an unrecoverable mint — see witnesses.ts's deriveHolderPk comment. This view exists purely so
 // a subscriber can generate and copy that value for a specific organizer, out-of-band (chat,
 // email, in person) — there's no on-chain "give me this" handshake to automate here.
+//
+// The code also carries this wallet's encryption key for the same organizer
+// (`<holderPk>.<encryptionKey>`, see credential-crypto.ts), so a credential with private
+// attributes can be delivered to it encrypted. Both halves are derived from local_sk: generating
+// the code again always gives the same value.
 export default function GetHolderKey() {
   const { midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
@@ -45,7 +51,8 @@ export default function GetHolderKey() {
     try {
       const issuerIdBytes = Uint8Array.from(Buffer.from(trimmed, "hex"));
       const hex = await midnight.provider.service.getHolderPkHex(issuerIdBytes);
-      setHolderPkHex(hex);
+      const { publicKeyHex } = await midnight.provider.service.getEncryptionKeyPair(issuerIdBytes);
+      setHolderPkHex(formatHolderCode(hex, publicKeyHex));
     } catch (error) {
       console.error("Error generating holder key:", error);
       errorFunction("Error", error.message || "Failed to generate your key. Please try again.", "");
@@ -114,7 +121,9 @@ export default function GetHolderKey() {
                     </button>
                   </div>
                   <p className="text-muted small mb-0 mt-2">
-                    Send this to the organizer — it's what they'll use to mint your POAP to.
+                    Send this to the organizer — it's what they'll use to mint your POAP to. It also
+                    lets them send you the credential's private details, encrypted so only you can
+                    read them.
                   </p>
                 </div>
               </div>

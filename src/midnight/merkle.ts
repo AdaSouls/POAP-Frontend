@@ -159,3 +159,18 @@ export async function buildMerkleTree(leaves: Uint8Array[], depth: number): Prom
 
   return { rootBytes, leafCount: leaves.length, pathForIndex, pathForLeaf };
 }
+
+/**
+ * Recomputes the root digest (as a Field, the form MerkleTree.checkRoot takes) of a path the
+ * LEDGER handed back — e.g. ledger.credentials.pathForLeaf(tokenId, leaf). Same algorithm as
+ * merkleTreePathRoot in the contract, so `credentials.checkRoot({ field })` tells whether that leaf
+ * really sits at that index in a known version of the on-chain tree.
+ */
+export async function merklePathRootField(path: MerkleTreePathArg): Promise<bigint> {
+  let acc = await leafDigestField(path.leaf);
+  for (const entry of path.path) {
+    const sibling = entry.sibling.field;
+    acc = transientHash(FIELD_PAIR, entry.goes_left ? [acc, sibling] : [sibling, acc]);
+  }
+  return acc;
+}

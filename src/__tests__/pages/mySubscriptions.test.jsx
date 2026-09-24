@@ -6,6 +6,11 @@ import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { getAllEvents, getEvent, getTokensByOwner } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
+// holder-proofs pulls in the compiled contract (WASM), unloadable under Jest — see merkle.test.ts.
+jest.mock('../../midnight/holder-proofs', () => ({
+  loadCredentialPackage: jest.fn().mockResolvedValue(null),
+}));
+
 
 const ISSUER_PK = 'bb'.repeat(32);
 const HOLDER_PK = 'ff'.repeat(32);

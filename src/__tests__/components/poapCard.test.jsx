@@ -5,8 +5,14 @@ import PoapCard from '../../jsx/components/poapCard';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { getTokenVisibility } from '../../midnight/collection-share';
 import { getEvent } from '../../midnight/indexer.service';
+import { loadCredentialPackage } from '../../midnight/holder-proofs';
 
 jest.mock('../../midnight/indexer.service');
+// holder-proofs pulls in the compiled contract (WASM), unloadable under Jest — see merkle.test.ts.
+jest.mock('../../midnight/holder-proofs', () => ({
+  loadCredentialPackage: jest.fn().mockResolvedValue(null),
+}));
+
 
 describe('PoapCard Component', () => {
   const mockPoap = {
@@ -160,6 +166,22 @@ describe('PoapCard Component', () => {
       });
     });
 
+    it('opens the ownership proof popup for this token', async () => {
+      const dispatch = jest.fn();
+      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue, drawerDispatch: dispatch });
+
+      await userEvent.click(screen.getByRole('button', { name: /prove i own this poap/i }));
+
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_PROVE_OWNERSHIP',
+        payload: expect.objectContaining({
+          tokenId: poap.tokenId,
+          eventId: poap.firstEventId,
+          issuerPkHex: poap.issuerPkHex,
+        }),
+      });
+    });
+
     it('never shows the organizer-key copy badge to the holder', async () => {
       const dispatch = jest.fn();
       renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue, drawerDispatch: dispatch });
@@ -291,6 +313,70 @@ describe('PoapCard Component', () => {
 
       expect(await screen.findByText('AdaSouls Inc.')).toBeInTheDocument();
       expect(screen.queryByText(/aaaaaaaa…aaaaaa/)).not.toBeInTheDocument();
+    });
+  });
+  describe('private details (credential)', () => {
+    const FIELDS = [{ fieldId: '01'.repeat(32), label: 'Sector' }];
+    const campoHex = Buffer.concat([Buffer.from('Campo'), Buffer.alloc(27)]).toString('hex');
+    const PKG = {
+      version: 1,
+      eventId: 'bb'.repeat(32),
+      issuerPk: 'aa'.repeat(32),
+      holderPk: 'cc'.repeat(32),
+      credAttrRoot: 'dd'.repeat(32),
+      fields: [{ fieldId: FIELDS[0].fieldId, label: 'Sector', valueHex: campoHex, randHex: '11'.repeat(32) }],
+    };
+    const credentialPoap = {
+      ...mockPoap,
+      ownerPk: 'cc'.repeat(32),
+      metadataURI: 'https://example.com/meta-credential-fields.json',
+    };
+    const connected = (dispatch) => ({
+      drawerValue: {
+        ...mockDrawerContext,
+        midnight: { ...mockDrawerContext.midnight, provider: { address: 'ee'.repeat(32), service: {} } },
+      },
+      drawerDispatch: dispatch,
+    });
+
+    beforeEach(() => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ name: 'Recital', category: 'credential', credentialAttributeFields: FIELDS }),
+      });
+    });
+
+    it('keeps the values hidden until the holder asks to see them', async () => {
+      loadCredentialPackage.mockResolvedValue(PKG);
+      renderWithProviders(<PoapCard poap={credentialPoap} isExpanded />, connected(jest.fn()));
+
+      expect(await screen.findByText('Sector')).toBeInTheDocument();
+      expect(screen.queryByText('Campo')).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /show private details/i }));
+      expect(screen.getByText('Campo')).toBeInTheDocument();
+      expect(loadCredentialPackage).toHaveBeenCalledWith(
+        {},
+        { tokenId: 1, eventId: 'bb'.repeat(32), issuerPk: 'aa'.repeat(32), holderPk: 'cc'.repeat(32) },
+      );
+    });
+
+    it('says so when the organizer has not sent the details', async () => {
+      loadCredentialPackage.mockResolvedValue(null);
+      renderWithProviders(<PoapCard poap={credentialPoap} isExpanded />, connected(jest.fn()));
+      expect(await screen.findByText(/hasn't sent this credential's private details/i)).toBeInTheDocument();
+    });
+
+    it('opens Anonymous Proofs with the token, its fields and its details', async () => {
+      loadCredentialPackage.mockResolvedValue(PKG);
+      const dispatch = jest.fn();
+      renderWithProviders(<PoapCard poap={credentialPoap} isExpanded />, connected(dispatch));
+      await screen.findByRole('button', { name: /show private details/i });
+
+      await userEvent.click(screen.getByRole('button', { name: /anonymous proofs/i }));
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_HOLDER_PROOFS',
+        payload: expect.objectContaining({ credentialFields: FIELDS, pkg: PKG, eventName: 'Recital' }),
+      });
     });
   });
 });

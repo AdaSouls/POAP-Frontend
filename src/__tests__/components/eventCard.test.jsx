@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventCard from '../../jsx/components/eventCard';
 import { mockDrawerContext, mockUserRoles, renderWithProviders } from '../../testUtils';
-import { getEvent, getTokensByEvent, getTokensByOwner } from '../../midnight/indexer.service';
+import { getAllDisclosureRequests, getEvent, getTokensByEvent, getTokensByOwner } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
 
@@ -30,6 +30,7 @@ describe('EventCard Component', () => {
     getEvent.mockResolvedValue({ ...mockEvent, liveTokens: 7 });
     getTokensByEvent.mockResolvedValue([]);
     getTokensByOwner.mockResolvedValue([]);
+    getAllDisclosureRequests.mockResolvedValue([]);
   });
 
   it('renders a truncated event id', () => {
@@ -225,7 +226,7 @@ describe('EventCard Component', () => {
         type: 'PUBLISH_DISCLOSURE_REQUEST',
         payload: {
           eventId: eventWithAttributes.eventId,
-          fields: [{ fieldId: 'cc'.repeat(32), label: 'Region' }],
+          fields: [{ fieldId: 'cc'.repeat(32), label: 'Region', kind: 'event' }],
         },
       });
     });
@@ -573,6 +574,48 @@ describe('EventCard Component', () => {
           ]),
         }),
       });
+    });
+  });
+  describe('Ask for Proof of Ownership', () => {
+    const ZERO = '0'.repeat(64);
+    const organizerDrawer = (service = {}) => ({
+      ...mockDrawerContext,
+      midnight: { ...mockDrawerContext.midnight, provider: { address: mockEvent.issuerPk, service } },
+    });
+
+    it("is not offered on someone else's event", () => {
+      renderWithProviders(<EventCard event={{ ...mockEvent, issuerPk: 'cc'.repeat(32) }} isExpanded />, {
+        drawerValue: organizerDrawer(),
+      });
+      expect(screen.queryByRole('button', { name: /ask for proof of ownership/i })).not.toBeInTheDocument();
+    });
+
+    it('publishes a plain request for the event and then shows it as enabled', async () => {
+      const publishDisclosureRequest = jest
+        .fn()
+        .mockResolvedValue({ public: { txHash: '0xpub' }, private: { result: new Uint8Array(32).fill(3) } });
+      renderWithProviders(<EventCard event={mockEvent} isExpanded />, {
+        drawerValue: organizerDrawer({ publishDisclosureRequest }),
+      });
+
+      const button = await screen.findByRole('button', { name: /ask for proof of ownership/i });
+      await waitFor(() => expect(button).toBeEnabled());
+      await userEvent.click(button);
+
+      await waitFor(() => expect(screen.getByText(/proof of ownership enabled/i)).toBeInTheDocument());
+      const [, eventId, fieldId, setRoot] = publishDisclosureRequest.mock.calls[0];
+      expect(Buffer.from(eventId).toString('hex')).toBe(mockEvent.eventId);
+      expect(fieldId).toEqual(new Uint8Array(32));
+      expect(setRoot).toEqual(new Uint8Array(32));
+    });
+
+    it('shows it as already enabled when the organizer published one before', async () => {
+      getAllDisclosureRequests.mockResolvedValue([
+        { requestId: '11'.repeat(32), verifierPk: mockEvent.issuerPk, eventId: mockEvent.eventId, fieldId: ZERO, setRoot: ZERO },
+      ]);
+      renderWithProviders(<EventCard event={mockEvent} isExpanded />, { drawerValue: organizerDrawer() });
+      expect(await screen.findByText(/proof of ownership enabled/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /ask for proof of ownership/i })).not.toBeInTheDocument();
     });
   });
 });

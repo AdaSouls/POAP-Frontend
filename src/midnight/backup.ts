@@ -1,5 +1,6 @@
 import { PRIVATE_ATTRIBUTE_DRAFT_PREFIX } from './private-attribute-drafts';
 import { VISIBILITY_PREFIX } from './collection-share';
+import { CREDENTIAL_PACKAGE_PREFIX } from './credential-store';
 import {
   getBackupContext,
   getBackupStatus,
@@ -37,7 +38,7 @@ export const BACKUP_FORMAT = 'adasouls-backup';
 export const BACKUP_VERSION = 1;
 export const BACKUP_KDF_ITERATIONS = 600_000;
 const AUTO_BACKUP_DEBOUNCE_MS = 5_000;
-const BACKED_UP_PREFIXES = [PRIVATE_ATTRIBUTE_DRAFT_PREFIX, VISIBILITY_PREFIX];
+const BACKED_UP_PREFIXES = [PRIVATE_ATTRIBUTE_DRAFT_PREFIX, VISIBILITY_PREFIX, CREDENTIAL_PACKAGE_PREFIX];
 
 export type BackupEnvelope = {
   format: typeof BACKUP_FORMAT;

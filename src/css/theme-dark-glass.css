@@ -1018,6 +1018,88 @@ select option,
   color: var(--text-on-glass-muted);
 }
 
+/* B8 proof receipt (ProofReceipt.jsx) — the seal card on top, then label/value facts. */
+.proof-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.proof-receipt-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.proof-receipt-facts dt {
+  font-weight: 400;
+  color: var(--text-on-glass-muted);
+}
+
+.proof-receipt-facts dd {
+  margin: 0;
+  color: var(--text-on-glass);
+  overflow-wrap: anywhere;
+}
+
+.proof-receipt-verify {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Private details of a credential (poapCard.jsx) — owner-only block in the expanded card. */
+.credential-private-details {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.credential-private-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px 16px;
+}
+
+.credential-private-list dt {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-on-glass-muted);
+}
+
+.credential-private-list dd {
+  margin: 0;
+  font-size: 13px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--text-on-glass);
+}
+
+/* One answerable request in the Anonymous Proofs popup (holderProofs.jsx). */
+.holder-proof-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-hover);
+}
+
+/* Privacy trade-off the user should read before signing (proveOwnership.jsx) — same amber as
+   the header's backup chip. */
+.info-hint-card.is-warning {
+  border-color: rgba(241, 180, 76, 0.6);
+  background: rgba(241, 180, 76, 0.06);
+}
+
+.info-hint-card.is-warning svg {
+  color: #f1b44c;
+}
+
 /* Expanded event card's Mint POAP / Subscribe action, right column — was raw Bootstrap
    .btn-outline-secondary with no dark-mode override, so the text was effectively invisible
    against this app's dark surfaces. Same glass fill/hover language as .btn-white, full-rounded

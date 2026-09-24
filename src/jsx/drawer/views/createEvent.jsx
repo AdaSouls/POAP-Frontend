@@ -30,6 +30,7 @@ import {
   serializeTaxonomyValues,
 } from "../../constants/eventCategories";
 import eventNormal from "../../../images/svg/event-normal.svg";
+import { txHashOf } from "../../../midnight/tx-result";
 
 // NOTE: createEvent(eventId, maxSupply, expiration, isPublicMint, metadataURI) circuit — the
 // metadataURI is a pointer to off-chain JSON (name/description/image/category/…), not stored
@@ -130,8 +131,12 @@ export default function CreateEvent() {
   const isPoapImageValid = () => !usePoapImage || Boolean(poapImageValues.imageFile);
   // A fully-empty row is fine (ignored at submit — see handleSubmit's validAttributeRows filter);
   // a partially-filled row, or a value over the 32-byte encoding limit, blocks Next.
+  // Credential events only define the field names here — each recipient's values are set per
+  // credential at mint time (mintPoap.jsx → credentialAttributesRoot), not once for the event.
+  const attributesAreTemplate = category === "credential";
   const isPrivateAttributesValid = () =>
     privateAttributes.every((row) => {
+      if (attributesAreTemplate) return true;
       const hasFieldName = row.fieldName.trim().length > 0;
       const hasValue = row.value.trim().length > 0;
       if (!hasFieldName && !hasValue) return true;
@@ -270,9 +275,19 @@ export default function CreateEvent() {
       // this browser looks its own draft back up (private-attribute-drafts.ts, keyed by
       // (eventId, fieldId)). The {fieldId, label} pairs (never the value) also go into the public
       // metadataURI JSON below, so a verifier can discover what's askable without any private state.
-      const validAttributeRows = privateAttributes.filter(
-        (row) => row.fieldName.trim() && row.value.trim(),
-      );
+      const validAttributeRows = attributesAreTemplate
+        ? []
+        : privateAttributes.filter((row) => row.fieldName.trim() && row.value.trim());
+      // Credential: public list of field names + fresh random fieldIds, no values and no event-level
+      // root. mintPoap.jsx reads this list to ask for each recipient's values.
+      const credentialAttributeFieldsForMetadata = attributesAreTemplate
+        ? privateAttributes
+            .filter((row) => row.fieldName.trim())
+            .map((row) => ({
+              fieldId: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex"),
+              label: row.fieldName.trim(),
+            }))
+        : [];
       let privateAttributesRoot = new Uint8Array(32);
       const attributeDraftsToSave = [];
       const privateAttributeFieldsForMetadata = [];
@@ -318,6 +333,9 @@ export default function CreateEvent() {
         ...(privateAttributeFieldsForMetadata.length
           ? { privateAttributeFields: privateAttributeFieldsForMetadata }
           : {}),
+        ...(credentialAttributeFieldsForMetadata.length
+          ? { credentialAttributeFields: credentialAttributeFieldsForMetadata }
+          : {}),
       });
 
       const expiration = expirationDate
@@ -326,14 +344,16 @@ export default function CreateEvent() {
 
       loadingFunction("Creating Event", "Preparing transaction…", "");
 
-      const { txHash } = await provider.service.createEvent(
-        label,
-        BigInt(maxSupply || 0),
-        expiration,
-        categoryConfig.isPublicMint,
-        metadataURI,
-        privateMetadataCommit,
-        privateAttributesRoot,
+      const txHash = txHashOf(
+        await provider.service.createEvent(
+          label,
+          BigInt(maxSupply || 0),
+          expiration,
+          categoryConfig.isPublicMint,
+          metadataURI,
+          privateMetadataCommit,
+          privateAttributesRoot,
+        ),
       );
 
       const eventIdHex = Buffer.from(eventId).toString("hex");
@@ -476,7 +496,11 @@ export default function CreateEvent() {
           )}
 
           {currentStepKey === STEP_PRIVATE_ATTRIBUTES && (
-            <PrivateAttributesStepFields values={privateAttributes} onChange={setPrivateAttributes} />
+            <PrivateAttributesStepFields
+              values={privateAttributes}
+              onChange={setPrivateAttributes}
+              labelsOnly={attributesAreTemplate}
+            />
           )}
 
           {currentStepKey === STEP_POAP_IMAGE && (

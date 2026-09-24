@@ -22,6 +22,8 @@ import OrganizerInfo from "./pages/organizerInfo";
 import SubscriberInfo from "./pages/subscriberInfo";
 import AdminDeploy from "./pages/adminDeploy";
 import DisclosureRespond from "./pages/disclosureRespond";
+import CredentialImport from "./pages/credentialImport";
+import VerifyProof from "./pages/verifyProof";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -77,6 +79,8 @@ const Router = () => {
           <Route path="/app/collections/:section" element={<Collections />} />
           <Route path="/app/claim-mint" element={<ClaimMint />} />
           <Route path="/app/disclosure/respond" element={<DisclosureRespond />} />
+          <Route path="/app/credential" element={<CredentialImport />} />
+          <Route path="/app/verify" element={<VerifyProof />} />
         </Routes>
       </div>
     </BrowserRouter>

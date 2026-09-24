@@ -13,6 +13,7 @@ import { encodeAttributeValue } from "../../../midnight/attribute-value-codec";
 import { buildMerkleTree } from "../../../midnight/merkle";
 import { getDisclosureRequestsByVerifier } from "../../../midnight/indexer.service";
 import BlockchainField from "../../components/BlockchainField";
+import { publishRequestSet } from "../../../midnight/disclosure-sets";
 
 const REQUEST_ID_POLL_ATTEMPTS = 10;
 const REQUEST_ID_POLL_DELAY_MS = 1500;
@@ -50,6 +51,12 @@ export default function PublishDisclosureRequest() {
   const [members, setMembers] = useState(["", ""]);
   const [loading, setLoading] = useState(false);
   const [shareLink, setShareLink] = useState(null);
+  const [publishedForHolders, setPublishedForHolders] = useState(false);
+  // kind "credential" (a private field each credential carries, B7): the HOLDER answers, from their
+  // POAP card, so the accepted values are published for them (publishRequestSet). kind "event"
+  // (event-level attribute): only this organizer's browser can answer, via the share link.
+  const selectedField = fields.find((field) => field.fieldId === fieldId);
+  const isCredentialField = selectedField?.kind === "credential";
   const [copied, setCopied] = useState(false);
 
   const closeDrawer = () => {
@@ -87,15 +94,25 @@ export default function PublishDisclosureRequest() {
       const fieldIdBytes = Uint8Array.from(Buffer.from(fieldId, "hex"));
 
       loadingFunction("Publishing Disclosure Request", "Preparing transaction…", "");
-      await midnight.provider.service.publishDisclosureRequest(label, eventIdBytes, fieldIdBytes, tree.rootBytes);
+      const published = await midnight.provider.service.publishDisclosureRequest(
+        label,
+        eventIdBytes,
+        fieldIdBytes,
+        tree.rootBytes,
+      );
 
-      loadingFunction("Publishing Disclosure Request", "Waiting for the indexer to pick it up…", "");
-      const requestId = await pollForRequestId({
-        verifierPkHex: midnight.provider.address,
-        eventIdHex: disclosureEvent.eventId,
-        fieldIdHex: fieldId,
-        setRootHex,
-      });
+      // The circuit returns the requestId (private.result); the indexer poll stays as a fallback.
+      const returned = published?.private?.result;
+      let requestId = returned instanceof Uint8Array && returned.length === 32 ? Buffer.from(returned).toString("hex") : null;
+      if (!requestId) {
+        loadingFunction("Publishing Disclosure Request", "Waiting for the indexer to pick it up…", "");
+        requestId = await pollForRequestId({
+          verifierPkHex: midnight.provider.address,
+          eventIdHex: disclosureEvent.eventId,
+          fieldIdHex: fieldId,
+          setRootHex,
+        });
+      }
       if (!requestId) {
         throw new Error("Published, but the indexer hasn't shown it yet — try Get Share Link again shortly.");
       }
@@ -106,7 +123,27 @@ export default function PublishDisclosureRequest() {
       // encoding.
       const link = `${window.location.origin}/app/disclosure/respond?requestId=${requestId}&members=${trimmedMembers.map(encodeURIComponent).join(",")}`;
       setShareLink(link);
-      succesfullBlockchainCreation("Disclosure Request Published", `Request ID: ${requestId}`, "");
+
+      // Holders answer from their card, so they need the accepted values — the chain only has the root.
+      loadingFunction("Publishing Disclosure Request", "Publishing the accepted values…", "");
+      try {
+        await publishRequestSet(requestId, trimmedMembers);
+      } catch (setError) {
+        console.error("Publishing the accepted values failed:", setError);
+        if (isCredentialField) {
+          throw new Error(
+            "The request is on-chain, but its accepted values couldn't be published, so holders can't answer it. Publish the request again.",
+          );
+        }
+      }
+      setPublishedForHolders(isCredentialField);
+      succesfullBlockchainCreation(
+        "Disclosure Request Published",
+        isCredentialField
+          ? "Holders can now answer it from their POAP (Anonymous Proofs)."
+          : `Request ID: ${requestId}`,
+        "",
+      );
     } catch (error) {
       console.error("Error publishing disclosure request:", error);
       errorFunction("Error", error.message || "Failed to publish the disclosure request. Please try again.", "");
@@ -152,7 +189,7 @@ export default function PublishDisclosureRequest() {
               >
                 {fields.map((field) => (
                   <option key={field.fieldId} value={field.fieldId}>
-                    {field.label}
+                    {field.kind === "credential" ? `${field.label} (each credential)` : field.label}
                   </option>
                 ))}
               </select>
@@ -190,7 +227,16 @@ export default function PublishDisclosureRequest() {
               </small>
             </div>
 
-            {shareLink && (
+            {publishedForHolders && (
+              <div className="col-12 mt-2">
+                <div className="alert alert-success m-0" role="status">
+                  Published. Holders whose {selectedField?.label} is one of these values can prove it
+                  from their POAP card (Anonymous Proofs), without revealing it.
+                </div>
+              </div>
+            )}
+
+            {shareLink && !isCredentialField && (
               <div className="col-12 mt-2">
                 <BlockchainField
                   label="Share Link"

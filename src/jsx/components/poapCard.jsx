@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Award, BadgeCheck, Calendar, Database, ImageOff, Info, Ticket, X } from "lucide-react";
+import { Award, BadgeCheck, Calendar, Database, Eye, EyeOff, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
@@ -15,6 +15,8 @@ import {
   encodeShareableCollection,
   buildShareUrl,
 } from "../../midnight/collection-share";
+import { loadCredentialPackage } from "../../midnight/holder-proofs";
+import { decodeValueHex } from "../../midnight/credential-store";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -164,6 +166,62 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
       copyable: true,
     });
     dispatch({ type: "SHOW_BLOCKCHAIN_INFO", payload: { title: "Blockchain Info", fields } });
+  };
+
+  // Private details of this credential (B7) — only for credentials whose event defines private
+  // fields. Local copy first, else the encrypted delivery from the organizer (holder-proofs.ts).
+  // Values stay hidden until the holder asks to see them (the card may be on a shared screen).
+  const service = midnight?.provider?.service;
+  const credentialFields = eventMetadata?.credentialAttributeFields || [];
+  const holderToken = { tokenId: poap.tokenId, eventId: poap.firstEventId, issuerPk: poap.issuerPkHex, holderPk: poap.ownerPk };
+  const [credentialPkg, setCredentialPkg] = useState(null);
+  const [credentialStatus, setCredentialStatus] = useState("idle"); // idle | loading | ready | missing | error
+  const [showPrivate, setShowPrivate] = useState(false);
+  useEffect(() => {
+    if (!isExpanded || !service || credentialFields.length === 0 || poap.isBurned) return undefined;
+    let cancelled = false;
+    setCredentialStatus("loading");
+    loadCredentialPackage(service, holderToken)
+      .then((pkg) => {
+        if (cancelled) return;
+        setCredentialPkg(pkg);
+        setCredentialStatus(pkg ? "ready" : "missing");
+      })
+      .catch((error) => {
+        console.error("Error loading credential details:", error);
+        if (!cancelled) setCredentialStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+    // holderToken is rebuilt each render from these same poap fields.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExpanded, service, credentialFields.length, poap.tokenId, poap.isBurned]);
+
+  const openHolderProofs = () => {
+    dispatch({
+      type: "SHOW_HOLDER_PROOFS",
+      payload: {
+        token: holderToken,
+        eventName: eventMetadata?.name || null,
+        credentialFields,
+        pkg: credentialPkg,
+      },
+    });
+  };
+
+  // B6 — see proveOwnership.jsx / src/midnight/ownership-proof.ts.
+  const openProveOwnership = () => {
+    dispatch({
+      type: "SHOW_PROVE_OWNERSHIP",
+      payload: {
+        tokenId: poap.tokenId,
+        eventId: poap.firstEventId,
+        issuerPkHex: poap.issuerPkHex,
+        isBurned: poap.isBurned,
+        eventName: eventMetadata?.name || null,
+      },
+    });
   };
 
   // No "pending"/claim state exists for a POAP — mintTo() (organizer push-mint) and claim()
@@ -360,14 +418,87 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     </>
                   )}
 
-                  <button
-                    type="button"
-                    className="btn btn-card-detail-action btn-sm"
-                    onClick={openBlockchainInfoDrawer}
-                  >
-                    <Database size={14} className="mr-2" />
-                    View Blockchain Info
-                  </button>
+                  {credentialFields.length > 0 && !poap.isBurned && (
+                    <>
+                      <div className="credential-private-details">
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <span className="d-flex align-items-center small font-weight-semibold">
+                            <Lock size={14} className="mr-2" />
+                            Private details
+                          </span>
+                          {credentialStatus === "ready" && (
+                            <button
+                              type="button"
+                              className="btn btn-card-detail-action btn-sm"
+                              onClick={() => setShowPrivate((v) => !v)}
+                              aria-label={showPrivate ? "Hide private details" : "Show private details"}
+                            >
+                              {showPrivate ? <EyeOff size={14} /> : <Eye size={14} />}
+                              <span className="ml-2">{showPrivate ? "Hide" : "Show"}</span>
+                            </button>
+                          )}
+                        </div>
+                        {!service ? (
+                          <p className="m-0 small text-muted">Connect your wallet to see them.</p>
+                        ) : credentialStatus === "loading" ? (
+                          <p className="m-0 small text-muted">Looking for your private details…</p>
+                        ) : credentialStatus === "missing" ? (
+                          <p className="m-0 small text-muted">
+                            The organizer hasn't sent this credential's private details, or they were sent to a
+                            different key. If they gave you a private link, open it while connected.
+                          </p>
+                        ) : credentialStatus === "error" ? (
+                          <p className="m-0 small text-warning">Could not load the private details. Try again in a moment.</p>
+                        ) : credentialStatus === "ready" ? (
+                          <dl className="credential-private-list m-0">
+                            {credentialPkg.fields.map((field) => (
+                              <div key={field.fieldId}>
+                                <dt>{field.label}</dt>
+                                <dd>{showPrivate ? decodeValueHex(field.valueHex) : "••••••"}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        ) : null}
+                        <p className="m-0 mt-2 small text-muted">
+                          Only you can see these. Anonymous Proofs lets you prove one without revealing it.
+                        </p>
+                      </div>
+                      <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
+                    </>
+                  )}
+
+                  <div className="d-flex flex-wrap" style={{ gap: "8px" }}>
+                    <button
+                      type="button"
+                      className="btn btn-card-detail-action btn-sm"
+                      onClick={openBlockchainInfoDrawer}
+                    >
+                      <Database size={14} className="mr-2" />
+                      View Blockchain Info
+                    </button>
+                    {!poap.isBurned && (
+                      <button
+                        type="button"
+                        className="btn btn-card-detail-action btn-sm"
+                        onClick={openProveOwnership}
+                        disabled={!midnight?.provider}
+                      >
+                        <ShieldCheck size={14} className="mr-2" />
+                        Prove I Own This POAP
+                      </button>
+                    )}
+                    {!poap.isBurned && (
+                      <button
+                        type="button"
+                        className="btn btn-card-detail-action btn-sm"
+                        onClick={openHolderProofs}
+                        disabled={!midnight?.provider || credentialStatus === "loading"}
+                      >
+                        <EyeOff size={14} className="mr-2" />
+                        Anonymous Proofs
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

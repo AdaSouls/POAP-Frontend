@@ -29,13 +29,16 @@ describe('GetHolderKey drawer view', () => {
     expect(getHolderPkHex).not.toHaveBeenCalled();
   });
 
-  it('derives and displays the holder key for a valid issuer public key, and lets it be copied', async () => {
+  it('derives the holder key plus the encryption key into one code, and lets it be copied', async () => {
     const issuerPkHex = 'bb'.repeat(32);
     const holderPkHex = 'cc'.repeat(32);
+    const encryptionKeyHex = 'dd'.repeat(32);
+    const code = `${holderPkHex}.${encryptionKeyHex}`;
     const getHolderPkHex = jest.fn().mockResolvedValue(holderPkHex);
+    const getEncryptionKeyPair = jest.fn().mockResolvedValue({ publicKeyHex: encryptionKeyHex, privateKey: {} });
     const drawerValue = {
       ...mockDrawerContext,
-      midnight: { ...mockDrawerContext.midnight, provider: { service: { getHolderPkHex } } },
+      midnight: { ...mockDrawerContext.midnight, provider: { service: { getHolderPkHex, getEncryptionKeyPair } } },
     };
     renderWithProviders(<GetHolderKey />, { drawerValue });
 
@@ -45,11 +48,12 @@ describe('GetHolderKey drawer view', () => {
     await waitFor(() => {
       expect(getHolderPkHex).toHaveBeenCalledWith(Uint8Array.from(Buffer.from(issuerPkHex, 'hex')));
     });
-    expect(await screen.findByText(holderPkHex)).toBeInTheDocument();
+    expect(getEncryptionKeyPair).toHaveBeenCalledWith(Uint8Array.from(Buffer.from(issuerPkHex, 'hex')));
+    expect(await screen.findByText(code)).toBeInTheDocument();
 
     navigator.clipboard.writeText.mockClear();
     await userEvent.click(screen.getByRole('button', { name: /^copy$/i }));
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(holderPkHex);
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(code);
   });
 
   it('dispatches CLOSE_DRAWER when the close button is clicked', async () => {

@@ -210,8 +210,8 @@ app.post('/api/ipfs/private-signed-url', async (req, res) => {
 const LOOKUP_ID_PATTERN = /^[0-9a-f]{64}$/;
 const BACKUP_KEYVALUE = 'adasoulsBackup';
 
-async function listBackups(lookupId) {
-  const params = new URLSearchParams({ [`metadata[${BACKUP_KEYVALUE}]`]: lookupId, order: 'DESC', limit: '20' });
+async function listPrivateFiles(keyName, value) {
+  const params = new URLSearchParams({ [`metadata[${keyName}]`]: value, order: 'DESC', limit: '20' });
   const response = await fetch(`${PINATA_PRIVATE_FILES_URL}?${params}`, {
     headers: { Authorization: `Bearer ${PINATA_JWT}` },
   });
@@ -221,6 +221,16 @@ async function listBackups(lookupId) {
   }
   const { data } = await response.json();
   return data?.files ?? [];
+}
+
+function listBackups(lookupId) {
+  return listPrivateFiles(BACKUP_KEYVALUE, lookupId);
+}
+
+async function downloadPrivateJson(cid) {
+  const response = await fetch(await createSignedUrl(cid));
+  if (!response.ok) throw new Error(`Private file download failed (${response.status})`);
+  return response.json();
 }
 
 app.post('/api/backup', async (req, res) => {
@@ -271,11 +281,107 @@ app.get('/api/backup/:lookupId', async (req, res) => {
       res.status(404).json({ error: 'No backup found' });
       return;
     }
-    const response = await fetch(await createSignedUrl(latest.cid));
-    if (!response.ok) throw new Error(`Backup download failed (${response.status})`);
-    res.json(await response.json());
+    res.json(await downloadPrivateJson(latest.cid));
   } catch (error) {
     console.error('[ipfs-server] backup fetch failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Credential delivery ────────────────────────────────────────────────────────
+//
+// When an organizer issues a credential with private attributes (mintPoap.jsx), their browser
+// encrypts the openings (value/rand per field) for the recipient's per-organizer encryption key
+// (src/midnight/credential-crypto.ts) and posts the sealed envelope here. lookupId =
+// sha256(domain, holderPk, eventId), which the holder can recompute from their own token.
+// Nothing is deleted on a new upload: anyone can post under a lookupId, so the holder's browser
+// downloads every candidate and keeps the one that decrypts and matches the credential on-chain.
+const DELIVERY_KEYVALUE = 'adasoulsCredential';
+const MAX_CANDIDATES = 10;
+
+app.post('/api/credential-delivery', async (req, res) => {
+  try {
+    const { lookupId, envelope } = req.body ?? {};
+    if (typeof lookupId !== 'string' || !LOOKUP_ID_PATTERN.test(lookupId)) {
+      res.status(400).json({ error: 'Expected a 32-byte hex "lookupId"' });
+      return;
+    }
+    if (envelope?.format !== 'adasouls-credential' || typeof envelope.ciphertext !== 'string') {
+      res.status(400).json({ error: 'Expected an encrypted AdaSouls credential envelope' });
+      return;
+    }
+    const blob = new Blob([JSON.stringify(envelope)], { type: 'application/json' });
+    await pinToIpfs(blob, `adasouls-credential-${lookupId}.json`, 'private', { [DELIVERY_KEYVALUE]: lookupId });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[ipfs-server] credential delivery upload failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/credential-delivery/:lookupId', async (req, res) => {
+  try {
+    const { lookupId } = req.params;
+    if (!LOOKUP_ID_PATTERN.test(lookupId)) {
+      res.status(400).json({ error: 'Expected a 32-byte hex lookupId' });
+      return;
+    }
+    const files = (await listPrivateFiles(DELIVERY_KEYVALUE, lookupId)).slice(0, MAX_CANDIDATES);
+    const envelopes = await Promise.all(files.map((file) => downloadPrivateJson(file.cid).catch(() => null)));
+    res.json({ envelopes: envelopes.filter(Boolean) });
+  } catch (error) {
+    console.error('[ipfs-server] credential delivery fetch failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Disclosure request sets ────────────────────────────────────────────────────
+//
+// A disclosure request only puts the ROOT of its accepted-values set on-chain. Whoever answers
+// needs the values themselves to build the membership path, so publishDisclosureRequest.jsx posts
+// them here, keyed by requestId. Not secret (the holder has to see the question to answer it).
+// Same anyone-can-post caveat as above: the client recomputes the root and ignores lists that
+// don't match the request's on-chain setRoot.
+const SET_KEYVALUE = 'adasoulsRequestSet';
+const MAX_SET_MEMBERS = 64;
+
+app.post('/api/disclosure-sets', async (req, res) => {
+  try {
+    const { requestId, members } = req.body ?? {};
+    if (typeof requestId !== 'string' || !LOOKUP_ID_PATTERN.test(requestId)) {
+      res.status(400).json({ error: 'Expected a 32-byte hex "requestId"' });
+      return;
+    }
+    const valid =
+      Array.isArray(members) &&
+      members.length > 0 &&
+      members.length <= MAX_SET_MEMBERS &&
+      members.every((m) => typeof m === 'string' && Buffer.byteLength(m.trim(), 'utf8') <= 32);
+    if (!valid) {
+      res.status(400).json({ error: `Expected 1-${MAX_SET_MEMBERS} values of at most 32 bytes each` });
+      return;
+    }
+    const blob = new Blob([JSON.stringify({ requestId, members })], { type: 'application/json' });
+    await pinToIpfs(blob, `adasouls-request-set-${requestId}.json`, 'private', { [SET_KEYVALUE]: requestId });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[ipfs-server] disclosure set upload failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/disclosure-sets/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    if (!LOOKUP_ID_PATTERN.test(requestId)) {
+      res.status(400).json({ error: 'Expected a 32-byte hex requestId' });
+      return;
+    }
+    const files = (await listPrivateFiles(SET_KEYVALUE, requestId)).slice(0, MAX_CANDIDATES);
+    const sets = await Promise.all(files.map((file) => downloadPrivateJson(file.cid).catch(() => null)));
+    res.json({ sets: sets.filter((set) => set && Array.isArray(set.members)).map((set) => set.members) });
+  } catch (error) {
+    console.error('[ipfs-server] disclosure set fetch failed:', error);
     res.status(500).json({ error: error.message });
   }
 });

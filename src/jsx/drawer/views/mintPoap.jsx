@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "react-bootstrap";
-import { X } from "lucide-react";
+import { X, Copy, Check, Lock } from "lucide-react";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -16,16 +16,25 @@ import {
 import { useEventMetadata } from "../../hooks/useEventMetadata";
 import { uploadImageToIPFS, uploadJSONToIPFS } from "../../../services/ipfs.service";
 import { getCroppedImageBlob } from "../../../utils/cropImage";
+import { txHashOf } from "../../../midnight/tx-result";
+import { parseHolderCode } from "../../../midnight/credential-crypto";
+import {
+  buildCredentialAttributes,
+  deliverCredentialPackage,
+  packageToLinkFragment,
+} from "../../../midnight/credential-delivery";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
   return `${hex.slice(0, 8)}…${hex.slice(-6)}`;
 };
 
-const STEP_RECIPIENT = 1;
-const STEP_DOCUMENT = 2;
-const STEP_ICON = 3;
-const LAST_STEP = STEP_ICON;
+const STEP_RECIPIENT = "recipient";
+const STEP_PRIVATE = "private";
+const STEP_DOCUMENT = "document";
+const STEP_ICON = "icon";
+const MAX_VALUE_BYTES = 32;
+const utf8Length = (value) => new TextEncoder().encode((value || "").trim()).length;
 
 // mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit, credentialAttributesRoot) — the organizer-only
 // push-mint circuit (poap.compact) — is the counterpart to createPoap.jsx's self-service claim():
@@ -42,22 +51,39 @@ const LAST_STEP = STEP_ICON;
 // - `image` (icon, optional) — the small thumbnail wherever this token appears in a list/grid.
 // - `documentImage` (required) — the actual ticket/diploma/document, shown full-size when the
 //   holder opens this specific credential (poapCard.jsx's expanded view).
+//
+// When the event defines private fields (createEvent.jsx → metadata.credentialAttributeFields), a
+// "Private details" step asks for this recipient's values. They're committed on-chain only as a
+// Merkle root (mintTo's credentialAttributesRoot) and delivered to the recipient encrypted for the
+// key inside their "Get My Key" code (credential-delivery.ts). An old code without that key — or a
+// failed upload — falls back to a private link the organizer sends by hand.
 export default function MintPoap() {
   const { mintEvent, midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
   const { metadata } = useEventMetadata(mintEvent?.metadataURI);
 
-  const [step, setStep] = useState(STEP_RECIPIENT);
+  const credentialFields = metadata?.credentialAttributeFields || [];
+  const steps = [STEP_RECIPIENT, ...(credentialFields.length ? [STEP_PRIVATE] : []), STEP_DOCUMENT, STEP_ICON];
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = steps[Math.min(stepIndex, steps.length - 1)];
+  const isLastStep = stepIndex >= steps.length - 1;
   const [recipientPkHex, setRecipientPkHex] = useState("");
+  const [privateValues, setPrivateValues] = useState({});
+  // Set after a successful mint that still needs the organizer to act: the private link to send.
+  const [deliveryLink, setDeliveryLink] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [iconValues, setIconValues] = useState({ imageFile: null, croppedAreaPixels: null });
   const [documentValues, setDocumentValues] = useState({ imageFile: null, croppedAreaPixels: null });
   const [loading, setLoading] = useState(false);
 
-  const isRecipientValid = () => /^[0-9a-fA-F]{64}$/.test(recipientPkHex.trim());
+  const recipient = parseHolderCode(recipientPkHex);
+  const isRecipientValid = () => Boolean(recipient);
   const isDocumentValid = () => Boolean(documentValues.imageFile);
+  const isPrivateValid = () => credentialFields.every((f) => utf8Length(privateValues[f.fieldId]) <= MAX_VALUE_BYTES);
 
   const stepValidators = {
     [STEP_RECIPIENT]: isRecipientValid,
+    [STEP_PRIVATE]: isPrivateValid,
     [STEP_DOCUMENT]: isDocumentValid,
   };
   const isCurrentStepValid = () => {
@@ -69,8 +95,14 @@ export default function MintPoap() {
     dispatch({ type: "CLOSE_DRAWER" });
   };
 
-  const handleNext = () => setStep((s) => Math.min(LAST_STEP, s + 1));
-  const handleBack = () => setStep((s) => Math.max(STEP_RECIPIENT, s - 1));
+  const handleNext = () => setStepIndex((i) => Math.min(steps.length - 1, i + 1));
+  const handleBack = () => setStepIndex((i) => Math.max(0, i - 1));
+
+  const copyDeliveryLink = () => {
+    navigator.clipboard?.writeText(deliveryLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,7 +111,7 @@ export default function MintPoap() {
     if (!isRecipientValid()) {
       errorFunction(
         "Invalid Public Key",
-        "Recipient public key must be a 32-byte hex string (64 hex characters).",
+        "Paste the code the recipient generated in My Subscriptions → Get My Key.",
         ""
       );
       return;
@@ -125,17 +157,63 @@ export default function MintPoap() {
         documentImage: documentImageUri,
       });
 
-      loadingFunction("Minting POAP", "Preparing transaction…", "");
-      const eventIdBytes = Uint8Array.from(Buffer.from(mintEvent.eventId, "hex"));
-      const recipientPk = Uint8Array.from(Buffer.from(recipientPkHex.trim(), "hex"));
-      const { txHash } = await midnight.provider.service.mintTo(
-        eventIdBytes,
-        recipientPk,
-        tokenMetadataURI
+      const { fields: privateFields, root: credentialAttributesRoot } = await buildCredentialAttributes(
+        credentialFields,
+        privateValues,
       );
 
-      succesfullBlockchainCreation("POAP Minted Successfully", `Transaction: ${txHash}`, "");
-      closeDrawer();
+      loadingFunction("Minting POAP", "Preparing transaction…", "");
+      const eventIdBytes = Uint8Array.from(Buffer.from(mintEvent.eventId, "hex"));
+      const recipientPk = Uint8Array.from(Buffer.from(recipient.holderPkHex, "hex"));
+      const txHash = txHashOf(
+        await midnight.provider.service.mintTo(
+          eventIdBytes,
+          recipientPk,
+          tokenMetadataURI,
+          new Uint8Array(32),
+          credentialAttributesRoot,
+        ),
+      );
+
+      if (privateFields.length === 0) {
+        succesfullBlockchainCreation("POAP Minted Successfully", `Transaction: ${txHash}`, "");
+        closeDrawer();
+        return;
+      }
+
+      const pkg = {
+        version: 1,
+        eventId: mintEvent.eventId,
+        issuerPk: mintEvent.issuerPk,
+        holderPk: recipient.holderPkHex,
+        credAttrRoot: Buffer.from(credentialAttributesRoot).toString("hex"),
+        fields: privateFields,
+      };
+      let delivered = false;
+      if (recipient.encryptionPublicKeyHex) {
+        loadingFunction("Minting POAP", "Sending the private details, encrypted…", "");
+        try {
+          await deliverCredentialPackage(pkg, recipient.encryptionPublicKeyHex);
+          delivered = true;
+        } catch (deliveryError) {
+          console.error("Encrypted delivery failed, falling back to a link:", deliveryError);
+        }
+      }
+      if (delivered) {
+        succesfullBlockchainCreation(
+          "POAP Minted Successfully",
+          `The private details were sent encrypted; the recipient will see them in My Subscriptions. Transaction: ${txHash}`,
+          "",
+        );
+        closeDrawer();
+        return;
+      }
+      setDeliveryLink(`${window.location.origin}/app/credential#${packageToLinkFragment(pkg)}`);
+      succesfullBlockchainCreation(
+        "POAP Minted — Send the Private Link",
+        `Transaction: ${txHash}`,
+        "",
+      );
     } catch (error) {
       console.error("Error minting POAP:", error);
       errorFunction("Error", error.message || "Failed to mint POAP. Please try again.", "");
@@ -159,16 +237,47 @@ export default function MintPoap() {
         </h4>
       </div>
 
-      {mintEvent && (
+      {mintEvent && !deliveryLink && (
         <div className="drawer-modal-steps">
-          <span className={`step-dot${step === STEP_RECIPIENT ? ' active' : ''}`} />
-          <span className={`step-dot${step === STEP_DOCUMENT ? ' active' : ''}`} />
-          <span className={`step-dot${step === STEP_ICON ? ' active' : ''}`} />
+          {steps.map((key) => (
+            <span key={key} className={`step-dot${step === key ? ' active' : ''}`} />
+          ))}
         </div>
       )}
 
       <div className="drawer-body">
-        {mintEvent ? (
+        {deliveryLink ? (
+          <div className="d-flex flex-column" style={{ gap: "12px" }}>
+            <p className="m-0">The credential is minted. Now send its private details.</p>
+            <div className="info-hint-card is-warning m-0">
+              <Lock size={16} />
+              <p>
+                The recipient's code doesn't include an encryption key (or the encrypted upload
+                failed), so the details travel in this link instead. Anyone with the link can read
+                them — send it privately, only to the recipient. They open it once while connected
+                and the details are saved in their browser.
+              </p>
+            </div>
+            <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+              <input
+                id="deliveryLink"
+                type="text"
+                className="form-control"
+                value={deliveryLink}
+                readOnly
+                onFocus={(event) => event.target.select()}
+              />
+              <button
+                type="button"
+                className="btn btn-card-detail-action btn-sm flex-shrink-0"
+                onClick={copyDeliveryLink}
+                aria-label={linkCopied ? "Link copied" : "Copy link"}
+              >
+                {linkCopied ? <Check size={14} /> : <Copy size={14} />}
+              </button>
+            </div>
+          </div>
+        ) : mintEvent ? (
           <form name="mintPoapForm" className="row g-3" onSubmit={handleSubmit}>
             {step === STEP_RECIPIENT && (
               <>
@@ -202,11 +311,11 @@ export default function MintPoap() {
                 </div>
 
                 <div className="col-12 mt-3">
-                  <label className="form-label" htmlFor="recipientPkHex">Recipient's Key (hex)</label>
+                  <label className="form-label" htmlFor="recipientPkHex">Recipient's Key</label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="64-character hex key"
+                    placeholder="Code from the recipient's Get My Key"
                     id="recipientPkHex"
                     name="recipientPkHex"
                     value={recipientPkHex}
@@ -221,6 +330,49 @@ export default function MintPoap() {
                   </small>
                 </div>
               </>
+            )}
+
+            {step === STEP_PRIVATE && (
+              <div className="col-12">
+                <p className="small text-muted mb-3">
+                  Private details for this recipient only. They're stored on-chain as a fingerprint
+                  (a Merkle root), sent to the recipient encrypted, and let them prove a value to
+                  someone without revealing it. Leave a field empty to skip it.
+                </p>
+                {credentialFields.map((field) => {
+                  const bytes = utf8Length(privateValues[field.fieldId]);
+                  const tooLong = bytes > MAX_VALUE_BYTES;
+                  return (
+                    <div className="mb-3" key={field.fieldId}>
+                      <label className="form-label" htmlFor={`private-${field.fieldId}`}>{field.label}</label>
+                      <input
+                        id={`private-${field.fieldId}`}
+                        type="text"
+                        className={`form-control${tooLong ? " is-invalid" : ""}`}
+                        value={privateValues[field.fieldId] || ""}
+                        onChange={(event) =>
+                          setPrivateValues((current) => ({ ...current, [field.fieldId]: event.target.value }))
+                        }
+                      />
+                      {tooLong && (
+                        <small className="form-text text-danger d-block">
+                          {bytes}/{MAX_VALUE_BYTES} bytes — too long, shorten this value.
+                        </small>
+                      )}
+                    </div>
+                  );
+                })}
+                {recipient && !recipient.encryptionPublicKeyHex && (
+                  <div className="info-hint-card is-warning">
+                    <Lock size={16} />
+                    <p>
+                      This recipient's code is from an older version and has no encryption key. After
+                      minting you'll get a private link to send them by hand. Ask them to generate
+                      the code again to receive the details automatically.
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
 
             {step === STEP_DOCUMENT && (
@@ -256,9 +408,15 @@ export default function MintPoap() {
         )}
       </div>
 
-      {mintEvent && (
+      {deliveryLink ? (
+        <div className="drawer-footer d-flex flex-column">
+          <Button type="button" className="btn btn-card-detail-action" onClick={closeDrawer}>
+            Done
+          </Button>
+        </div>
+      ) : mintEvent && (
         <div className="drawer-footer">
-          {step === STEP_RECIPIENT ? (
+          {stepIndex === 0 ? (
             <Button
               type="button"
               className="btn btn-gradient btn-block w-100"
@@ -277,12 +435,12 @@ export default function MintPoap() {
               >
                 Back
               </Button>
-              {step === LAST_STEP ? (
+              {isLastStep ? (
                 <Button
                   type="submit"
                   className="btn btn-gradient flex-grow-1"
                   onClick={handleSubmit}
-                  disabled={loading || !isDocumentValid()}
+                  disabled={loading || !isDocumentValid() || !isPrivateValid()}
                 >
                   {loading ? "Minting…" : "Mint POAP"}
                 </Button>

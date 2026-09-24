@@ -60,11 +60,15 @@ async function fillThroughToSubmit({ categoryLabel, name, maxSupply, configureBe
   while (screen.queryByRole('button', { name: /^next$/i })) {
     // Runs once, on the private-attributes step, right before clicking past it — lets callers fill
     // in an attribute row without hardcoding this wizard's exact step count/order.
-    if (pendingConfigure && screen.queryByRole('button', { name: /add private attribute/i })) {
+    if (pendingConfigure && screen.queryByRole('button', { name: /add private (attribute|field)/i })) {
       await pendingConfigure();
       pendingConfigure = null;
     }
     await clickNext();
+  }
+  // Credential has no POAP-image step, so private attributes is its LAST step (Create, no Next).
+  if (pendingConfigure && screen.queryByRole('button', { name: /add private (attribute|field)/i })) {
+    await pendingConfigure();
   }
   await clickCreate(); // submit
 }
@@ -257,6 +261,34 @@ describe('CreateEvent drawer view', () => {
     expect(uploadJSONToIPFS).toHaveBeenCalledWith(expect.objectContaining({ category: 'credential' }));
     const [, , , isPublicMintArg] = createEvent.mock.calls[0];
     expect(isPublicMintArg).toBe(false);
+  });
+
+  it('on a Credential, private fields are a template: names only, no values and no event-level root', async () => {
+    const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
+    renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
+
+    await fillThroughToSubmit({
+      categoryLabel: 'Credential',
+      name: 'Recital',
+      maxSupply: '0',
+      configureBeforeLastNext: async () => {
+        await userEvent.click(screen.getByRole('button', { name: /add private field/i }));
+        expect(screen.queryByLabelText('Attribute value')).not.toBeInTheDocument();
+        await userEvent.type(screen.getByLabelText('Attribute label'), 'Sector');
+      },
+    });
+
+    await waitFor(() => expect(createEvent).toHaveBeenCalled());
+    expect(createEvent.mock.calls[0][6]).toEqual(new Uint8Array(32));
+    expect(savePrivateAttributeDraft).not.toHaveBeenCalled();
+    expect(uploadJSONToIPFS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        credentialAttributeFields: [{ fieldId: expect.stringMatching(/^[0-9a-f]{64}$/), label: 'Sector' }],
+      }),
+    );
+    expect(uploadJSONToIPFS).toHaveBeenCalledWith(
+      expect.not.objectContaining({ privateAttributeFields: expect.anything() }),
+    );
   });
 
   it('does not ask for a shared POAP image on the Credential flow — tokens get their own image later via push-mint', async () => {

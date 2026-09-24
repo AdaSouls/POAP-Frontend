@@ -5,6 +5,11 @@ import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { getTokensByOwner } from '../../midnight/indexer.service';
 
 jest.mock('../../midnight/indexer.service');
+// holder-proofs pulls in the compiled contract (WASM), unloadable under Jest — see merkle.test.ts.
+jest.mock('../../midnight/holder-proofs', () => ({
+  loadCredentialPackage: jest.fn().mockResolvedValue(null),
+}));
+
 
 // Subscribing now happens from an event card's own "Subscribe" action (exploreEvents.jsx dispatches
 // CREATE_POAP with the event already selected) — this page no longer has its own claim entry
