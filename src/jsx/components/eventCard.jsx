@@ -166,17 +166,22 @@ const EventCard = forwardRef(({
 
   // Fetched only while expanded — getAllEvents() (the page's own poll, event.* here) doesn't
   // include liveTokens, only GET /api/events/:id does, and the collapsed tile never shows this
-  // content so has no reason to fetch it too.
+  // content so has no reason to fetch it too. Refetched whenever the page's poll brings a new
+  // event.minted (e.g. right after a mintTo from this card) — only the first fetch shows "…", so
+  // later refreshes swap the number in place instead of flickering.
   const [eventDetail, setEventDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const detailLoadedForRef = useRef(null);
 
   useEffect(() => {
     if (!isExpanded) return undefined;
     let cancelled = false;
-    setDetailLoading(true);
+    if (detailLoadedForRef.current !== event.eventId) setDetailLoading(true);
     getEvent(event.eventId)
       .then((detail) => {
-        if (!cancelled) setEventDetail(detail);
+        if (cancelled) return;
+        setEventDetail(detail);
+        detailLoadedForRef.current = event.eventId;
       })
       .catch((error) => {
         console.error("Error loading event detail:", error);
@@ -187,7 +192,7 @@ const EventCard = forwardRef(({
     return () => {
       cancelled = true;
     };
-  }, [isExpanded, event.eventId]);
+  }, [isExpanded, event.eventId, event.minted]);
 
   // Token breakdown donut for the organizer's own view (variant !== "explore") — what "counts" as
   // a segment depends on the event: unlimited-supply events (maxSupply === 0) have no "Available"

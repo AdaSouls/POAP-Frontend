@@ -242,7 +242,7 @@ Todo off-chain, lo resolvemos nosotros, sin cambios de contrato:
 5. A3 + A4 (predicados y campos con tipo) — sirven tanto para atributos de evento como de credencial.
 6. A2 (kit de atributos a nivel evento) — **reevaluar**: con atributos por credencial puede sobrar.
 
-### Antes de empezar B6
+### Antes de empezar B6 — ✅ hecho 2026-09-24 (A1 y emisión de credencial con `mintTo` probados en vivo)
 - Prueba manual rápida: conectar (paso de bienvenida + recovery code nuevo = prueba de A1), crear un
   evento Credential y emitir una credencial con `mintTo` (firma nueva).
 
