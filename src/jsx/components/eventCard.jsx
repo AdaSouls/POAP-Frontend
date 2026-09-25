@@ -1,13 +1,15 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Chart from "react-apexcharts";
-import { Award, BadgeCheck, Calendar, Database, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
+import { Award, BadgeCheck, Calendar, Database, ImageOff, Info, Link2, Lock, ShieldCheck, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import formatDateToDDMMYYYY from "../../utils/formatDateToDDMMYYYY";
 import { getEventStatus, getEventStatusLabel } from "../../utils/poapHelpers";
 import { getEvent, getTokensByEvent } from "../../midnight/indexer.service";
+import { TOKEN_BURNED_EVENT } from "../../midnight/token-events";
+import { inviteLink } from "../../midnight/invite-links";
 import { useEventMetadata } from "../hooks/useEventMetadata";
 import { findOwnershipRequest, publishOwnershipRequest } from "../../midnight/ownership-proof";
 import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../toasts/sweetAlerts";
@@ -91,9 +93,26 @@ const EventCard = forwardRef(({
     dispatch({ type: "CREATE_MINT", payload: event });
   };
 
+  // Invite link (invite-links.ts): whoever opens it gets their key for this organizer generated and
+  // sends back a mint link that opens Mint POAP pre-filled — no keys to paste either way.
+  const openInviteLink = () => {
+    dispatch({
+      type: "SHOW_LINK_QR",
+      payload: {
+        title: "Invite Link",
+        intro: "Send this to the person who should receive a credential, or let them scan it. It generates their key for you and gives them a link back that opens Mint POAP with everything filled in.",
+        url: inviteLink(window.location.origin, event.issuerPk, event.eventId),
+        label: metadata?.name || null,
+      },
+    });
+  };
+
   const subscriberListLabel = getSubscriberListLabel(metadata);
   const openSubscribersDrawer = () => {
-    dispatch({ type: "SHOW_SUBSCRIBERS", payload: { event, tokens: eventTokens, label: subscriberListLabel } });
+    dispatch({
+      type: "SHOW_SUBSCRIBERS",
+      payload: { event, tokens: eventTokens, label: subscriberListLabel, eventName: metadata?.name || null },
+    });
   };
 
   // Raw blockchain data lives behind this popup now, not inline — see BlockchainInfoModal.jsx.
@@ -143,15 +162,11 @@ const EventCard = forwardRef(({
 
   // Open to any connected wallet, not just this event's own organizer — poap.compact's
   // publishDisclosureRequest has no organizer/admin gate (see docs/selective-disclosure-ui-design.md).
-  // Only shown when the event actually committed at least one private attribute at creation time
-  // (createEvent.jsx's private-attributes step publishes the {fieldId, label} list here, never the
-  // value itself).
-  // Credential events add per-credential fields (createEvent.jsx → credentialAttributeFields):
-  // questions about those are answered by each HOLDER, anonymously (holderProofs.jsx).
-  const privateAttributeFields = [
-    ...(metadata?.privateAttributeFields || []).map((field) => ({ ...field, kind: "event" })),
-    ...(metadata?.credentialAttributeFields || []).map((field) => ({ ...field, kind: "credential" })),
-  ];
+  // Only Credential events with private fields (createEvent.jsx → credentialAttributeFields) show
+  // it: each HOLDER answers, anonymously, from their POAP (holderProofs.jsx). Event-level private
+  // attributes were removed 2026-09-24 (same value for every holder, so a question about them said
+  // nothing about the person).
+  const privateAttributeFields = metadata?.credentialAttributeFields || [];
   const openPublishDisclosureRequestDrawer = () => {
     dispatch({
       type: "PUBLISH_DISCLOSURE_REQUEST",
@@ -295,6 +310,42 @@ const EventCard = forwardRef(({
       });
     return () => {
       cancelled = true;
+    };
+  }, [isExpanded, variant, event.eventId]);
+
+  // A Revoke from this event's subscribers list (burnToken.jsx) shows up right away: the token is
+  // marked burned here and liveTokens drops by one. Neither comes back from the page's own poll
+  // (a burn doesn't change event.minted), so both are refetched a bit later — and the local marks
+  // are kept on top, in case the indexer hasn't caught up by then.
+  const burnedHereRef = useRef(new Set());
+  useEffect(() => {
+    if (!isExpanded || variant === "explore") return undefined;
+    let timer = null;
+    const markBurned = (tokens) =>
+      tokens.map((token) => (burnedHereRef.current.has(String(token.tokenId)) ? { ...token, isBurned: true } : token));
+    const onBurned = ({ detail }) => {
+      if (detail?.eventId !== event.eventId) return;
+      burnedHereRef.current.add(detail.tokenId);
+      setEventTokens(markBurned);
+      setEventDetail((current) =>
+        current && current.liveTokens > 0 ? { ...current, liveTokens: current.liveTokens - 1 } : current,
+      );
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        getTokensByEvent(event.eventId).then((tokens) => setEventTokens(markBurned(tokens))).catch(() => {});
+        getEvent(event.eventId)
+          .then((detail) =>
+            setEventDetail((current) =>
+              current && detail && detail.liveTokens > current.liveTokens ? current : detail,
+            ),
+          )
+          .catch(() => {});
+      }, 8000);
+    };
+    window.addEventListener(TOKEN_BURNED_EVENT, onBurned);
+    return () => {
+      window.removeEventListener(TOKEN_BURNED_EVENT, onBurned);
+      clearTimeout(timer);
     };
   }, [isExpanded, variant, event.eventId]);
 
@@ -733,6 +784,17 @@ const EventCard = forwardRef(({
                           onClick={openMintDrawer}
                         >
                           Mint POAP
+                        </button>
+                      )}
+
+                      {canMintForEvent && (
+                        <button
+                          type="button"
+                          className="btn btn-card-detail-action btn-sm"
+                          onClick={openInviteLink}
+                        >
+                          <Link2 size={14} className="mr-2" />
+                          Invite Link
                         </button>
                       )}
 

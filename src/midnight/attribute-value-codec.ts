@@ -1,11 +1,9 @@
-// Shared Bytes<32> encoding for a private-attribute value (Channel B — selective disclosure). Used
-// by every place that needs to produce the exact same leaf bytes for a given human value with zero
-// coordination beyond the text itself: the organizer committing an attribute (createEvent.jsx), a
-// verifier building a candidate-set tree to publish a disclosure request against
-// (publishDisclosureRequest.jsx), and the response flow that must recompute both the organizer's
-// own attribute leaf and the verifier's set-membership leaf for the same value
-// (disclosure-response.ts) — see poap.compact's proveAttributeMembership, which asserts
-// `setMembershipPath.leaf == value` verbatim.
+// Shared Bytes<32> encoding for a private-attribute value (selective disclosure). Used by every
+// place that needs to produce the exact same leaf bytes for a given human value with zero
+// coordination beyond the text itself: the organizer issuing a credential's values (credential-delivery.ts),
+// a verifier building a candidate-set tree to publish a disclosure request against
+// (publishDisclosureRequest.jsx), and the holder proving their value is in that set
+// (holder-proofs.ts) — the circuit asserts `setMembershipPath.leaf == value` verbatim.
 //
 // Scheme: trimmed UTF-8, right-padded with zero bytes to exactly 32 bytes. No hashing — this caps
 // attribute values at 32 raw UTF-8 bytes, but keeps the encoding simple, symmetric, and legible in

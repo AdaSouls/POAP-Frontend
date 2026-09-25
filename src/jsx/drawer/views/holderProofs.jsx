@@ -1,25 +1,57 @@
 import { useEffect, useState } from "react";
-import { X, EyeOff, ShieldCheck } from "lucide-react";
+import { X, EyeOff, ShieldCheck, Users, Info } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../../contexts/drawer/drawer.provider";
 import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../../toasts/sweetAlerts";
 import {
   listAnswerableRequests,
   proveAttendance,
   proveAttribute,
+  setTreeFor,
   valueQualifies,
 } from "../../../midnight/holder-proofs";
 import { addProofRecord } from "../../../midnight/proof-history";
+import { getEvent } from "../../../midnight/indexer.service";
+import { describeRule, ruleSize } from "../../../midnight/attribute-types";
 import ProofReceipt from "../../components/ProofReceipt";
 import loadingGif from "../../../images/loading.gif";
 
 const PROGRESS_TITLE = "Proving";
+// Below this many live POAPs in the event, "one of the holders" barely hides anyone.
+export const ANONYMITY_WARNING_BELOW = 5;
+
+// An anonymous proof hides which of the event's live POAPs is yours, so it's only as anonymous as
+// that count is large. Informative only: the proof itself is unchanged and the button stays enabled.
+function AnonymityNote({ holders }) {
+  if (holders == null) return null;
+  if (holders >= ANONYMITY_WARNING_BELOW) {
+    return (
+      <p className="text-muted small m-0 d-flex align-items-center">
+        <Users size={14} className="mr-2 flex-shrink-0" />
+        Anonymous among {holders} holders of this event.
+      </p>
+    );
+  }
+  return (
+    <div className="info-hint-card is-warning m-0">
+      <Info size={16} />
+      <p>
+        {holders <= 1
+          ? "You're the only holder of this event so far, so this proof points straight at you."
+          : `Only ${holders} holders of this event so far: whoever checks this proof may be able to tell it's you.`}
+      </p>
+    </div>
+  );
+}
 
 const questionFor = (item) =>
   item.kind === "attendance"
     ? "Holds a valid POAP of this event"
-    : item.members
-      ? `${item.label} is one of: ${item.members.join(", ")}`
+    : item.rule
+      ? describeRule(item.label, item.rule)
       : `${item.label} (accepted values not published)`;
+
+// Big ranges take a few seconds to turn into the set the proof needs (attribute-types.ts).
+const SLOW_SET_SIZE = 2000;
 
 // Two modes, one per button on the POAP card:
 //   "ownership" — Prove Ownership Anonymously: plain requests (proveEventAttendance), "I hold a
@@ -57,6 +89,7 @@ export default function HolderProofs() {
   const [loadError, setLoadError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [receipt, setReceipt] = useState(null);
+  const [holders, setHolders] = useState(null);
 
   useEffect(() => {
     if (!ctx || !service) return undefined;
@@ -74,16 +107,34 @@ export default function HolderProofs() {
     };
   }, [ctx, service, mode.kind]);
 
+  // Live (non-burned) POAPs of the event = the crowd an anonymous proof hides in.
+  useEffect(() => {
+    if (!ctx) return undefined;
+    let cancelled = false;
+    getEvent(ctx.token.eventId)
+      .then((event) => {
+        if (!cancelled && typeof event?.liveTokens === "number") setHolders(event.liveTokens);
+      })
+      .catch((error) => console.error("Error loading the event's holder count:", error));
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx]);
+
   const closeDrawer = () => dispatch({ type: "CLOSE_DRAWER" });
 
   const answer = async (item) => {
     setBusyId(item.request.requestId);
     try {
+      if (item.kind === "attribute" && ruleSize(item.rule) > SLOW_SET_SIZE) {
+        loadingFunction(PROGRESS_TITLE, `Building the ${ruleSize(item.rule).toLocaleString()} accepted values…`, "");
+        await setTreeFor(item.rule); // cached: proveAttribute reuses it
+      }
       loadingFunction(PROGRESS_TITLE, "Preparing transaction…", "");
       const { txHash } =
         item.kind === "attendance"
           ? await proveAttendance(service, ctx.token, item.request.requestId, ctx.pkg)
-          : await proveAttribute(service, ctx.token, item.request, item.members, ctx.pkg);
+          : await proveAttribute(service, ctx.token, item.request, item.rule, ctx.pkg);
       const record = {
         kind: item.kind === "attendance" ? "proveEventAttendance" : "proveCredentialAttribute",
         question: questionFor(item),
@@ -131,6 +182,8 @@ export default function HolderProofs() {
               <p>{mode.intro}</p>
             </div>
 
+            <AnonymityNote holders={holders} />
+
             {loadError ? (
               <div className="alert alert-danger m-0" role="alert">
                 Could not load the requests for this event. Try again in a moment.
@@ -146,11 +199,11 @@ export default function HolderProofs() {
               <ul className="list-unstyled m-0 d-flex flex-column" style={{ gap: "10px" }}>
                 {items.map((item) => {
                   const isAttribute = item.kind === "attribute";
-                  const qualifies = isAttribute ? valueQualifies(ctx.pkg, item.request.fieldId, item.members) : true;
+                  const qualifies = isAttribute ? valueQualifies(ctx.pkg, item.request.fieldId, item.rule) : true;
                   const hasValue = !isAttribute || Boolean(ctx.pkg?.fields.some((f) => f.fieldId === item.request.fieldId));
                   const reason = !isAttribute
                     ? null
-                    : !item.members
+                    : !item.rule
                       ? "The accepted values for this question aren't available."
                       : !hasValue
                         ? "Your credential has no value for this field."

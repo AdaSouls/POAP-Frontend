@@ -1,12 +1,18 @@
-import { listAnswerableRequests, proveAttendance, proveAttribute, valueQualifies } from '../../midnight/holder-proofs';
+import {
+  fetchRequestRule,
+  listAnswerableRequests,
+  proveAttendance,
+  proveAttribute,
+  valueQualifies,
+} from '../../midnight/holder-proofs';
 import { getAllDisclosureRequests } from '../../midnight/indexer.service';
-import { fetchRequestSetCandidates } from '../../midnight/disclosure-sets';
+import { fetchRequestRuleCandidates } from '../../midnight/disclosure-sets';
 import { credentialPathOnChain } from '../../midnight/credential-delivery';
 import { buildMerkleTree } from '../../midnight/merkle';
 
 // WASM-backed modules (compiled contract, transientHash) are mocked — see merkle.test.ts.
 jest.mock('../../midnight/indexer.service', () => ({ getAllDisclosureRequests: jest.fn() }));
-jest.mock('../../midnight/disclosure-sets', () => ({ fetchRequestSetCandidates: jest.fn() }));
+jest.mock('../../midnight/disclosure-sets', () => ({ fetchRequestRuleCandidates: jest.fn() }));
 jest.mock('../../midnight/contract.service', () => ({ computeCredentialAttrLeaf: jest.fn((fieldId) => fieldId) }));
 jest.mock('../../midnight/merkle', () => ({ buildMerkleTree: jest.fn() }));
 jest.mock('../../midnight/credential-delivery', () => ({
@@ -44,7 +50,10 @@ const request = (overrides: Record<string, unknown>) => ({
   ...overrides,
 });
 
-// A "root" that is just the members joined — lets fetchRequestSet's root check be exercised.
+// A "root" that is just the members joined — lets fetchRequestRule's root check be exercised.
+const fakeRoot = (values: string[]) =>
+  Buffer.from(Buffer.from(values.map(encode).join('|')).subarray(0, 32)).toString('hex');
+const oneOf = (...values: string[]) => ({ op: 'oneOf' as const, values });
 beforeEach(() => {
   (buildMerkleTree as jest.Mock).mockImplementation(async (leaves: Uint8Array[]) => ({
     rootBytes: Buffer.from(Buffer.from(leaves.map((l) => Buffer.from(l).toString('hex')).join('|')).subarray(0, 32)),
@@ -57,31 +66,58 @@ beforeEach(() => {
 
 describe('listAnswerableRequests', () => {
   it('keeps plain and credential-field requests for this event, drops the rest', async () => {
-    const setRoot = Buffer.from(
-      Buffer.from([encode('Campo'), encode('Platea')].join('|')).subarray(0, 32),
-    ).toString('hex');
+    const setRoot = fakeRoot(['Campo', 'Platea']);
     (getAllDisclosureRequests as jest.Mock).mockResolvedValue([
       request({ requestId: 'plain' }),
       request({ requestId: 'sector', fieldId: SECTOR, setRoot }),
       request({ requestId: 'event-level', fieldId: '03'.repeat(32), setRoot: '44'.repeat(32) }),
       request({ requestId: 'other-event', eventId: 'ff'.repeat(32) }),
     ]);
-    (fetchRequestSetCandidates as jest.Mock).mockResolvedValue([['Bogus'], ['Campo', 'Platea']]);
+    (fetchRequestRuleCandidates as jest.Mock).mockResolvedValue([oneOf('Bogus'), oneOf('Campo', 'Platea')]);
 
     const items = await listAnswerableRequests(EVENT, [{ fieldId: SECTOR, label: 'Sector' }]);
     expect(items.map((i) => [i.kind, i.request.requestId])).toEqual([
       ['attendance', 'plain'],
       ['attribute', 'sector'],
     ]);
-    expect(items[1]).toMatchObject({ label: 'Sector', members: ['Campo', 'Platea'] });
+    expect(items[1]).toMatchObject({ label: 'Sector', rule: oneOf('Campo', 'Platea'), verified: true });
+  });
+});
+
+describe('fetchRequestRule', () => {
+  const bigRange = { op: 'onOrBefore' as const, type: 'date' as const, from: '1920-01-01', to: '2008-09-24' };
+
+  it('returns a lone big range unchecked, and checks it only when asked to', async () => {
+    (fetchRequestRuleCandidates as jest.Mock).mockResolvedValue([bigRange]);
+    await expect(fetchRequestRule('22'.repeat(32), '44'.repeat(32))).resolves.toEqual({ rule: bigRange, verified: false });
+    expect(buildMerkleTree).not.toHaveBeenCalled();
+
+    await expect(fetchRequestRule('22'.repeat(32), '44'.repeat(32), { checkAll: true })).resolves.toBeNull();
+    expect(buildMerkleTree).toHaveBeenCalled();
+  });
+
+  it('prefers a small rule that matches the root', async () => {
+    (fetchRequestRuleCandidates as jest.Mock).mockResolvedValue([bigRange, oneOf('Campo')]);
+    await expect(fetchRequestRule('22'.repeat(32), fakeRoot(['Campo']))).resolves.toEqual({
+      rule: oneOf('Campo'),
+      verified: true,
+    });
   });
 });
 
 describe('valueQualifies', () => {
-  it('compares the holder value against the accepted set locally', () => {
-    expect(valueQualifies(PKG, SECTOR, ['Platea', 'Campo'])).toBe(true);
-    expect(valueQualifies(PKG, SECTOR, ['Platea'])).toBe(false);
-    expect(valueQualifies(null, SECTOR, ['Campo'])).toBe(false);
+  it('checks the holder value against the rule locally', () => {
+    expect(valueQualifies(PKG, SECTOR, oneOf('Platea', 'Campo'))).toBe(true);
+    expect(valueQualifies(PKG, SECTOR, oneOf('Platea'))).toBe(false);
+    expect(valueQualifies(null, SECTOR, oneOf('Campo'))).toBe(false);
+    expect(valueQualifies(PKG, SECTOR, null)).toBe(false);
+  });
+
+  it('works for ranges without building any set', () => {
+    const age = { ...PKG, fields: [{ ...PKG.fields[0], valueHex: encode('21') }] };
+    expect(valueQualifies(age, SECTOR, { op: 'gte', type: 'number', min: 18, max: 150 })).toBe(true);
+    expect(valueQualifies(age, SECTOR, { op: 'gte', type: 'number', min: 22, max: 150 })).toBe(false);
+    expect(buildMerkleTree).not.toHaveBeenCalled();
   });
 });
 
@@ -116,7 +152,9 @@ describe('proving', () => {
 
   it('proves a credential attribute with attribute, set and credential paths', async () => {
     (credentialPathOnChain as jest.Mock).mockResolvedValue({ cred: true });
-    const result = await proveAttribute(service, TOKEN, request({ fieldId: SECTOR }), ['Platea', 'Campo'], PKG);
+    const rule = oneOf('Platea', 'Campo');
+    const req = request({ fieldId: SECTOR, setRoot: fakeRoot(rule.values) });
+    const result = await proveAttribute(service, TOKEN, req, rule, PKG);
     expect(service.proveCredentialAttribute).toHaveBeenCalledWith(
       expect.any(Uint8Array),
       Uint8Array.from(Buffer.from(encode('Campo'), 'hex')),
@@ -129,9 +167,14 @@ describe('proving', () => {
   });
 
   it('stops before proving when the value is not in the accepted set', async () => {
-    await expect(proveAttribute(service, TOKEN, request({ fieldId: SECTOR }), ['Platea'], PKG)).rejects.toThrow(
-      /isn't one of the values/,
-    );
+    const req = request({ fieldId: SECTOR, setRoot: fakeRoot(['Platea']) });
+    await expect(proveAttribute(service, TOKEN, req, oneOf('Platea'), PKG)).rejects.toThrow(/isn't one of the values/);
+    expect(service.proveCredentialAttribute).not.toHaveBeenCalled();
+  });
+
+  it("stops before proving when the published rule doesn't rebuild the on-chain root", async () => {
+    const req = request({ fieldId: SECTOR, setRoot: fakeRoot(['Other']) });
+    await expect(proveAttribute(service, TOKEN, req, oneOf('Campo', 'VIP'), PKG)).rejects.toThrow(/don't match it on-chain/);
     expect(service.proveCredentialAttribute).not.toHaveBeenCalled();
   });
 });

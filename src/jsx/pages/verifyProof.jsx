@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Award, BadgeCheck, CircleAlert, ExternalLink, Search } from "lucide-react";
 import Layout from "../layout/layout";
-import { lookupProofTransaction, PROOF_KINDS } from "../../midnight/proof-verification";
+import { blockTimestamp, lookupProofTransaction, PROOF_KINDS } from "../../midnight/proof-verification";
+import { describeValidity, formatUntil, parseValidity, validityStatus } from "../../midnight/validity";
 import { decodeProofDetails, isZeroHex } from "../../midnight/proof-transcript";
 import { getEvent, getToken } from "../../midnight/indexer.service";
 import { fetchMetadata } from "../hooks/useEventMetadata";
+import { describeRule } from "../../midnight/attribute-types";
 import { explorerBlockUrl, explorerTxUrl } from "../../utils/midnightExplorer";
 
 const truncateHex = (hex) => (hex ? `${hex.slice(0, 10)}…${hex.slice(-8)}` : "N/A");
@@ -17,20 +19,38 @@ function questionFor(entryPoint, details, context) {
   if (entryPoint === "proveEventAttendance") return "Holds a valid POAP of this event (which one isn't revealed)";
   const label = context?.fieldLabel || "A private detail";
   const scope = entryPoint === "proveCredentialAttribute" ? "" : " of the event";
-  return context?.members
-    ? `${label}${scope} is one of: ${context.members.join(", ")}`
+  return context?.rule
+    ? describeRule(`${label}${scope}`, context.rule)
     : `${label}${scope} is one of the accepted values (list not published)`;
 }
 
 // Event, token and question context for a decoded proof. Every lookup is best-effort: the proof
 // is valid on its own; this only puts names on it.
-async function loadProofContext(entryPoint, details) {
+// Validity (validity.ts) of what this proof showed, when the event sets one and it can be told:
+// a Subscription's runs from each ownership proof, so from this one; an Event's or Credential's
+// runs from the token's mint, known only when the proof names the token. An anonymous credential
+// proof can't say which credential it was — its holder proves "Valid until" as a private detail.
+async function loadValidity(entryPoint, metadata, token, proofTimestamp) {
+  const validity = parseValidity(metadata?.validity);
+  if (!validity) return null;
+  const holding = entryPoint === "proveTokenOwnership" || entryPoint === "proveEventAttendance";
+  if (metadata?.category === "subscription") {
+    return holding && proofTimestamp ? { validity, fromMs: proofTimestamp, basis: "this proof" } : null;
+  }
+  if (entryPoint === "proveTokenOwnership" && token?.mintedBlock != null) {
+    const mintedMs = await blockTimestamp(token.mintedBlock);
+    return mintedMs ? { validity, fromMs: mintedMs, basis: "when it was issued" } : null;
+  }
+  return null;
+}
+
+async function loadProofContext(entryPoint, details, proofTimestamp) {
   const event = await getEvent(details.eventId).catch(() => null);
   const metadata = event?.metadataURI ? await fetchMetadata(event.metadataURI) : null;
   const token = details.tokenId !== null ? await getToken(details.tokenId).catch(() => null) : null;
 
   let fieldLabel = null;
-  let members = null;
+  let rule = null;
   if (!isZeroHex(details.fieldId)) {
     const fields =
       entryPoint === "proveCredentialAttribute" ? metadata?.credentialAttributeFields : metadata?.privateAttributeFields;
@@ -38,10 +58,13 @@ async function loadProofContext(entryPoint, details) {
   }
   if (!isZeroHex(details.setRoot)) {
     // holder-proofs pulls in the compiled contract — only load it when a set has to be checked.
-    const { fetchRequestSet } = await import("../../midnight/holder-proofs");
-    members = await fetchRequestSet(details.requestId, details.setRoot).catch(() => null);
+    // checkAll: a question shown on this page must match the on-chain root, even a big range.
+    const { fetchRequestRule } = await import("../../midnight/holder-proofs");
+    const found = await fetchRequestRule(details.requestId, details.setRoot, { checkAll: true }).catch(() => null);
+    rule = found?.verified ? found.rule : null;
   }
-  return { event, metadata, token, fieldLabel, members };
+  const validityInfo = await loadValidity(entryPoint, metadata, token, proofTimestamp).catch(() => null);
+  return { event, metadata, token, fieldLabel, rule, validityInfo };
 }
 
 // B8 — public check of a proof receipt (ProofReceipt.jsx's verify link). No wallet: reads the
@@ -78,7 +101,7 @@ export default function VerifyProof() {
         });
         if (cancelled || !decoded) return;
         setDetails(decoded);
-        const loaded = await loadProofContext(found.entryPoint, decoded);
+        const loaded = await loadProofContext(found.entryPoint, decoded, found.timestamp);
         if (!cancelled) setContext(loaded);
       })
       .catch((lookupError) => {
@@ -98,6 +121,8 @@ export default function VerifyProof() {
   const metadata = context?.metadata;
   const token = context?.token;
   const askedByOrganizer = details && event && details.verifierPk === event.issuerPk?.toLowerCase();
+  const validityInfo = context?.validityInfo;
+  const validityNow = validityInfo ? validityStatus(validityInfo.validity, validityInfo.fromMs) : null;
 
   const verifyForm = (
     <form
@@ -201,6 +226,19 @@ export default function VerifyProof() {
                               {token.isBurned ? ` · revoked since block ${token.burnedBlock ?? "N/A"}` : " · still held today"}
                             </span>
                           )}
+                        </dd>
+                      </>
+                    )}
+                    {validityNow?.untilMs && (
+                      <>
+                        <dt>Validity</dt>
+                        <dd className={validityNow.state === "expired" ? "text-warning" : undefined}>
+                          {validityNow.state === "expired" ? "Expired on " : "Valid until "}
+                          {formatUntil(validityNow.untilMs, validityInfo.validity)}
+                          <span className="text-muted">
+                            {" "}
+                            · {describeValidity(validityInfo.validity)} from {validityInfo.basis}
+                          </span>
                         </dd>
                       </>
                     )}

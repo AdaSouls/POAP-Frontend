@@ -6,8 +6,16 @@ import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { getTokenVisibility } from '../../midnight/collection-share';
 import { getEvent } from '../../midnight/indexer.service';
 import { loadCredentialPackage } from '../../midnight/holder-proofs';
+import { act } from '@testing-library/react';
+import { notifyTokenBurned } from '../../midnight/token-events';
+import { blockTimestamp } from '../../midnight/proof-verification';
+import { addProofRecord } from '../../midnight/proof-history';
 
 jest.mock('../../midnight/indexer.service');
+jest.mock('../../midnight/proof-verification', () => ({
+  ...jest.requireActual('../../midnight/proof-verification'),
+  blockTimestamp: jest.fn(),
+}));
 // holder-proofs pulls in the compiled contract (WASM), unloadable under Jest — see merkle.test.ts.
 jest.mock('../../midnight/holder-proofs', () => ({
   loadCredentialPackage: jest.fn().mockResolvedValue(null),
@@ -413,6 +421,92 @@ describe('PoapCard Component', () => {
         type: 'SHOW_HOLDER_PROOFS',
         payload: expect.objectContaining({ mode: 'ownership', pkg: PKG }),
       });
+    });
+  });
+
+  describe('burn', () => {
+    const drawerFor = (dispatch) => ({
+      drawerValue: {
+        ...mockDrawerContext,
+        midnight: { ...mockDrawerContext.midnight, provider: { address: 'ee'.repeat(32), service: {} } },
+      },
+      drawerDispatch: dispatch,
+    });
+
+    it('opens the burn confirmation for the holder', async () => {
+      const dispatch = jest.fn();
+      renderWithProviders(<PoapCard poap={mockPoap} isExpanded />, drawerFor(dispatch));
+
+      await userEvent.click(await screen.findByRole('button', { name: /^burn$/i }));
+
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_BURN_TOKEN',
+        payload: expect.objectContaining({ mode: 'burn', tokenId: 1, eventId: mockPoap.firstEventId }),
+      });
+    });
+
+    it('has no Burn button once burned', () => {
+      renderWithProviders(<PoapCard poap={{ ...mockPoap, isBurned: true }} isExpanded />, drawerFor(jest.fn()));
+      expect(screen.queryByRole('button', { name: /^burn$/i })).not.toBeInTheDocument();
+    });
+
+    it('shows Burned right away when this token is burned, without waiting for the indexer', async () => {
+      renderWithProviders(<PoapCard poap={mockPoap} isExpanded />, drawerFor(jest.fn()));
+      await screen.findByRole('button', { name: /^burn$/i });
+
+      act(() => notifyTokenBurned(mockPoap.firstEventId, 1));
+
+      expect(await screen.findByText(/^Burned$/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^burn$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /prove ownership/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('validity', () => {
+    const withEventMetadata = (meta) => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue(meta) });
+    };
+    // useEventMetadata caches by URI, so every test needs its own.
+    let uriCounter = 0;
+    const poapOf = (extra = {}) => ({
+      ...mockPoap,
+      ownerPk: 'cc'.repeat(32),
+      metadataURI: `https://example.com/validity-${(uriCounter += 1)}.json`,
+      ...extra,
+    });
+
+    beforeEach(() => window.localStorage.clear());
+
+    it('a Subscription nobody has proven yet shows "Not proven yet"', async () => {
+      withEventMetadata({ name: 'Club', category: 'subscription', validity: { amount: 30, unit: 'days' } });
+      renderWithProviders(<PoapCard poap={poapOf()} />);
+      expect(await screen.findByText('Not proven yet')).toBeInTheDocument();
+    });
+
+    it('a Subscription is active for its validity after an ownership proof', async () => {
+      withEventMetadata({ name: 'Club', category: 'subscription', validity: { amount: 30, unit: 'days' } });
+      const provenAt = new Date();
+      addProofRecord('cc'.repeat(32), 1, { kind: 'proveEventAttendance', question: 'q', txHash: null, provenAt: provenAt.toISOString() });
+      renderWithProviders(<PoapCard poap={poapOf()} />);
+      const until = new Date(provenAt.getTime() + 30 * 24 * 3600 * 1000);
+      const dd = String(until.getDate()).padStart(2, '0');
+      const mm = String(until.getMonth() + 1).padStart(2, '0');
+      expect(await screen.findByText(`Active until ${dd}/${mm}/${until.getFullYear()}`)).toBeInTheDocument();
+    });
+
+    it('an Event counts from the block it was minted in, and shows Expired once past', async () => {
+      withEventMetadata({ name: 'Recital', category: 'event', validity: { amount: 1, unit: 'days' } });
+      blockTimestamp.mockResolvedValue(Date.parse('2020-01-01T12:00:00Z'));
+      renderWithProviders(<PoapCard poap={poapOf({ mintedBlock: 77 })} />);
+      expect(await screen.findByText(/^Expired · 0?2\/01\/2020/)).toBeInTheDocument();
+      expect(blockTimestamp).toHaveBeenCalledWith(77);
+    });
+
+    it('shows nothing when the event has no validity', async () => {
+      withEventMetadata({ name: 'Recital', category: 'event' });
+      renderWithProviders(<PoapCard poap={poapOf({ mintedBlock: 77 })} />);
+      await screen.findByText(/POAP #1/);
+      expect(screen.queryByText(/until|Expired|Not proven/)).not.toBeInTheDocument();
     });
   });
 });

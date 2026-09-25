@@ -40,9 +40,8 @@ async function resolveIpfs(uri) {
 // event rendered on both the collapsed grid tile and the Explore Events page) share one fetch.
 const metadataCache = new Map();
 
-// Exported for src/midnight/disclosure-response.ts, which needs to re-fetch an event's metadata
-// JSON (specifically privateAttributeFields, see createEvent.jsx's private-attributes step) outside
-// of a React component — reuses the same IPFS gateway resolution rather than duplicating it.
+// Exported for verifyProof.jsx, which needs an event's metadata JSON outside of this hook —
+// reuses the same IPFS gateway resolution rather than duplicating it.
 export async function fetchMetadata(metadataURI) {
   try {
     const response = await fetch(await resolveIpfs(metadataURI));

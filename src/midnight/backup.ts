@@ -1,4 +1,3 @@
-import { PRIVATE_ATTRIBUTE_DRAFT_PREFIX } from './private-attribute-drafts';
 import { VISIBILITY_PREFIX } from './collection-share';
 import { CREDENTIAL_PACKAGE_PREFIX } from './credential-store';
 import { PROOF_HISTORY_PREFIX } from './proof-history';
@@ -21,8 +20,7 @@ import {
 
 // Encrypted backup of everything that only exists in this browser: the private state (local_sk —
 // the wallet's identity for this contract — plus its claimed-token cache) and the localStorage
-// secrets that sit next to it (private-attribute drafts, share-visibility choices, credential
-// packages, proof history).
+// secrets that sit next to it (share-visibility choices, credential packages, proof history).
 //
 // Encrypted here before it goes anywhere, with the wallet's key — which is also the user's recovery
 // code (storage-password.ts): PBKDF2 → AES-GCM (WebCrypto).
@@ -41,7 +39,6 @@ export const BACKUP_VERSION = 1;
 export const BACKUP_KDF_ITERATIONS = 600_000;
 const AUTO_BACKUP_DEBOUNCE_MS = 5_000;
 const BACKED_UP_PREFIXES = [
-  PRIVATE_ATTRIBUTE_DRAFT_PREFIX,
   VISIBILITY_PREFIX,
   CREDENTIAL_PACKAGE_PREFIX,
   PROOF_HISTORY_PREFIX,

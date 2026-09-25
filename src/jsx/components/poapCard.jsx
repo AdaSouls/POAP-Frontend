@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Award, BadgeCheck, Calendar, Database, ExternalLink, Eye, EyeOff, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
+import { Award, BadgeCheck, Calendar, Database, ExternalLink, Eye, EyeOff, Flame, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
@@ -19,7 +19,9 @@ import {
 import { loadCredentialPackage } from "../../midnight/holder-proofs";
 import { decodeValueHex } from "../../midnight/credential-store";
 import { getProofHistory, PROOF_HISTORY_EVENT } from "../../midnight/proof-history";
-import { PROOF_KINDS, verifyUrl } from "../../midnight/proof-verification";
+import { blockTimestamp, PROOF_KINDS, verifyUrl } from "../../midnight/proof-verification";
+import { describeValidity, formatUntil, parseValidity, validityStatus } from "../../midnight/validity";
+import { TOKEN_BURNED_EVENT } from "../../midnight/token-events";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -48,6 +50,17 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
   const [visible, setVisible] = useState(() => getTokenVisibility(poap.issuerPkHex, poap.tokenId));
   const [shareCopied, setShareCopied] = useState(false);
+  // Burned from this card (burnToken.jsx) — shown right away instead of waiting for the page's next
+  // indexer poll to bring poap.isBurned.
+  const [burnedHere, setBurnedHere] = useState(false);
+  useEffect(() => {
+    const onBurned = ({ detail }) => {
+      if (detail?.eventId === poap.firstEventId && detail?.tokenId === String(poap.tokenId)) setBurnedHere(true);
+    };
+    window.addEventListener(TOKEN_BURNED_EVENT, onBurned);
+    return () => window.removeEventListener(TOKEN_BURNED_EVENT, onBurned);
+  }, [poap.firstEventId, poap.tokenId]);
+  const isBurned = poap.isBurned || burnedHere;
   const { metadata, loading: metadataLoading } = useEventMetadata(poap.tokenMetadataURI || poap.metadataURI);
   const poapImageUrl = metadata?.poapImageUrl || metadata?.imageUrl;
   const claimLabel = getClaimActionLabel(metadata);
@@ -181,7 +194,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   const [credentialStatus, setCredentialStatus] = useState("idle"); // idle | loading | ready | missing | error
   const [showPrivate, setShowPrivate] = useState(false);
   useEffect(() => {
-    if (!isExpanded || !service || credentialFields.length === 0 || poap.isBurned) return undefined;
+    if (!isExpanded || !service || credentialFields.length === 0 || isBurned) return undefined;
     let cancelled = false;
     setCredentialStatus("loading");
     loadCredentialPackage(service, holderToken)
@@ -199,7 +212,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     };
     // holderToken is rebuilt each render from these same poap fields.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isExpanded, service, credentialFields.length, poap.tokenId, poap.isBurned]);
+  }, [isExpanded, service, credentialFields.length, poap.tokenId, isBurned]);
 
   // mode: "ownership" (Prove Ownership Anonymously) or "detail" (Prove a Private Detail).
   const openHolderProofs = (mode) => {
@@ -215,6 +228,14 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     });
   };
 
+  // Permanent: burnToken.jsx asks for confirmation first.
+  const openBurn = () => {
+    dispatch({
+      type: "SHOW_BURN_TOKEN",
+      payload: { mode: "burn", tokenId: poap.tokenId, eventId: poap.firstEventId, eventName: eventMetadata?.name || null },
+    });
+  };
+
   // B6 — see proveOwnership.jsx / src/midnight/ownership-proof.ts.
   const openProveOwnership = () => {
     dispatch({
@@ -224,7 +245,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
         eventId: poap.firstEventId,
         issuerPkHex: poap.issuerPkHex,
         holderPk: poap.ownerPk,
-        isBurned: poap.isBurned,
+        isBurned,
         eventName: eventMetadata?.name || null,
       },
     });
@@ -254,6 +275,68 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     </Tooltip>
   );
 
+  // Validity (validity.ts), if the event sets one. Subscription: counted from the last ownership
+  // proof made here (anonymous or not). Event/Credential: from the mint block's time — or, for a
+  // credential, its own private "Valid until" date once its details are loaded (that's the value
+  // the holder can prove).
+  const validity = parseValidity(eventMetadata?.validity);
+  const isSubscription = eventMetadata?.category === "subscription";
+  const [mintedMs, setMintedMs] = useState(undefined);
+  useEffect(() => {
+    if (!validity || isSubscription) return undefined;
+    if (poap.mintedBlock === null || poap.mintedBlock === undefined) {
+      setMintedMs(NaN);
+      return undefined;
+    }
+    let cancelled = false;
+    blockTimestamp(poap.mintedBlock).then((ms) => {
+      if (!cancelled) setMintedMs(ms ?? NaN);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // validity is re-parsed each render; what matters is whether the event has one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(validity), isSubscription, poap.mintedBlock]);
+  const lastHoldingProof =
+    proofHistory.find((record) => record.kind === "proveTokenOwnership" || record.kind === "proveEventAttendance") || null;
+  const validUntilFieldId = credentialFields.find((field) => field.auto === "validUntil")?.fieldId;
+  const credentialValidUntil = credentialPkg?.fields.find((field) => field.fieldId === validUntilFieldId);
+  let validityState = validityStatus(
+    validity,
+    isSubscription ? (lastHoldingProof ? Date.parse(lastHoldingProof.provenAt) : null) : mintedMs,
+  );
+  if (validity && credentialValidUntil) {
+    const untilMs = Date.parse(`${decodeValueHex(credentialValidUntil.valueHex)}T23:59:59.999Z`);
+    if (!Number.isNaN(untilMs)) validityState = { state: untilMs > Date.now() ? "active" : "expired", untilMs };
+  }
+  const validityBadge = !isBurned && validity && validityState.state !== "none" && validityState.state !== "unknown" && (
+    <Tooltip
+      multiline
+      label={
+        isSubscription
+          ? `Stays active for ${describeValidity(validity)} after each proof of ownership. Prove it again to renew.`
+          : eventMetadata?.category === "credential"
+            ? "Set by the issuer. Only they can renew it, by issuing a new one."
+            : `Valid for ${describeValidity(validity)} from when you got it.`
+      }
+    >
+      {validityState.state === "pending" ? (
+        <span className="badge poap-validity-badge is-pending" style={{ fontSize: "10px", padding: "2px 8px" }}>
+          Not proven yet
+        </span>
+      ) : validityState.state === "active" ? (
+        <span className="badge poap-validity-badge" style={{ fontSize: "10px", padding: "2px 8px" }}>
+          {isSubscription ? "Active" : "Valid"} until {formatUntil(validityState.untilMs, validity)}
+        </span>
+      ) : (
+        <span className="badge poap-validity-badge is-expired" style={{ fontSize: "10px", padding: "2px 8px" }}>
+          Expired · {formatUntil(validityState.untilMs, validity)}
+        </span>
+      )}
+    </Tooltip>
+  );
+
   // No "pending"/claim state exists for a POAP — mintTo() (organizer push-mint) and claim()
   // (self-mint) both leave the token already owned by the recipient the instant the transaction
   // lands, with no separate claim/approval step (see mySubscriptions.jsx reading straight from the
@@ -263,8 +346,8 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   // "Active" said nothing about how you got this POAP — same category-aware verb the explore-events
   // grid uses once claimed (Followed/Attended/Subscribed, see getClaimActionLabel), since every card
   // on this page is by definition already-held (no "Claimable" state exists here).
-  const poapStatusBadgeClass = poap.isBurned ? "badge bg-secondary" : "badge status-badge-held";
-  const poapStatusLabel = poap.isBurned ? "Burned" : claimLabel.done;
+  const poapStatusBadgeClass = isBurned ? "badge bg-secondary" : "badge status-badge-held";
+  const poapStatusLabel = isBurned ? "Burned" : claimLabel.done;
 
   return (
     <motion.div
@@ -364,7 +447,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                         {poapStatusLabel}
                       </span>
                     </div>
-                    {(poap.isSoulbound || proofBadge) && (
+                    {(poap.isSoulbound || proofBadge || validityBadge) && (
                       <div className="d-flex align-items-center flex-wrap mb-2" style={{ gap: "6px" }}>
                         {poap.isSoulbound && (
                           <Tooltip multiline label="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet.">
@@ -374,6 +457,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                           </Tooltip>
                         )}
                         {proofBadge}
+                        {validityBadge}
                       </div>
                     )}
 
@@ -447,7 +531,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     </>
                   )}
 
-                  {credentialFields.length > 0 && !poap.isBurned && (
+                  {credentialFields.length > 0 && !isBurned && (
                     <>
                       <div className="credential-private-details">
                         <div className="d-flex align-items-center justify-content-between mb-2">
@@ -514,7 +598,16 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                                   {PROOF_KINDS[record.kind]?.title || "Proof"}
                                 </p>
                                 <p className="m-0 small text-muted text-truncate">{record.question}</p>
-                                <p className="m-0 small text-muted">{new Date(record.provenAt).toLocaleString()}</p>
+                                <p className="m-0 small text-muted">
+                                  {new Date(record.provenAt).toLocaleString()}
+                                  {isSubscription &&
+                                    validity &&
+                                    (record.kind === "proveTokenOwnership" || record.kind === "proveEventAttendance") &&
+                                    ` · valid until ${formatUntil(
+                                      validityStatus(validity, Date.parse(record.provenAt)).untilMs,
+                                      validity,
+                                    )}`}
+                                </p>
                               </div>
                               {record.txHash && (
                                 <a
@@ -549,7 +642,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                       <Database size={14} className="mr-2" />
                       View Blockchain Info
                     </button>
-                    {!poap.isBurned && (
+                    {!isBurned && (
                       <button
                         type="button"
                         className="btn btn-card-detail-action btn-sm"
@@ -560,7 +653,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                         Prove Ownership
                       </button>
                     )}
-                    {!poap.isBurned && (
+                    {!isBurned && (
                       <Tooltip multiline label="Proves you hold a POAP of this event without revealing which one.">
                         <button
                           type="button"
@@ -574,7 +667,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                         </button>
                       </Tooltip>
                     )}
-                    {!poap.isBurned && credentialFields.length > 0 && (
+                    {!isBurned && credentialFields.length > 0 && (
                       <Tooltip multiline label="Proves one of your private details matches a question, without revealing it.">
                         <button
                           type="button"
@@ -586,6 +679,17 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                           Prove a Private Detail
                         </button>
                       </Tooltip>
+                    )}
+                    {!isBurned && (
+                      <button
+                        type="button"
+                        className="btn btn-card-detail-action btn-sm"
+                        onClick={openBurn}
+                        disabled={!midnight?.provider}
+                      >
+                        <Flame size={14} className="mr-2" />
+                        Burn
+                      </button>
                     )}
                   </div>
                 </div>

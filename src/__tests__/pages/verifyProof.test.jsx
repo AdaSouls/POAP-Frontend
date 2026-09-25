@@ -95,6 +95,26 @@ describe('VerifyProof page', () => {
     expect(decodeProofDetails).toHaveBeenCalledWith('deadbeef', CONTRACT);
   });
 
+  it("shows how long a Subscription proof keeps its holder active", async () => {
+    const provenAt = Date.parse('2026-09-24T10:00:00Z');
+    graphqlReturns([
+      {
+        hash: TX,
+        raw: 'ab',
+        block: { height: 50, timestamp: provenAt },
+        transactionResult: { status: 'SUCCESS' },
+        contractActions: [{ __typename: 'ContractCall', address: CONTRACT, entryPoint: 'proveEventAttendance' }],
+      },
+    ]);
+    decodeProofDetails.mockResolvedValue({ requestId: 'a2'.repeat(32), verifierPk: ORGANIZER, eventId: EVENT, fieldId: '0'.repeat(64), setRoot: '0'.repeat(64), tokenId: null });
+    getEvent.mockResolvedValue({ eventId: EVENT, issuerPk: ORGANIZER, metadataURI: 'ipfs://club' });
+    fetchMetadata.mockResolvedValue({ name: 'Club', category: 'subscription', validity: { amount: 1, unit: 'years' } });
+    renderAt(TX);
+
+    expect(await screen.findByText(/1 year from this proof/)).toBeInTheDocument();
+    expect(screen.getByText(/Valid until 24\/09\/2027/)).toBeInTheDocument();
+  });
+
   it('warns when the proven token has been revoked since', async () => {
     graphqlReturns([
       { hash: TX, raw: 'ab', block: { height: 9, timestamp: null }, contractActions: [{ __typename: 'ContractCall', address: CONTRACT, entryPoint: 'proveTokenOwnership' }] },

@@ -21,9 +21,10 @@ import SharedCollection from "./pages/sharedCollection";
 import OrganizerInfo from "./pages/organizerInfo";
 import SubscriberInfo from "./pages/subscriberInfo";
 import AdminDeploy from "./pages/adminDeploy";
-import DisclosureRespond from "./pages/disclosureRespond";
 import CredentialImport from "./pages/credentialImport";
 import VerifyProof from "./pages/verifyProof";
+import KeyInvite from "./pages/keyInvite";
+import MintLink from "./pages/mintLink";
 
 const Router = () => {
   const dispatch = useDrawerDispatch();
@@ -78,9 +79,10 @@ const Router = () => {
           <Route path="/app/collection/:id" element={<Collection />} />
           <Route path="/app/collections/:section" element={<Collections />} />
           <Route path="/app/claim-mint" element={<ClaimMint />} />
-          <Route path="/app/disclosure/respond" element={<DisclosureRespond />} />
           <Route path="/app/credential" element={<CredentialImport />} />
           <Route path="/app/verify" element={<VerifyProof />} />
+          <Route path="/app/key" element={<KeyInvite />} />
+          <Route path="/app/mint" element={<MintLink />} />
         </Routes>
       </div>
     </BrowserRouter>

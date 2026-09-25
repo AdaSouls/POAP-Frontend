@@ -11,7 +11,7 @@ import {
   parseBackupEnvelope,
   serializeState,
 } from '../../midnight/backup';
-import { PRIVATE_ATTRIBUTE_DRAFT_PREFIX } from '../../midnight/private-attribute-drafts';
+import { PROOF_HISTORY_PREFIX } from '../../midnight/proof-history';
 
 jest.setTimeout(30000); // PBKDF2 at 600k iterations
 
@@ -72,9 +72,9 @@ describe('backup', () => {
     expect(() => parseBackupEnvelope(JSON.stringify({ ...envelope, version: 99 }))).toThrow(/unsupported/i);
   });
 
-  it('backs up the private state and attribute drafts, and restores both into another browser', async () => {
-    const draftKey = `${PRIVATE_ATTRIBUTE_DRAFT_PREFIX}ee:ff`;
-    window.localStorage.setItem(draftKey, JSON.stringify({ fieldName: 'Region', valueHex: '01', randHex: '02' }));
+  it('backs up the private state and proof history, and restores both into another browser', async () => {
+    const historyKey = `${PROOF_HISTORY_PREFIX}ee:ff`;
+    window.localStorage.setItem(historyKey, JSON.stringify([{ kind: 'ownership', txHash: 'Region' }]));
     window.localStorage.setItem('unrelated:key', 'not backed up');
     const source = fakeProvider(samplePrivateState());
 
@@ -87,7 +87,7 @@ describe('backup', () => {
     const restored = target.store.get(KEY) as ReturnType<typeof samplePrivateState>;
     expect(Array.from(restored.secretKey)).toEqual(Array.from(samplePrivateState().secretKey));
     expect(restored.tokens['ab'.repeat(32)].tokenId).toBe(7n);
-    expect(window.localStorage.getItem(draftKey)).toContain('Region');
+    expect(window.localStorage.getItem(historyKey)).toContain('Region');
     expect(window.localStorage.getItem('unrelated:key')).toBeNull();
   });
 

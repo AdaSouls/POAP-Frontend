@@ -87,6 +87,28 @@ export async function lookupProofTransaction(txHash: string, contractAddress: st
   };
 }
 
+// When a block was produced (ms), e.g. a token's mintedBlock — validity.ts counts an Event's or a
+// Credential's validity from it. Cached: a block's time never changes.
+const blockTimes = new Map<number, Promise<number | null>>();
+export function blockTimestamp(height: number): Promise<number | null> {
+  let time = blockTimes.get(height);
+  if (!time) {
+    time = fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'query ($h: Int!) { block(offset: { height: $h }) { timestamp } }', variables: { h: height } }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => body?.data?.block?.timestamp ?? null)
+      .catch(() => null);
+    time.then((value) => {
+      if (value === null) blockTimes.delete(height);
+    });
+    blockTimes.set(height, time);
+  }
+  return time;
+}
+
 export function verifyUrl(txHash: string): string {
   return `${window.location.origin}/app/verify?tx=${txHash}`;
 }

@@ -343,8 +343,8 @@ público/privado del contrato.
    la prueba de otro. Falta que el verificador genere un pedido nuevo en el momento.
 4. **Nada se "consume".** No hay prueba de un solo uso para tenencia o asistencia: sirve para
    demostrar, no para validar una entrada una sola vez.
-5. **Reclamo abierto en eventos públicos.** Sin códigos de reclamo, un Event o Follow no puede
-   limitar quién lo obtiene.
+5. **Reclamo abierto en eventos públicos — es a propósito (decidido 2026-09-24).** Cualquiera
+   puede reclamar un Event o Follow; no se van a agregar códigos de reclamo.
 6. **Solo "está en esta lista".** Sin rangos ni comparaciones (A3): "edad ≥ 18" se resuelve con
    categorías.
 7. **El anonimato depende del tamaño del evento.** Con pocas credenciales emitidas, "alguien de
@@ -363,55 +363,127 @@ público/privado del contrato.
 ---
 
 ## Mejoras propuestas (orden sugerido, después de la prueba en vivo)
+**Plan acordado 2026-09-24:** todas estas entran en el MVP. Se construyen en un día de trabajo, se
+validan al día siguiente, cerrando esta semana, y el lunes 2026-09-28 se empieza en preprod. La 1
+depende de la infraestructura con Matías; el lado frontend es solo apuntar la URL.
+
 1. **Proof server de producción** (límite 1; infraestructura con Matías). En el frontend alcanza con
    apuntar `REACT_APP_MIDNIGHT_PROOF_SERVER_URL` a la URL alojada; el trabajo está en el servidor
    (sin logs, CORS, límites, escala) y en ajustar los textos de privacidad. El local queda solo
    para desarrollo.
 2. **QR para el intercambio de claves** (límite 2). El holder muestra un QR o un link con su código;
    Mint POAP lo lee y rellena el destinatario.
-3. **Pedidos en el momento** (límites 3 y 4). Una pantalla de verificador: genera un pedido nuevo,
-   muestra un QR, el holder responde a ese pedido y la pantalla se actualiza sola al confirmarse.
-   Para "un solo uso" haría falta una variante de tenencia con nullifier en el contrato (pedido a
-   Matías).
-4. **A3 — rangos y comparaciones** (límite 6), y A4 — campos con tipo (fecha, número).
-5. **Códigos de reclamo** para Event/Follow (límite 5): links de un solo uso generados por el
-   organizador. Probablemente necesita soporte en el contrato.
-6. **Aviso de anonimato** (límite 7): mostrar cuántas credenciales vivas tiene el evento antes de
+3. **A3 — rangos y comparaciones** (límite 6), y A4 — campos con tipo (fecha, número).
+4. **Aviso de anonimato** (límite 7): mostrar cuántas credenciales vivas tiene el evento antes de
    una prueba anónima.
-7. **Resiliencia** (límite 10): varios gateways de IPFS y un modo de solo lectura cuando el indexer
-   POAP no responde.
+5. **Validez / vencimiento** (sumada al MVP 2026-09-24). Solo frontend.
+   Un campo opcional **"Validity"** en el evento (horas, días, meses, años o sin vencimiento) que el POAP
+   cruza con una fecha para mostrar **"Active until …"** o **"Expired"**. Según la categoría, el plazo
+   se cuenta desde una fecha distinta:
+
+   - **Subscription: desde la última prueba de tenencia.** Tener el POAP no te hace suscriptor activo;
+     probarlo cada tanto sí. El suscriptor renueva cuando quiere, probando de nuevo (una transacción,
+     con costo de DUST). Es una señal de confianza, no un control de pago. El organizador conserva el
+     corte: si quema el POAP, ya no se puede volver a probar y queda vencido. Funciona también con la
+     prueba anónima, porque la validez es del evento y no del token. Base ya hecha: el historial de
+     pruebas (`proof-history.ts`).
+   - **Credential (matrícula médica por N años, licencia de conducir por 5): desde la emisión.** El
+     holder no puede autorrenovarse: renueva el emisor, que emite una credencial nueva; puede revocar
+     antes quemándola. La hora de emisión sale del `mintedBlock` del token y la hora del bloque del
+     indexer de Midnight.
+
+   Piezas: campo en el asistente y la metadata; badge en el POAP; vigencia de cada prueba en el
+   historial; y en `/app/verify`, "valid until … / expired". Esto último necesita leer de la
+   transacción el pedido (`requestId`), que dice de qué evento es, para que no se pueda falsificar
+   pasando otro evento por la URL.
+6. **Revocar (burn)** (sumada al MVP 2026-09-24). El contrato ya tiene `burn(tokenId)` (lo puede
+   llamar el dueño, el organizador/emisor del evento o el admin) y `PoapContractService.burn()`
+   existe en `contract.service.ts`, pero ningún botón lo llama (el "Burn" de
+   `collection-details.jsx` es del camino viejo de Cardano). Falta: botón "Revoke" en la lista de
+   suscriptores del organizador (`subscribersList.jsx`) y, quizás, "Burn" para el propio holder en
+   su POAP. La UI ya muestra los tokens quemados. Es la contraparte de la Validez: con ella el
+   organizador corta una Subscription y el emisor revoca una Credential antes de tiempo.
+
+### Diseño acordado 2026-09-24 (brainstorm de las mejoras 2 a 6)
+
+**Estado: implementado 2026-09-24 (noche), sin commitear, sin probar en vivo.** Tests 421 pasan (los
+5 de siempre fallan). Guía de validación desde cero: `prueba_de_credenciales.md`. Queda del lado de
+Matías la mejora 1 (proof server alojado).
+
+**QR / links (2).** Circuito de dos links, ambos con los datos después del `#`:
+- El organizador comparte un **link de invitación** desde la card de un evento Credential
+  (`/app/key#organizer=…&event=…`, con QR). Al abrirlo, el fan ve Get My Key con la clave del
+  organizador cargada y el código generado solo.
+- Get My Key devuelve un **link de emisión** con QR (`/app/mint#event=…&to=<código>`). Al abrirlo, el
+  organizador ve Mint POAP con el evento y el destinatario cargados, o un aviso si la wallet no es la
+  del organizador.
+- Pegar a mano sigue funcionando. Librería: `qrcode.react`. Sin escáner propio: se escanea con la
+  cámara del celular.
+
+**A3 + A4 (3), solo Credential.**
+- Tipos de campo: Texto, Número (**solo enteros**, mín./máx. opcionales), Fecha (`YYYY-MM-DD`) y Lista
+  (opciones fijas).
+- Mint POAP usa el control de cada tipo, con codificación canónica.
+- Ask for a Disclosure pregunta según el tipo:
+  - Texto o Lista: "uno de".
+  - Número: ≥, ≤, entre, uno de.
+  - Fecha: antes, después, entre, y el atajo "al menos N años".
+- Un rango se expande a la lista de valores que lo cumplen (máximo 65.536). Se publica la **regla**,
+  no la lista, y cada navegador la expande. El árbol se arma por partes, con progreso.
+
+**Aviso de anonimato (4).** Siempre se muestra "Anonymous among N holders of this event" (N = tokens
+vivos). Con **menos de 5**, además un aviso ámbar, sin bloquear el botón.
+
+**Validez (5).** Campo "Validity" opcional en el asistente, para todas las categorías (cantidad +
+unidad, o sin vencimiento), guardado en la metadata del evento.
+- Subscription: "Active until" = última prueba + plazo, en el POAP y en `/app/verify`.
+- Event y Credential: se cuenta desde el minteo.
+- **Opción (b):** una Credential con validez recibe automáticamente un campo privado **"Valid until"**
+  (tipo Fecha), así el verificador puede preguntar anónimamente "Valid until ≥ hoy" con los rangos
+  de la mejora 3.
+
+**Revocar (6): ambos.** "Revoke" para el organizador en la lista de suscriptores, y "Burn" para el
+holder en su propio POAP. Los dos piden confirmación.
 
 Para la demo del Hito 5 alcanza con el flujo de Credential (recital o título) tal como está; las
-mejoras 1 a 3 son las que separan la demo de un piloto con usuarios reales.
+mejoras son las que separan la demo de un piloto con usuarios reales.
 
 
 ---
 
 ## Ideas para más adelante (2026-09-24, conversadas, sin diseñar)
 
-### Validez / vencimiento
-Un campo opcional **"Validity"** en el evento (horas, días, meses, años o sin vencimiento) que el POAP
-cruza con una fecha para mostrar **"Active until …"** o **"Expired"**. Según la categoría, el plazo
-se cuenta desde una fecha distinta:
+### Pedidos en el momento (fuera del MVP, decidido 2026-09-24)
+**Pedidos en el momento** (límites 3 y 4). Una pantalla de verificador: genera un pedido nuevo,
+muestra un QR, el holder responde a ese pedido y la pantalla se actualiza sola al confirmarse.
+Para "un solo uso" haría falta una variante de tenencia con nullifier en el contrato (pedido a
+Matías).
 
-- **Subscription: desde la última prueba de tenencia.** Tener el POAP no te hace suscriptor activo;
-  probarlo cada tanto sí. El suscriptor renueva cuando quiere, probando de nuevo (una transacción,
-  con costo de DUST). Es una señal de confianza, no un control de pago. El organizador conserva el
-  corte: si quema el POAP, ya no se puede volver a probar y queda vencido. Funciona también con la
-  prueba anónima, porque la validez es del evento y no del token. Base ya hecha: el historial de
-  pruebas (`proof-history.ts`).
-- **Credential (matrícula médica por N años, licencia de conducir por 5): desde la emisión.** El
-  holder no puede autorrenovarse: renueva el emisor, que emite una credencial nueva; puede revocar
-  antes quemándola. La hora de emisión sale del `mintedBlock` del token y la hora del bloque del
-  indexer de Midnight.
+### Hecho 2026-09-24: sin atributos privados en Event y Subscription
+En esas categorías los atributos privados eran del evento (mismo valor para todos) y solo los
+respondía el navegador del organizador, así que una pregunta sobre ellos no decía nada del holder.
+Tampoco le llegaban al que reclamaba. Se quitó: el paso del asistente (queda solo en Credential),
+"Ask for a Disclosure" en esos eventos, "Pending Disclosure Requests" en My Events, la página
+`/app/disclosure/respond`, `disclosure-response.ts` y `private-attribute-drafts.ts` (y su lugar en el
+backup). El contrato no cambió; `/app/verify` sigue reconociendo pruebas viejas de
+`proveAttributeMembership`. Los Prove (tenencia y tenencia anónima) siguen en todas las categorías.
 
-Piezas: campo en el asistente y la metadata; badge en el POAP; vigencia de cada prueba en el
-historial; y en `/app/verify`, "valid until … / expired". Esto último necesita leer de la
-transacción el pedido (`requestId`), que dice de qué evento es, para que no se pueda falsificar
-pasando otro evento por la URL.
+Idea abierta que salió de esto: **contenido privado para quienes reclamaron** un Event o
+Subscription (un link, un código de descuento), visible solo para cada wallet holder. Hoy no existe.
+Para un descuento, un código compartido no se puede comprobar (quien lo sabe lo usa). Mejor que el
+POAP sea el descuento: la tienda pide Prove Ownership Anonymously. Para que sea seguro faltan
+"Pedidos en el momento" (sin reusar pruebas viejas) y un nullifier en el contrato (un uso por
+holder). Alternativa sin contrato: un código distinto por holder, entregado cifrado. Decidido
+2026-09-24: queda para después del MVP.
 
-Relacionado: habilitar **"solo por invitación"** también en Event y Subscription (hoy solo existe en
-Credential), para membresías pagas donde renueva el organizador. Y la ventana de N horas desde la
+### Resiliencia (fuera del MVP, decidido 2026-09-24)
+Varios gateways de IPFS y un modo de solo lectura cuando el indexer POAP no responde (límite 10).
+No es obligatorio para la presentación del MVP.
+
+### Solo por invitación y check-in de N horas
+Relacionado con la Validez (mejora 5): habilitar **"solo por invitación"** también en Event y
+Subscription (hoy solo existe en Credential), para membresías pagas donde renueva el organizador.
+Y la ventana de N horas desde la
 entrada a un evento, con renovación, necesita un check-in de un solo uso en el contrato (a
 conversar con Matías).
 
@@ -420,3 +492,19 @@ Hoy es un paso manual del organizador. Si lo olvida, sus holders no tienen prueb
 tenencia, y Prove Ownership les pide 2 firmas y vincula su wallet con el token. Opciones: publicarlo
 automáticamente al crear el evento (una firma más en ese momento), o al menos un aviso en la tarjeta
 del evento mientras no esté publicado.
+
+### "Ask for a Disclosure" desde la creación del evento
+No es obsoleto frente a los datos privados del POAP: los datos privados son la **respuesta** del
+holder y el pedido es la **pregunta**. El circuito prueba "mi valor comprometido está en el conjunto
+publicado", así que sin un pedido on-chain no hay nada contra qué probar (y el `requestId` ata la
+prueba a esa pregunta en el comprobante y en `/app/verify`). Lo que sobra es el paso manual
+posterior. Opciones:
+
+- En el paso de campos privados de Create Event (Credential), marcar los **valores aceptados** de
+  cada campo y publicar esas preguntas automáticamente al crear (una firma por pregunta). "Ask for a
+  Disclosure" queda para preguntas nuevas.
+- Como mínimo, un aviso en la tarjeta del evento cuando hay campos privados pero ninguna pregunta
+  publicada (hoy el holder ve "Nobody has asked a question…" y no puede hacer nada).
+
+Conviene resolverlo junto con el "Ask for Proof of Ownership" automático de arriba: mismo momento,
+mismo patrón.

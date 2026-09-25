@@ -1,8 +1,9 @@
-import { X, Award } from "lucide-react";
+import { X, Award, Flame } from "lucide-react";
 import {
   useDrawer,
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
+import { useUserRoles } from "../../contexts/user-roles/user-roles.provider";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -19,9 +20,13 @@ const truncateHex = (hex) => {
 // burned status, and mint block/tx as provenance. There's no claim timestamp and no flag
 // distinguishing a self-claim from an organizer push-mint (mintTo) — both produce an identical
 // token row today, so this list can't tell them apart either.
+//
+// The event's organizer (or the admin) gets a Revoke button on each live token: poap.compact's
+// burn() accepts either, besides the owner. It opens burnToken.jsx's confirmation.
 export default function SubscribersList() {
-  const { subscribers } = useDrawer();
+  const { subscribers, midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const { isAdmin } = useUserRoles();
 
   const closeDrawer = () => {
     dispatch({ type: "CLOSE_DRAWER" });
@@ -29,6 +34,16 @@ export default function SubscribersList() {
 
   const tokens = subscribers?.tokens || [];
   const label = subscribers?.label || "Subscribers";
+  const event = subscribers?.event;
+  const myPk = midnight?.provider?.address;
+  const canRevoke = Boolean(event && myPk) && (isAdmin || myPk === event.issuerPk);
+
+  const openRevoke = (token) => {
+    dispatch({
+      type: "SHOW_BURN_TOKEN",
+      payload: { mode: "revoke", tokenId: token.tokenId, eventId: event.eventId, eventName: subscribers?.eventName || null },
+    });
+  };
 
   return (
     <div className="d-flex flex-column w-100 drawer-modal-inner">
@@ -67,6 +82,17 @@ export default function SubscribersList() {
                 <span className={`badge flex-shrink-0 ${token.isBurned ? "bg-secondary" : "status-badge-active"}`}>
                   {token.isBurned ? "Burned" : "Active"}
                 </span>
+                {canRevoke && !token.isBurned && (
+                  <button
+                    type="button"
+                    className="btn btn-card-detail-action btn-sm flex-shrink-0"
+                    onClick={() => openRevoke(token)}
+                    aria-label={`Revoke POAP #${token.tokenId}`}
+                  >
+                    <Flame size={14} className="mr-1" />
+                    Revoke
+                  </button>
+                )}
               </li>
             ))}
           </ul>

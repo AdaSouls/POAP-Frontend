@@ -339,29 +339,52 @@ app.get('/api/credential-delivery/:lookupId', async (req, res) => {
 //
 // A disclosure request only puts the ROOT of its accepted-values set on-chain. Whoever answers
 // needs the values themselves to build the membership path, so publishDisclosureRequest.jsx posts
-// them here, keyed by requestId. Not secret (the holder has to see the question to answer it).
-// Same anyone-can-post caveat as above: the client recomputes the root and ignores lists that
-// don't match the request's on-chain setRoot.
+// the question's RULE here, keyed by requestId: either a short list ({ op: 'oneOf', values }) or a
+// number/date range that every browser expands itself (src/midnight/attribute-types.ts) — a range
+// can accept tens of thousands of values, too many to post. Not secret (the holder has to see the
+// question to answer it). Same anyone-can-post caveat as above: the client expands the rule,
+// recomputes the root and ignores rules that don't match the request's on-chain setRoot.
+// Older entries stored a bare { members } list; they're served back as a oneOf rule.
 const SET_KEYVALUE = 'adasoulsRequestSet';
 const MAX_SET_MEMBERS = 64;
+const MAX_RULE_BYTES = 4096;
+const RANGE_OPS = { number: ['gte', 'lte', 'between'], date: ['onOrAfter', 'onOrBefore', 'between'] };
+
+function validRule(rule) {
+  if (!rule || typeof rule !== 'object' || JSON.stringify(rule).length > MAX_RULE_BYTES) return false;
+  if (rule.op === 'oneOf') {
+    return (
+      Array.isArray(rule.values) &&
+      rule.values.length > 0 &&
+      rule.values.length <= MAX_SET_MEMBERS &&
+      rule.values.every((v) => typeof v === 'string' && Buffer.byteLength(v.trim(), 'utf8') <= 32)
+    );
+  }
+  if (rule.type === 'number') {
+    return RANGE_OPS.number.includes(rule.op) && Number.isSafeInteger(rule.min) && Number.isSafeInteger(rule.max);
+  }
+  if (rule.type === 'date') {
+    const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    return RANGE_OPS.date.includes(rule.op) && isDate(rule.from) && isDate(rule.to);
+  }
+  return false;
+}
 
 app.post('/api/disclosure-sets', async (req, res) => {
   try {
     const { requestId, members } = req.body ?? {};
+    const rule = req.body?.rule ?? (Array.isArray(members) ? { op: 'oneOf', values: members } : null);
     if (typeof requestId !== 'string' || !LOOKUP_ID_PATTERN.test(requestId)) {
       res.status(400).json({ error: 'Expected a 32-byte hex "requestId"' });
       return;
     }
-    const valid =
-      Array.isArray(members) &&
-      members.length > 0 &&
-      members.length <= MAX_SET_MEMBERS &&
-      members.every((m) => typeof m === 'string' && Buffer.byteLength(m.trim(), 'utf8') <= 32);
-    if (!valid) {
-      res.status(400).json({ error: `Expected 1-${MAX_SET_MEMBERS} values of at most 32 bytes each` });
+    if (!validRule(rule)) {
+      res.status(400).json({
+        error: `Expected a rule: 1-${MAX_SET_MEMBERS} values of at most 32 bytes each, or a number/date range`,
+      });
       return;
     }
-    const blob = new Blob([JSON.stringify({ requestId, members })], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ requestId, rule })], { type: 'application/json' });
     await pinToIpfs(blob, `adasouls-request-set-${requestId}.json`, 'private', { [SET_KEYVALUE]: requestId });
     res.json({ ok: true });
   } catch (error) {
@@ -378,8 +401,11 @@ app.get('/api/disclosure-sets/:requestId', async (req, res) => {
       return;
     }
     const files = (await listPrivateFiles(SET_KEYVALUE, requestId)).slice(0, MAX_CANDIDATES);
-    const sets = await Promise.all(files.map((file) => downloadPrivateJson(file.cid).catch(() => null)));
-    res.json({ sets: sets.filter((set) => set && Array.isArray(set.members)).map((set) => set.members) });
+    const entries = await Promise.all(files.map((file) => downloadPrivateJson(file.cid).catch(() => null)));
+    const rules = entries
+      .map((entry) => entry?.rule ?? (Array.isArray(entry?.members) ? { op: 'oneOf', values: entry.members } : null))
+      .filter(validRule);
+    res.json({ rules });
   } catch (error) {
     console.error('[ipfs-server] disclosure set fetch failed:', error);
     res.status(500).json({ error: error.message });

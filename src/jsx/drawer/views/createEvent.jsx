@@ -16,13 +16,12 @@ import CategoryPicker from "../../components/CategoryPicker";
 import TaxonomyStepFields from "../../components/TaxonomyStepFields";
 import ChannelsField from "../../components/ChannelsField";
 import OrganizationProfileFields from "../../components/OrganizationProfileFields";
-import PrivateAttributesStepFields from "../../components/PrivateAttributesStepFields";
+import PrivateAttributesStepFields, {
+  privateFieldFromRow,
+  privateFieldRowError,
+} from "../../components/PrivateAttributesStepFields";
 import { uploadImageToIPFS, uploadJSONToIPFS } from "../../../services/ipfs.service";
 import { getCroppedImageBlob } from "../../../utils/cropImage";
-import { computeEventId, computeAttributeLeaf } from "../../../midnight/contract.service";
-import { savePrivateAttributeDraft } from "../../../midnight/private-attribute-drafts";
-import { encodeAttributeValue } from "../../../midnight/attribute-value-codec";
-import { buildMerkleTree } from "../../../midnight/merkle";
 import {
   EVENT_CATEGORIES,
   getCategoryConfig,
@@ -31,6 +30,7 @@ import {
 } from "../../constants/eventCategories";
 import eventNormal from "../../../images/svg/event-normal.svg";
 import { txHashOf } from "../../../midnight/tx-result";
+import { VALID_UNTIL_FIELD, VALIDITY_UNITS, parseValidity } from "../../../midnight/validity";
 
 // NOTE: createEvent(eventId, maxSupply, expiration, isPublicMint, metadataURI) circuit — the
 // metadataURI is a pointer to off-chain JSON (name/description/image/category/…), not stored
@@ -42,7 +42,7 @@ import { txHashOf } from "../../../midnight/tx-result";
 // src/jsx/constants/eventCategories.js) before anything else — see
 // docs/event-creation-wizard-design.md for the full design. Every category then walks the SAME
 // step sequence (details → image → supply → channels → taxonomy → org profile [conditional] →
-// private attributes → POAP image), just with different taxonomy fields and a fixed, non-editable
+// private fields [Credential only] → POAP image), just with different taxonomy fields and a fixed, non-editable
 // isPublicMint derived from the category. `step` is 0 for the category picker, then a 1-based
 // index into `steps` (computed below) once a category is chosen. The Public Mint/Invite-Only Mint
 // explanation used to repeat as its own card on the supply step — moved to a badge on each
@@ -74,10 +74,13 @@ export default function CreateEvent() {
   });
   const [maxSupply, setMaxSupply] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
+  // How long each POAP stays valid (validity.ts). Unit "" = no expiry.
+  const [validityAmount, setValidityAmount] = useState("");
+  const [validityUnit, setValidityUnit] = useState("");
   const [channels, setChannels] = useState([]);
   const [taxonomyValues, setTaxonomyValues] = useState({});
   const [organizationProfile, setOrganizationProfile] = useState({});
-  // { fieldName, value }[] — selective disclosure. See docs/selective-disclosure-ui-design.md.
+  // { fieldName, type, min, max, optionsText }[] — Credential only: each credential's private fields.
   const [privateAttributes, setPrivateAttributes] = useState([]);
   const [usePoapImage, setUsePoapImage] = useState(false);
   // Separate {imageFile, croppedAreaPixels} pair — EventImageField hardcodes those two field names
@@ -113,41 +116,27 @@ export default function CreateEvent() {
   const showOrgAddress = isOrganizationProfileApplicable(category, taxonomyValues);
   const steps = useMemo(() => {
     if (!categoryConfig) return [];
-    const list = [
-      STEP_DETAILS, STEP_IMAGE, STEP_SUPPLY, STEP_CHANNELS, STEP_TAXONOMY, STEP_ORG_PROFILE,
-      STEP_PRIVATE_ATTRIBUTES,
-    ];
+    const list = [STEP_DETAILS, STEP_IMAGE, STEP_SUPPLY, STEP_CHANNELS, STEP_TAXONOMY, STEP_ORG_PROFILE];
+    // Private fields only make sense per credential (each holder has their own values and proves
+    // them anonymously). Event/Subscription used to take event-level private attributes, the same
+    // for every holder; removed 2026-09-24: a question about them said nothing about the holder.
+    if (category === "credential") {
+      list.push(STEP_PRIVATE_ATTRIBUTES);
+    }
     if (categoryConfig.isPublicMint) {
       list.push(STEP_POAP_IMAGE);
     }
     return list;
-  }, [categoryConfig]);
+  }, [categoryConfig, category]);
 
   const currentStepKey = step > 0 ? steps[step - 1] : null;
   const isLastStep = step > 0 && step === steps.length;
 
   const isDetailsValid = () => metadata.name.trim().length > 0;
-  const isSupplyValid = () => Number(maxSupply) >= 0;
+  const validity = validityUnit ? parseValidity({ amount: validityAmount, unit: validityUnit }) : null;
+  const isSupplyValid = () => Number(maxSupply) >= 0 && (!validityUnit || Boolean(validity));
   const isPoapImageValid = () => !usePoapImage || Boolean(poapImageValues.imageFile);
-  // A fully-empty row is fine (ignored at submit — see handleSubmit's validAttributeRows filter);
-  // a partially-filled row, or a value over the 32-byte encoding limit, blocks Next.
-  // Credential events only define the field names here — each recipient's values are set per
-  // credential at mint time (mintPoap.jsx → credentialAttributesRoot), not once for the event.
-  const attributesAreTemplate = category === "credential";
-  const isPrivateAttributesValid = () =>
-    privateAttributes.every((row) => {
-      if (attributesAreTemplate) return true;
-      const hasFieldName = row.fieldName.trim().length > 0;
-      const hasValue = row.value.trim().length > 0;
-      if (!hasFieldName && !hasValue) return true;
-      if (!hasFieldName || !hasValue) return false;
-      try {
-        encodeAttributeValue(row.value);
-        return true;
-      } catch {
-        return false;
-      }
-    });
+  const isPrivateAttributesValid = () => privateAttributes.every((row) => !privateFieldRowError(row));
 
   const stepValidators = {
     [STEP_DETAILS]: isDetailsValid,
@@ -254,66 +243,30 @@ export default function CreateEvent() {
       const label = new Uint8Array(32);
       crypto.getRandomValues(label);
 
-      // Computed before the tx (not parsed out of its result — see computeEventId's comment in
-      // contract.service.ts) using this wallet's own already-known pk. Needed early now, not just
-      // for the Channel A draft key: Channel B's attribute leaves below are keyed by this same
-      // eventId, and must be known before privateAttributesRoot is built and passed into
-      // createEvent itself.
-      const organizerPk = Buffer.from(provider.address, "hex");
-      const eventId = computeEventId(organizerPk, label);
-
       // poap.compact's createEvent still takes a privateMetadataCommit slot (the commit/reveal
       // "Extra Info" feature this UI used to offer) — always pass the all-zero default now that
       // this wizard no longer sets it, per poap.compact's own convention for "no private part".
       const privateMetadataCommit = new Uint8Array(32);
 
-      // Selective disclosure. Each non-empty row becomes its own Merkle leaf
-      // (computeAttributeLeaf), committed together as one tree (buildMerkleTree, depth 8 — see
-      // poap.compact's proveAttributeMembership); privateAttributesRoot stays the all-zero default
-      // when there are none. fieldId is a fresh random id per attribute (not derived from the
-      // label) — it's how a later disclosure request names which field it's asking about, and how
-      // this browser looks its own draft back up (private-attribute-drafts.ts, keyed by
-      // (eventId, fieldId)). The {fieldId, label} pairs (never the value) also go into the public
-      // metadataURI JSON below, so a verifier can discover what's askable without any private state.
-      const validAttributeRows = attributesAreTemplate
-        ? []
-        : privateAttributes.filter((row) => row.fieldName.trim() && row.value.trim());
-      // Credential: public list of field names + fresh random fieldIds, no values and no event-level
-      // root. mintPoap.jsx reads this list to ask for each recipient's values.
-      const credentialAttributeFieldsForMetadata = attributesAreTemplate
+      // Credential: public list of fields (name, type and its limits/options) + fresh random fieldIds,
+      // no values and no event-level root (privateAttributesRoot stays all-zero). mintPoap.jsx reads
+      // this list to ask for each recipient's values.
+      const credentialAttributeFieldsForMetadata = category === "credential"
         ? privateAttributes
             .filter((row) => row.fieldName.trim())
-            .map((row) => ({
-              fieldId: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex"),
-              label: row.fieldName.trim(),
-            }))
+            .map((row) =>
+              privateFieldFromRow(row, Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex")),
+            )
         : [];
-      let privateAttributesRoot = new Uint8Array(32);
-      const attributeDraftsToSave = [];
-      const privateAttributeFieldsForMetadata = [];
-      if (validAttributeRows.length > 0) {
-        const leaves = validAttributeRows.map((row) => {
-          const fieldId = new Uint8Array(32);
-          crypto.getRandomValues(fieldId);
-          const rand = new Uint8Array(32);
-          crypto.getRandomValues(rand);
-          const encodedValue = encodeAttributeValue(row.value);
-          const leaf = computeAttributeLeaf(eventId, fieldId, encodedValue, rand);
-          const fieldIdHex = Buffer.from(fieldId).toString("hex");
-          attributeDraftsToSave.push({
-            fieldIdHex,
-            draft: {
-              fieldName: row.fieldName.trim(),
-              valueHex: Buffer.from(encodedValue).toString("hex"),
-              randHex: Buffer.from(rand).toString("hex"),
-            },
-          });
-          privateAttributeFieldsForMetadata.push({ fieldId: fieldIdHex, label: row.fieldName.trim() });
-          return leaf;
+      // A Credential with validity also carries its end date as a private field, so a verifier can
+      // ask "valid until ≥ today" anonymously (validity.ts). mintPoap.jsx fills it in at issuance.
+      if (category === "credential" && validity) {
+        credentialAttributeFieldsForMetadata.push({
+          fieldId: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex"),
+          ...VALID_UNTIL_FIELD,
         });
-        const tree = await buildMerkleTree(leaves, 8);
-        privateAttributesRoot = tree.rootBytes;
       }
+      const privateAttributesRoot = new Uint8Array(32);
 
       const taxonomyEntries = serializeTaxonomyValues(category, taxonomyValues);
       const hasOrgProfileField = Object.values(organizationProfile).some(
@@ -330,12 +283,10 @@ export default function CreateEvent() {
         ...taxonomyEntries,
         ...(channels.length ? { channels } : {}),
         ...(hasOrgProfileField ? { organization: organizationProfile } : {}),
-        ...(privateAttributeFieldsForMetadata.length
-          ? { privateAttributeFields: privateAttributeFieldsForMetadata }
-          : {}),
         ...(credentialAttributeFieldsForMetadata.length
           ? { credentialAttributeFields: credentialAttributeFieldsForMetadata }
           : {}),
+        ...(validity ? { validity } : {}),
       });
 
       const expiration = expirationDate
@@ -355,11 +306,6 @@ export default function CreateEvent() {
           privateAttributesRoot,
         ),
       );
-
-      const eventIdHex = Buffer.from(eventId).toString("hex");
-      attributeDraftsToSave.forEach(({ fieldIdHex, draft }) => {
-        savePrivateAttributeDraft(eventIdHex, fieldIdHex, draft);
-      });
 
       closeDrawer();
       succesfullBlockchainCreation("Event Created Successfully", `Transaction: ${txHash}`, "");
@@ -468,7 +414,44 @@ export default function CreateEvent() {
                   onChange={(event) => setExpirationDate(event.target.value)}
                 />
                 <small className="form-text text-muted">
-                  Optional. Leave blank for no expiration.
+                  Optional. No new POAPs can be {categoryConfig?.isPublicMint ? "claimed" : "issued"} after this
+                  date. Leave blank for no expiration.
+                </small>
+              </div>
+
+              <div className="col-12 mb-3">
+                <label className="form-label" htmlFor="validityAmount">Validity</label>
+                <div className="d-flex" style={{ gap: "8px" }}>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    className="form-control"
+                    id="validityAmount"
+                    placeholder="e.g. 1"
+                    value={validityAmount}
+                    disabled={!validityUnit}
+                    onChange={(event) => setValidityAmount(event.target.value)}
+                  />
+                  <select
+                    className="form-control"
+                    aria-label="Validity unit"
+                    value={validityUnit}
+                    onChange={(event) => setValidityUnit(event.target.value)}
+                  >
+                    <option value="">No expiry</option>
+                    {VALIDITY_UNITS.map((unit) => (
+                      <option key={unit} value={unit}>{unit[0].toUpperCase() + unit.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+                <small className="form-text text-muted">
+                  Optional. How long each POAP stays valid,{" "}
+                  {category === "subscription"
+                    ? "counted from the holder's last proof of ownership: they renew by proving it again."
+                    : category === "credential"
+                      ? "counted from when it's issued. Each credential also gets a private \"Valid until\" date the holder can prove without revealing it."
+                      : "counted from when it's claimed."}
                 </small>
               </div>
 
@@ -499,7 +482,6 @@ export default function CreateEvent() {
             <PrivateAttributesStepFields
               values={privateAttributes}
               onChange={setPrivateAttributes}
-              labelsOnly={attributesAreTemplate}
             />
           )}
 

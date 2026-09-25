@@ -18,6 +18,8 @@ import PublishDisclosureRequest from './views/publishDisclosureRequest.jsx';
 import BackupRestore from './views/backupRestore.jsx';
 import ProveOwnership from './views/proveOwnership.jsx';
 import HolderProofs from './views/holderProofs.jsx';
+import BurnToken from './views/burnToken.jsx';
+import LinkQrPopup from './views/linkQrPopup.jsx';
 
 export const Drawer = () => {
 
@@ -93,6 +95,14 @@ export const Drawer = () => {
       return <HolderProofs />;
     }
 
+    if (state?.burnToken === true) {
+      return <BurnToken />;
+    }
+
+    if (state?.showLinkQr === true) {
+      return <LinkQrPopup />;
+    }
+
   };
 
   // Key names an active flag rather than any content from the view itself, so AnimatePresence
@@ -101,7 +111,7 @@ export const Drawer = () => {
   const activeViewKey = [
     'showCardanoWallet', 'showMidnightWallet', 'createSoul', 'createSoulToken', 'createPoap',
     'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint', 'getHolderKey',
-    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs',
+    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs', 'burnToken', 'showLinkQr',
   ].find((flag) => state?.[flag] === true) || 'none';
 
   // CLOSE_DRAWER flips every view flag to false in the same dispatch as `open: false` (see the
@@ -137,7 +147,7 @@ export const Drawer = () => {
   // panel).
   const MODAL_VIEWS = [
     'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
-    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs',
+    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs', 'burnToken', 'showLinkQr',
   ];
   const isModalView = MODAL_VIEWS.includes(chromeViewKey);
   const drawerLayout = isModalView ? 'drawer-modal' : 'drawer-cart';

@@ -5,10 +5,10 @@ import PublishDisclosureRequest from '../../../jsx/drawer/views/publishDisclosur
 import { mockDrawerContext, renderWithProviders } from '../../../testUtils';
 import { getDisclosureRequestsByVerifier } from '../../../midnight/indexer.service';
 import { buildMerkleTree } from '../../../midnight/merkle';
-import { publishRequestSet } from '../../../midnight/disclosure-sets';
+import { publishRequestRule } from '../../../midnight/disclosure-sets';
 
 jest.mock('../../../midnight/disclosure-sets', () => ({
-  publishRequestSet: jest.fn().mockResolvedValue(undefined),
+  publishRequestRule: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../../../midnight/indexer.service', () => ({
   getDisclosureRequestsByVerifier: jest.fn(),
@@ -59,8 +59,9 @@ describe('PublishDisclosureRequest drawer view', () => {
     expect(screen.getByText(/no private attributes to ask about/i)).toBeInTheDocument();
   });
 
-  it('publishes the request, builds a depth-16 set tree, and shows a share link once the indexer confirms it', async () => {
+  it('falls back to the indexer for the requestId, builds a depth-16 set tree, and publishes the accepted values', async () => {
     const publishDisclosureRequest = jest.fn().mockResolvedValue({ txHash: '0xabc' });
+    publishRequestRule.mockResolvedValue(undefined);
     const drawerValue = buildDrawerValue({ publishDisclosureRequest });
     getDisclosureRequestsByVerifier.mockResolvedValue([
       {
@@ -86,17 +87,19 @@ describe('PublishDisclosureRequest drawer view', () => {
     expect(setRootArg).toEqual(new Uint8Array(32).fill(5));
     expect(buildMerkleTree).toHaveBeenCalledWith([expect.any(Uint8Array), expect.any(Uint8Array)], 16);
 
-    expect(await screen.findByText(new RegExp(`requestId=${'ee'.repeat(32)}`))).toBeInTheDocument();
+    await waitFor(() =>
+      expect(publishRequestRule).toHaveBeenCalledWith('ee'.repeat(32), { op: 'oneOf', values: ['EU', 'APAC'] }),
+    );
   });
 
-  it('for a per-credential field: uses the returned requestId and publishes the accepted values for holders', async () => {
+  it('uses the returned requestId and publishes the accepted values for holders', async () => {
     const requestIdBytes = new Uint8Array(32).fill(0xee);
     const publishDisclosureRequest = jest
       .fn()
       .mockResolvedValue({ public: { txHash: '0xabc' }, private: { result: requestIdBytes } });
-    publishRequestSet.mockResolvedValue(undefined);
+    publishRequestRule.mockResolvedValue(undefined);
     const drawerValue = buildDrawerValue({ publishDisclosureRequest });
-    drawerValue.disclosureEvent = { eventId: EVENT_ID_HEX, fields: [{ ...FIELD, label: 'Sector', kind: 'credential' }] };
+    drawerValue.disclosureEvent = { eventId: EVENT_ID_HEX, fields: [{ ...FIELD, label: 'Sector' }] };
     renderWithProviders(<PublishDisclosureRequest />, { drawerValue });
 
     const memberInputs = screen.getAllByLabelText('Candidate value');
@@ -104,10 +107,33 @@ describe('PublishDisclosureRequest drawer view', () => {
     await userEvent.type(memberInputs[1], 'Platea');
     await userEvent.click(screen.getByRole('button', { name: /^publish request$/i }));
 
-    expect(await screen.findByText(/holders whose sector is one of these values/i)).toBeInTheDocument();
-    expect(publishRequestSet).toHaveBeenCalledWith('ee'.repeat(32), ['Campo', 'Platea']);
+    expect(await screen.findByText(/Sector is one of: Campo, Platea/)).toBeInTheDocument();
+    expect(publishRequestRule).toHaveBeenCalledWith('ee'.repeat(32), { op: 'oneOf', values: ['Campo', 'Platea'] });
     expect(getDisclosureRequestsByVerifier).not.toHaveBeenCalled();
     expect(screen.queryByText(/requestId=/)).not.toBeInTheDocument();
+  });
+
+  it('asks a range question about a number field: the rule is published, the whole range goes in the tree', async () => {
+    const requestIdBytes = new Uint8Array(32).fill(0xee);
+    const publishDisclosureRequest = jest
+      .fn()
+      .mockResolvedValue({ public: { txHash: '0xabc' }, private: { result: requestIdBytes } });
+    const drawerValue = buildDrawerValue({ publishDisclosureRequest });
+    drawerValue.disclosureEvent = {
+      eventId: EVENT_ID_HEX,
+      fields: [{ ...FIELD, label: 'Age', type: 'number', min: 0, max: 120 }],
+    };
+    renderWithProviders(<PublishDisclosureRequest />, { drawerValue });
+
+    // First option for a number field: "is at least (≥)"; the upper end comes from the field's max.
+    await userEvent.type(screen.getByLabelText(/^value$/i), '18');
+    expect(screen.getByLabelText(/up to/i)).toHaveValue(120);
+    expect(screen.getByText(/accepts 103 values/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^publish request$/i }));
+
+    expect(await screen.findByText(/Age ≥ 18/)).toBeInTheDocument();
+    expect(publishRequestRule).toHaveBeenCalledWith('ee'.repeat(32), { op: 'gte', type: 'number', min: 18, max: 120 });
+    expect(buildMerkleTree.mock.calls[0][0]).toHaveLength(103);
   });
 
   it('rejects submission with no candidate values', async () => {
@@ -115,8 +141,7 @@ describe('PublishDisclosureRequest drawer view', () => {
     const drawerValue = buildDrawerValue({ publishDisclosureRequest });
     renderWithProviders(<PublishDisclosureRequest />, { drawerValue });
 
-    await userEvent.click(screen.getByRole('button', { name: /^publish request$/i }));
-
+    expect(screen.getByRole('button', { name: /^publish request$/i })).toBeDisabled();
     expect(publishDisclosureRequest).not.toHaveBeenCalled();
   });
 

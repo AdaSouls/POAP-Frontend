@@ -1194,6 +1194,27 @@ select option,
   cursor: pointer;
 }
 
+/* Validity (validity.ts): same outline shape as the Proven badge — green while valid, red once
+   expired, gray for a Subscription nobody has proven yet. */
+.card-poap .poap-validity-badge {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1px solid #34c38f;
+  color: #34c38f;
+  cursor: help;
+}
+
+.card-poap .poap-validity-badge.is-expired {
+  border-color: #f46a6a;
+  color: #f46a6a;
+}
+
+.card-poap .poap-validity-badge.is-pending {
+  border-color: #74788d;
+  color: #a6b0cf;
+}
+
 /* Proof history block in the expanded POAP card — same box as .credential-private-details. */
 .proof-history {
   padding: 12px 14px;
@@ -1234,6 +1255,25 @@ select option,
 
 .info-hint-card.is-warning svg {
   color: #f1b44c;
+}
+
+/* Permanent actions (burnToken.jsx: Revoke / Burn) — the same translucent red as the wallet
+   popup's Disconnect phase (#f46a6a = --bs-danger), instead of a solid .btn-danger slab. */
+.btn-destructive {
+  color: #fff;
+  background: rgba(244, 106, 106, 0.35);
+  border: 1px solid rgba(244, 106, 106, 0.6);
+}
+
+.btn-destructive:hover:not(:disabled),
+.btn-destructive:focus-visible {
+  color: #fff;
+  background: rgba(244, 106, 106, 0.5);
+  border-color: #f46a6a;
+}
+
+.btn-destructive:disabled {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* Expanded event card's Mint POAP / Subscribe action, right column — was raw Bootstrap
@@ -4023,3 +4063,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: #f1b44c !important;
 }
 
+
+/* LinkQrCard.jsx — the QR on its own white tile (cameras read dark-on-light best), centered above
+   the link text. */
+.link-qr-card-code {
+  display: flex;
+  justify-content: center;
+}
+
+.link-qr-card-code svg {
+  border-radius: 8px;
+}
+
+.link-qr-card-url {
+  font-family: monospace;
+  font-size: 0.72rem;
+  opacity: 0.85;
+  min-width: 0;
+}

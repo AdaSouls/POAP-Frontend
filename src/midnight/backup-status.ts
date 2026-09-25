@@ -1,7 +1,7 @@
 // Per-wallet, per-contract bookkeeping for encrypted backups (backup.ts): when the last backup was
 // made, whether anything worth backing up changed since, and whether auto cloud backup is on.
-// SDK-free and dependency-free on purpose — private-attribute-drafts.ts and providers.ts both mark
-// changes through here, and backup.ts itself imports those modules.
+// SDK-free and dependency-free on purpose — providers.ts, credential-store.ts and proof-history.ts
+// mark changes through here, and backup.ts itself imports those modules.
 
 type StoredBackupStatus = {
   lastBackupAt: string | null;

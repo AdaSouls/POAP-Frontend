@@ -10,10 +10,11 @@ import { buildMerkleTree } from './merkle';
 import { encodeAttributeValue } from './attribute-value-codec';
 import { computeCredentialAttrLeaf } from './contract.service';
 import { credentialAttributeTree, credentialPathOnChain, fetchDeliveredPackage } from './credential-delivery';
-import { getCredentialPackage, type CredentialPackage } from './credential-store';
+import { decodeValueHex, getCredentialPackage, type CredentialPackage } from './credential-store';
 import { isOwnershipRequest } from './ownership-proof';
 import { txHashOf } from './tx-result';
-import { fetchRequestSetCandidates } from './disclosure-sets';
+import { fetchRequestRuleCandidates } from './disclosure-sets';
+import { expandRule, ruleAccepts, ruleSize, type CredentialField, type Rule } from './attribute-types';
 
 const ZERO_HEX = '0'.repeat(64);
 
@@ -54,61 +55,96 @@ export async function loadCredentialPackage(service: Service, token: HolderToken
 
 export type AnswerableRequest =
   | { kind: 'attendance'; request: IndexedDisclosureRequest }
-  | { kind: 'attribute'; request: IndexedDisclosureRequest; label: string; members: string[] | null };
+  | {
+      kind: 'attribute';
+      request: IndexedDisclosureRequest;
+      field: CredentialField;
+      label: string;
+      // null when no published rule could be found for it. `verified` = its set was already checked
+      // against the on-chain root; big ranges are checked when the holder proves (see fetchRequestRule).
+      rule: Rule | null;
+      verified: boolean;
+    };
 
 // Plain requests (attendance / ownership) and requests about one of this event's credential
 // fields. Requests about event-level attributes are the organizer's to answer, not the holder's.
 export async function listAnswerableRequests(
   eventIdHex: string,
-  credentialFields: Array<{ fieldId: string; label: string }>,
+  credentialFields: CredentialField[],
 ): Promise<AnswerableRequest[]> {
   const requests = (await getAllDisclosureRequests()).filter((r) => r.eventId === eventIdHex);
-  const labels = new Map(credentialFields.map((f) => [f.fieldId, f.label]));
+  const fields = new Map(credentialFields.map((f) => [f.fieldId, f]));
   const answerable: AnswerableRequest[] = [];
   for (const request of requests) {
     if (isOwnershipRequest(request)) {
       answerable.push({ kind: 'attendance', request });
-    } else if (labels.has(request.fieldId)) {
+    } else if (fields.has(request.fieldId)) {
+      const field = fields.get(request.fieldId) as CredentialField;
+      const found = await fetchRequestRule(request.requestId, request.setRoot).catch(() => null);
       answerable.push({
         kind: 'attribute',
         request,
-        label: labels.get(request.fieldId) as string,
-        members: await fetchRequestSet(request.requestId, request.setRoot).catch(() => null),
+        field,
+        label: field.label,
+        rule: found?.rule ?? null,
+        verified: found?.verified ?? false,
       });
     }
   }
   return answerable;
 }
 
-export async function setRootOf(members: string[]): Promise<string> {
-  const tree = await buildMerkleTree(members.map(encodeAttributeValue), 16);
-  return hex(tree.rootBytes);
+// One set tree per rule, shared by the root check and the proof: a range can take seconds to build.
+const setTrees = new Map<string, ReturnType<typeof buildMerkleTree>>();
+export function setTreeFor(rule: Rule) {
+  const key = JSON.stringify(rule);
+  let tree = setTrees.get(key);
+  if (!tree) {
+    tree = buildMerkleTree(expandRule(rule).map(encodeAttributeValue), 16);
+    tree.catch(() => setTrees.delete(key));
+    setTrees.set(key, tree);
+  }
+  return tree;
 }
 
-// The accepted values behind a request's setRoot (published by publishDisclosureRequest.jsx).
-// Only a list that rebuilds the on-chain root counts — anyone can post under a requestId.
-export async function fetchRequestSet(requestIdHex: string, setRootHex: string): Promise<string[] | null> {
-  for (const members of await fetchRequestSetCandidates(requestIdHex)) {
-    try {
-      if ((await setRootOf(members)) === setRootHex.toLowerCase()) return members;
-    } catch {
-      // Malformed list — skip.
-    }
+async function ruleMatchesRoot(rule: Rule, setRootHex: string): Promise<boolean> {
+  try {
+    return hex((await setTreeFor(rule)).rootBytes) === setRootHex.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+// Rules up to this many values are checked against the root as soon as the request is listed.
+const EAGER_CHECK_MAX = 2000;
+
+// The question behind a request's setRoot (published by publishDisclosureRequest.jsx). Anyone can
+// post under a requestId, so only a rule whose set rebuilds the on-chain root counts. Small rules
+// are checked right away; a lone big range (a date range can be ~40,000 values, several seconds) is
+// returned unchecked and checked when the holder proves (proveAttribute) — or by the verify page.
+export async function fetchRequestRule(
+  requestIdHex: string,
+  setRootHex: string,
+  { checkAll = false }: { checkAll?: boolean } = {},
+): Promise<{ rule: Rule; verified: boolean } | null> {
+  const candidates = await fetchRequestRuleCandidates(requestIdHex);
+  const small = candidates.filter((rule) => ruleSize(rule) <= EAGER_CHECK_MAX);
+  const big = candidates.filter((rule) => ruleSize(rule) > EAGER_CHECK_MAX);
+  for (const rule of small) {
+    if (await ruleMatchesRoot(rule, setRootHex)) return { rule, verified: true };
+  }
+  if (big.length === 1 && !checkAll) return { rule: big[0], verified: false };
+  for (const rule of big) {
+    if (await ruleMatchesRoot(rule, setRootHex)) return { rule, verified: true };
   }
   return null;
 }
 
-// Does this holder's value for the request's field fall in its accepted set? Local only.
-export function valueQualifies(pkg: CredentialPackage | null, fieldIdHex: string, members: string[] | null): boolean {
+// Does this holder's value for the request's field satisfy its rule? Local only.
+export function valueQualifies(pkg: CredentialPackage | null, fieldIdHex: string, rule: Rule | null): boolean {
   const field = pkg?.fields.find((f) => f.fieldId === fieldIdHex);
-  if (!field || !members) return false;
-  return members.some((m) => {
-    try {
-      return hex(encodeAttributeValue(m)) === field.valueHex;
-    } catch {
-      return false;
-    }
-  });
+  if (!field || !rule) return false;
+  return ruleAccepts(rule, decodeValueHex(field.valueHex));
 }
 
 // ── Proving ───────────────────────────────────────────────────────────────────
@@ -140,7 +176,7 @@ export async function proveAttribute(
   service: Service,
   token: HolderToken,
   request: IndexedDisclosureRequest,
-  members: string[],
+  rule: Rule,
   pkg: CredentialPackage,
 ): Promise<{ txHash: string | null }> {
   const field = pkg.fields.find((f) => f.fieldId === request.fieldId);
@@ -151,7 +187,10 @@ export async function proveAttribute(
   const attributeTree = await credentialAttributeTree(pkg.fields);
   const attributePath = attributeTree.pathForLeaf(computeCredentialAttrLeaf(fromHex(field.fieldId), value, rand));
 
-  const setTree = await buildMerkleTree(members.map(encodeAttributeValue), 16);
+  const setTree = await setTreeFor(rule);
+  if (hex(setTree.rootBytes) !== request.setRoot.toLowerCase()) {
+    throw new Error("The accepted values published for this question don't match it on-chain, so the proof would fail.");
+  }
   let setPath;
   try {
     setPath = setTree.pathForLeaf(value);

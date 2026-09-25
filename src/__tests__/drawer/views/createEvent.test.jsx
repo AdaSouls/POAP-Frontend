@@ -4,29 +4,11 @@ import userEvent from '@testing-library/user-event';
 import CreateEvent from '../../../jsx/drawer/views/createEvent';
 import { mockDrawerContext, renderWithProviders } from '../../../testUtils';
 import { uploadJSONToIPFS } from '../../../services/ipfs.service';
-import { computeAttributeLeaf, computeEventId } from '../../../midnight/contract.service';
-import { buildMerkleTree } from '../../../midnight/merkle';
-import { savePrivateAttributeDraft } from '../../../midnight/private-attribute-drafts';
 
 jest.mock('../../../services/ipfs.service', () => ({
   uploadImageToIPFS: jest.fn(),
   uploadJSONToIPFS: jest.fn(),
 }));
-jest.mock('../../../midnight/contract.service', () => ({
-  computeEventId: jest.fn(() => new Uint8Array(32).fill(1)),
-  computeAttributeLeaf: jest.fn((eventId, fieldId) => fieldId),
-}));
-// merkle.ts pulls in @midnight-ntwrk/compact-runtime, a WASM-bindgen build Jest can't load (see
-// src/__tests__/midnight/merkle.test.ts's header comment) — mocked here purely so importing
-// createEvent.jsx doesn't transitively try to load it, same reasoning as every other service mock
-// in this file.
-jest.mock('../../../midnight/merkle', () => ({
-  buildMerkleTree: jest.fn(),
-}));
-jest.mock('../../../midnight/private-attribute-drafts', () => ({
-  savePrivateAttributeDraft: jest.fn(),
-}));
-
 const buildDrawerValue = (createEvent) => ({
   ...mockDrawerContext,
   midnight: {
@@ -39,10 +21,9 @@ const clickNext = () => userEvent.click(screen.getByRole('button', { name: /^nex
 const clickBack = () => userEvent.click(screen.getByRole('button', { name: /^back$/i }));
 const clickCreate = () => userEvent.click(screen.getByRole('button', { name: /^create$/i }));
 
-// Every category walks details → image → supply → channels → taxonomy → org profile →
-// private attributes, then STEP_POAP_IMAGE only for self-mint categories (Event/Subscription) —
-// Credential skips it,
-// since its tokens get their own per-recipient image later via push-mint, not a shared one set
+// Every category walks details → image → supply → channels → taxonomy → org profile, then
+// private fields only for Credential, and STEP_POAP_IMAGE only for self-mint categories
+// (Event/Subscription) — Credential skips it, since its tokens get their own per-recipient image later via push-mint, not a shared one set
 // here (see createEvent.jsx's steps useMemo). Every step after supply is fully optional, so this
 // just keeps clicking Next until Create appears instead of hardcoding a step count per category.
 async function fillThroughToSubmit({ categoryLabel, name, maxSupply, configureBeforeLastNext }) {
@@ -58,16 +39,16 @@ async function fillThroughToSubmit({ categoryLabel, name, maxSupply, configureBe
   await userEvent.type(screen.getByLabelText(/Maximum Supply/i), maxSupply);
   let pendingConfigure = configureBeforeLastNext;
   while (screen.queryByRole('button', { name: /^next$/i })) {
-    // Runs once, on the private-attributes step, right before clicking past it — lets callers fill
+    // Runs once, on the private-fields step (Credential only), right before clicking past it — lets callers fill
     // in an attribute row without hardcoding this wizard's exact step count/order.
-    if (pendingConfigure && screen.queryByRole('button', { name: /add private (attribute|field)/i })) {
+    if (pendingConfigure && screen.queryByRole('button', { name: /add private field/i })) {
       await pendingConfigure();
       pendingConfigure = null;
     }
     await clickNext();
   }
-  // Credential has no POAP-image step, so private attributes is its LAST step (Create, no Next).
-  if (pendingConfigure && screen.queryByRole('button', { name: /add private (attribute|field)/i })) {
+  // Credential has no POAP-image step, so private fields is its LAST step (Create, no Next).
+  if (pendingConfigure && screen.queryByRole('button', { name: /add private field/i })) {
     await pendingConfigure();
   }
   await clickCreate(); // submit
@@ -77,17 +58,6 @@ describe('CreateEvent drawer view', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     uploadJSONToIPFS.mockResolvedValue('ipfs://Qmmetadata');
-    // Re-applied every test — this project's jest config resets mock implementations (not just
-    // call history) between tests despite only calling jest.clearAllMocks(), so the jest.mock()
-    // factory's inline implementations above don't survive past the first test either.
-    computeEventId.mockImplementation(() => new Uint8Array(32).fill(1));
-    computeAttributeLeaf.mockImplementation((eventId, fieldId) => fieldId);
-    buildMerkleTree.mockResolvedValue({
-      rootBytes: new Uint8Array(32).fill(9),
-      leafCount: 0,
-      pathForIndex: jest.fn(),
-      pathForLeaf: jest.fn(),
-    });
   });
 
   it('shows Step 0 with the three categories, Next disabled until one is picked', async () => {
@@ -170,8 +140,7 @@ describe('CreateEvent drawer view', () => {
     await userEvent.click(screen.getByLabelText('Format'));
     await userEvent.click(screen.getByRole('option', { name: 'In-person' }));
     await clickNext(); // taxonomy -> org profile
-    await clickNext(); // org profile -> private attributes
-    await clickNext(); // private attributes -> POAP image
+    await clickNext(); // org profile -> POAP image (no private-fields step outside Credential)
     await clickCreate(); // submit
 
     await waitFor(() => expect(createEvent).toHaveBeenCalled());
@@ -188,66 +157,26 @@ describe('CreateEvent drawer view', () => {
     expect(metadataURIArg).toBe('ipfs://Qmmetadata');
   });
 
-  it('commits a private attribute: builds the Merkle root, passes it to createEvent, saves the draft, and lists it in the metadata JSON', async () => {
+  it('has no private-fields step on Event or Subscription, and leaves privateAttributesRoot all-zero', async () => {
     const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
-    const mockedRoot = new Uint8Array(32).fill(7);
-    buildMerkleTree.mockResolvedValue({
-      rootBytes: mockedRoot,
-      leafCount: 1,
-      pathForIndex: jest.fn(),
-      pathForLeaf: jest.fn(),
-    });
     renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
 
+    const sawPrivateFieldsStep = jest.fn();
     await fillThroughToSubmit({
       categoryLabel: 'Subscription',
       name: 'DevCon Pass',
       maxSupply: '0',
-      configureBeforeLastNext: async () => {
-        await userEvent.click(screen.getByRole('button', { name: /add private attribute/i }));
-        await userEvent.type(screen.getByLabelText('Attribute label'), 'Region');
-        await userEvent.type(screen.getByLabelText('Attribute value'), 'EU');
-      },
+      configureBeforeLastNext: sawPrivateFieldsStep,
     });
 
     await waitFor(() => expect(createEvent).toHaveBeenCalled());
-    expect(computeAttributeLeaf).toHaveBeenCalledTimes(1);
-    expect(buildMerkleTree).toHaveBeenCalledWith([expect.any(Uint8Array)], 8);
-
-    const call = createEvent.mock.calls[0];
-    expect(call[6]).toEqual(mockedRoot); // privateAttributesRoot is the 7th positional arg
-
-    // savePrivateAttributeDraft runs in the code path AFTER `await provider.service.createEvent(...)`
-    // resolves — createEvent having been *called* (waited for above) doesn't guarantee that
-    // continuation has run yet, so this needs its own waitFor rather than a synchronous assertion.
-    await waitFor(() => expect(savePrivateAttributeDraft).toHaveBeenCalledTimes(1));
-    const [eventIdHexArg, fieldIdHexArg, draftArg] = savePrivateAttributeDraft.mock.calls[0];
-    expect(eventIdHexArg).toBe(Buffer.from(new Uint8Array(32).fill(1)).toString('hex'));
-    expect(typeof fieldIdHexArg).toBe('string');
-    expect(draftArg).toEqual(
-      expect.objectContaining({ fieldName: 'Region', valueHex: expect.any(String), randHex: expect.any(String) }),
-    );
-
-    expect(uploadJSONToIPFS).toHaveBeenCalledWith(
-      expect.objectContaining({
-        privateAttributeFields: [{ fieldId: fieldIdHexArg, label: 'Region' }],
-      }),
-    );
-  });
-
-  it('leaves privateAttributesRoot at the all-zero default when no attribute rows are filled in', async () => {
-    const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
-    renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
-
-    await fillThroughToSubmit({ categoryLabel: 'Subscription', name: 'DevCon Pass', maxSupply: '0' });
-
-    await waitFor(() => expect(createEvent).toHaveBeenCalled());
-    expect(buildMerkleTree).not.toHaveBeenCalled();
-    expect(savePrivateAttributeDraft).not.toHaveBeenCalled();
-    const call = createEvent.mock.calls[0];
-    expect(call[6]).toEqual(new Uint8Array(32));
+    expect(sawPrivateFieldsStep).not.toHaveBeenCalled();
+    expect(createEvent.mock.calls[0][6]).toEqual(new Uint8Array(32));
     expect(uploadJSONToIPFS).toHaveBeenCalledWith(
       expect.not.objectContaining({ privateAttributeFields: expect.anything() }),
+    );
+    expect(uploadJSONToIPFS).toHaveBeenCalledWith(
+      expect.not.objectContaining({ credentialAttributeFields: expect.anything() }),
     );
   });
 
@@ -280,15 +209,88 @@ describe('CreateEvent drawer view', () => {
 
     await waitFor(() => expect(createEvent).toHaveBeenCalled());
     expect(createEvent.mock.calls[0][6]).toEqual(new Uint8Array(32));
-    expect(savePrivateAttributeDraft).not.toHaveBeenCalled();
     expect(uploadJSONToIPFS).toHaveBeenCalledWith(
       expect.objectContaining({
-        credentialAttributeFields: [{ fieldId: expect.stringMatching(/^[0-9a-f]{64}$/), label: 'Sector' }],
+        credentialAttributeFields: [{ fieldId: expect.stringMatching(/^[0-9a-f]{64}$/), label: 'Sector', type: 'text' }],
       }),
     );
     expect(uploadJSONToIPFS).toHaveBeenCalledWith(
       expect.not.objectContaining({ privateAttributeFields: expect.anything() }),
     );
+  });
+
+  it('saves each private field with its type: number limits and list options', async () => {
+    const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
+    renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
+
+    await fillThroughToSubmit({
+      categoryLabel: 'Credential',
+      name: 'Licencia',
+      maxSupply: '0',
+      configureBeforeLastNext: async () => {
+        await userEvent.click(screen.getByRole('button', { name: /add private field/i }));
+        await userEvent.type(screen.getByLabelText('Attribute label'), 'Age');
+        await userEvent.selectOptions(screen.getByLabelText('Field type'), 'number');
+        await userEvent.type(screen.getByLabelText('Minimum value'), '0');
+        await userEvent.type(screen.getByLabelText('Maximum value'), '120');
+
+        await userEvent.click(screen.getByRole('button', { name: /add private field/i }));
+        await userEvent.type(screen.getAllByLabelText('Attribute label')[1], 'Sector');
+        await userEvent.selectOptions(screen.getAllByLabelText('Field type')[1], 'list');
+        await userEvent.type(screen.getByLabelText('List options'), 'Campo');
+        expect(screen.getByText(/at least two options/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^create$/i })).toBeDisabled();
+        await userEvent.type(screen.getByLabelText('List options'), ', Platea');
+      },
+    });
+
+    await waitFor(() => expect(createEvent).toHaveBeenCalled());
+    expect(uploadJSONToIPFS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        credentialAttributeFields: [
+          { fieldId: expect.any(String), label: 'Age', type: 'number', min: 0, max: 120 },
+          { fieldId: expect.any(String), label: 'Sector', type: 'list', options: ['Campo', 'Platea'] },
+        ],
+      }),
+    );
+  });
+
+  it('saves the validity, and gives a Credential with validity its private "Valid until" field', async () => {
+    const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
+    renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
+
+    await userEvent.click(screen.getByText('Credential'));
+    await clickNext();
+    await userEvent.type(screen.getByLabelText(/Credential Name/i), 'Matrícula');
+    await clickNext(); // details -> image
+    await clickNext(); // image -> supply
+    await userEvent.type(screen.getByLabelText(/Maximum Supply/i), '0');
+    expect(screen.getByLabelText('Validity')).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText('Validity unit'), 'years');
+    expect(screen.getByRole('button', { name: /^next$/i })).toBeDisabled(); // unit without an amount
+    await userEvent.type(screen.getByLabelText('Validity'), '5');
+    while (screen.queryByRole('button', { name: /^next$/i })) {
+      await clickNext();
+    }
+    await clickCreate();
+
+    await waitFor(() => expect(createEvent).toHaveBeenCalled());
+    expect(uploadJSONToIPFS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        validity: { amount: 5, unit: 'years' },
+        credentialAttributeFields: [
+          { fieldId: expect.stringMatching(/^[0-9a-f]{64}$/), label: 'Valid until', type: 'date', auto: 'validUntil' },
+        ],
+      }),
+    );
+  });
+
+  it('leaves validity out when it is "No expiry"', async () => {
+    const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
+    renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
+    await fillThroughToSubmit({ categoryLabel: 'Subscription', name: 'Club', maxSupply: '0' });
+    await waitFor(() => expect(createEvent).toHaveBeenCalled());
+    expect(uploadJSONToIPFS).toHaveBeenCalledWith(expect.not.objectContaining({ validity: expect.anything() }));
   });
 
   it('does not ask for a shared POAP image on the Credential flow — tokens get their own image later via push-mint', async () => {

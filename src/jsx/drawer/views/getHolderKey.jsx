@@ -5,7 +5,8 @@ import {
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
 import { errorFunction } from "../../toasts/sweetAlerts";
-import { formatHolderCode } from "../../../midnight/credential-crypto";
+import { generateHolderCode, mintLink } from "../../../midnight/invite-links";
+import LinkQrCard from "../../components/LinkQrCard";
 
 // getHolderPk(issuerId) is a per-organizer pseudonym (poap.compact) — deliberately DIFFERENT from
 // the caller pk shown as "your address" everywhere else in the app. It's the only value an
@@ -18,6 +19,10 @@ import { formatHolderCode } from "../../../midnight/credential-crypto";
 // (`<holderPk>.<encryptionKey>`, see credential-crypto.ts), so a credential with private
 // attributes can be delivered to it encrypted. Both halves are derived from local_sk: generating
 // the code again always gives the same value.
+//
+// The result also comes as a mint link + QR (invite-links.ts): opening it opens Mint POAP with this
+// code filled in. An organizer's invite link (/app/key, keyInvite.jsx) does all of this without
+// pasting their key first.
 export default function GetHolderKey() {
   const { midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
@@ -49,10 +54,7 @@ export default function GetHolderKey() {
     setHolderPkHex(null);
     setCopied(false);
     try {
-      const issuerIdBytes = Uint8Array.from(Buffer.from(trimmed, "hex"));
-      const hex = await midnight.provider.service.getHolderPkHex(issuerIdBytes);
-      const { publicKeyHex } = await midnight.provider.service.getEncryptionKeyPair(issuerIdBytes);
-      setHolderPkHex(formatHolderCode(hex, publicKeyHex));
+      setHolderPkHex(await generateHolderCode(midnight.provider.service, trimmed));
     } catch (error) {
       console.error("Error generating holder key:", error);
       errorFunction("Error", error.message || "Failed to generate your key. Please try again.", "");
@@ -125,6 +127,13 @@ export default function GetHolderKey() {
                     lets them send you the credential's private details, encrypted so only you can
                     read them.
                   </p>
+                </div>
+                <div className="mt-3">
+                  <LinkQrCard
+                    url={mintLink(window.location.origin, holderPkHex)}
+                    label="Or send this link"
+                    hint="Opening it opens Mint POAP with your key already filled in. Together, the organizer can scan the QR."
+                  />
                 </div>
               </div>
             )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "react-bootstrap";
 import { X, Copy, Check, Lock } from "lucide-react";
 import {
@@ -23,6 +23,8 @@ import {
   deliverCredentialPackage,
   packageToLinkFragment,
 } from "../../../midnight/credential-delivery";
+import { canonicalValue, fieldType } from "../../../midnight/attribute-types";
+import { parseValidity, validUntilIso } from "../../../midnight/validity";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -33,8 +35,9 @@ const STEP_RECIPIENT = "recipient";
 const STEP_PRIVATE = "private";
 const STEP_DOCUMENT = "document";
 const STEP_ICON = "icon";
-const MAX_VALUE_BYTES = 32;
-const utf8Length = (value) => new TextEncoder().encode((value || "").trim()).length;
+// Each field's value is checked and stored in its canonical form (attribute-types.ts): the same
+// text a later range question expands to, so "018" and "18" can't end up as different values.
+const valueCheck = (field, raw) => canonicalValue(field, raw || "");
 
 // mintTo(eventId, recipientPk, tokenMetadataURI, tokenPrivateMetadataCommit, credentialAttributesRoot) — the organizer-only
 // push-mint circuit (poap.compact) — is the counterpart to createPoap.jsx's self-service claim():
@@ -58,7 +61,7 @@ const utf8Length = (value) => new TextEncoder().encode((value || "").trim()).len
 // key inside their "Get My Key" code (credential-delivery.ts). An old code without that key — or a
 // failed upload — falls back to a private link the organizer sends by hand.
 export default function MintPoap() {
-  const { mintEvent, midnight } = useDrawer();
+  const { mintEvent, mintRecipient, midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
   const { metadata } = useEventMetadata(mintEvent?.metadataURI);
 
@@ -67,8 +70,21 @@ export default function MintPoap() {
   const [stepIndex, setStepIndex] = useState(0);
   const step = steps[Math.min(stepIndex, steps.length - 1)];
   const isLastStep = stepIndex >= steps.length - 1;
-  const [recipientPkHex, setRecipientPkHex] = useState("");
+  const [recipientPkHex, setRecipientPkHex] = useState(mintRecipient || "");
   const [privateValues, setPrivateValues] = useState({});
+  // A Credential with validity has an automatic "Valid until" field (createEvent.jsx): pre-filled
+  // with today + the event's validity, still editable (e.g. a license that started earlier).
+  const rawValidity = metadata?.validity;
+  const validUntilField = credentialFields.find((field) => field.auto === "validUntil");
+  useEffect(() => {
+    const validity = parseValidity(rawValidity);
+    if (!validUntilField || !validity) return;
+    setPrivateValues((current) =>
+      current[validUntilField.fieldId] !== undefined
+        ? current
+        : { ...current, [validUntilField.fieldId]: validUntilIso(Date.now(), validity) },
+    );
+  }, [validUntilField, rawValidity]);
   // Set after a successful mint that still needs the organizer to act: the private link to send.
   const [deliveryLink, setDeliveryLink] = useState(null);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -79,7 +95,7 @@ export default function MintPoap() {
   const recipient = parseHolderCode(recipientPkHex);
   const isRecipientValid = () => Boolean(recipient);
   const isDocumentValid = () => Boolean(documentValues.imageFile);
-  const isPrivateValid = () => credentialFields.every((f) => utf8Length(privateValues[f.fieldId]) <= MAX_VALUE_BYTES);
+  const isPrivateValid = () => credentialFields.every((f) => "value" in valueCheck(f, privateValues[f.fieldId]));
 
   const stepValidators = {
     [STEP_RECIPIENT]: isRecipientValid,
@@ -157,9 +173,15 @@ export default function MintPoap() {
         documentImage: documentImageUri,
       });
 
+      const canonicalValues = Object.fromEntries(
+        credentialFields.map((field) => {
+          const checked = valueCheck(field, privateValues[field.fieldId]);
+          return [field.fieldId, "value" in checked ? checked.value : ""];
+        }),
+      );
       const { fields: privateFields, root: credentialAttributesRoot } = await buildCredentialAttributes(
         credentialFields,
-        privateValues,
+        canonicalValues,
       );
 
       loadingFunction("Minting POAP", "Preparing transaction…", "");
@@ -340,23 +362,40 @@ export default function MintPoap() {
                   someone without revealing it. Leave a field empty to skip it.
                 </p>
                 {credentialFields.map((field) => {
-                  const bytes = utf8Length(privateValues[field.fieldId]);
-                  const tooLong = bytes > MAX_VALUE_BYTES;
+                  const type = fieldType(field);
+                  const checked = valueCheck(field, privateValues[field.fieldId]);
+                  const problem = "error" in checked ? checked.error : null;
+                  const inputId = `private-${field.fieldId}`;
+                  const value = privateValues[field.fieldId] || "";
+                  const setValue = (next) => setPrivateValues((current) => ({ ...current, [field.fieldId]: next }));
+                  const range =
+                    type === "number" && (field.min !== undefined || field.max !== undefined)
+                      ? ` (${field.min ?? "…"} to ${field.max ?? "…"})`
+                      : "";
                   return (
                     <div className="mb-3" key={field.fieldId}>
-                      <label className="form-label" htmlFor={`private-${field.fieldId}`}>{field.label}</label>
-                      <input
-                        id={`private-${field.fieldId}`}
-                        type="text"
-                        className={`form-control${tooLong ? " is-invalid" : ""}`}
-                        value={privateValues[field.fieldId] || ""}
-                        onChange={(event) =>
-                          setPrivateValues((current) => ({ ...current, [field.fieldId]: event.target.value }))
-                        }
-                      />
-                      {tooLong && (
-                        <small className="form-text text-danger d-block">
-                          {bytes}/{MAX_VALUE_BYTES} bytes — too long, shorten this value.
+                      <label className="form-label" htmlFor={inputId}>{field.label}{range}</label>
+                      {type === "list" ? (
+                        <select id={inputId} className="form-control" value={value} onChange={(event) => setValue(event.target.value)}>
+                          <option value="">—</option>
+                          {(field.options || []).map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={inputId}
+                          type={type === "number" ? "number" : type === "date" ? "date" : "text"}
+                          step={type === "number" ? 1 : undefined}
+                          className={`form-control${problem ? " is-invalid" : ""}`}
+                          value={value}
+                          onChange={(event) => setValue(event.target.value)}
+                        />
+                      )}
+                      {problem && <small className="form-text text-danger d-block">{problem}</small>}
+                      {field.auto === "validUntil" && !problem && (
+                        <small className="form-text text-muted d-block">
+                          Set from the event's validity. The holder can prove it's still valid without revealing it.
                         </small>
                       )}
                     </div>

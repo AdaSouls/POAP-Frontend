@@ -202,7 +202,7 @@ describe('EventCard Component', () => {
       });
     });
 
-    it('does not show an Ask for a Disclosure button when the event has no private attributes', async () => {
+    it('does not show an Ask for a Disclosure button when the event has no private credential fields', async () => {
       renderWithProviders(<EventCard event={mockEvent} isExpanded />);
       expect(screen.queryByRole('button', { name: /ask for a disclosure/i })).not.toBeInTheDocument();
     });
@@ -212,7 +212,7 @@ describe('EventCard Component', () => {
         ok: true,
         json: jest.fn().mockResolvedValue({
           name: 'DevCon 2026',
-          privateAttributeFields: [{ fieldId: 'cc'.repeat(32), label: 'Region' }],
+          credentialAttributeFields: [{ fieldId: 'cc'.repeat(32), label: 'Sector' }],
         }),
       });
       const dispatch = jest.fn();
@@ -226,7 +226,7 @@ describe('EventCard Component', () => {
         type: 'PUBLISH_DISCLOSURE_REQUEST',
         payload: {
           eventId: eventWithAttributes.eventId,
-          fields: [{ fieldId: 'cc'.repeat(32), label: 'Region', kind: 'event' }],
+          fields: [{ fieldId: 'cc'.repeat(32), label: 'Sector' }],
         },
       });
     });
@@ -259,7 +259,7 @@ describe('EventCard Component', () => {
 
       expect(dispatch).toHaveBeenCalledWith({
         type: 'SHOW_SUBSCRIBERS',
-        payload: { event: mockEvent, tokens, label: 'Subscribers' },
+        payload: { event: mockEvent, tokens, label: 'Subscribers', eventName: null },
       });
     });
 
@@ -300,6 +300,27 @@ describe('EventCard Component', () => {
         userRolesValue: { ...mockUserRoles, isIssuer: false },
       });
       expect(screen.getByRole('button', { name: /mint poap/i })).toBeInTheDocument();
+    });
+
+    it('gives the owner an Invite Link that opens the link popup with this event in it', async () => {
+      const dispatch = jest.fn();
+      renderWithProviders(<EventCard event={privateMockEvent} isExpanded />, {
+        drawerValue: {
+          ...mockDrawerContext,
+          midnight: { ...mockDrawerContext.midnight, provider: { address: privateMockEvent.issuerPk } },
+        },
+        drawerDispatch: dispatch,
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /invite link/i }));
+
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'SHOW_LINK_QR',
+        payload: expect.objectContaining({
+          title: 'Invite Link',
+          url: `${window.location.origin}/app/key#organizer=${privateMockEvent.issuerPk}&event=${privateMockEvent.eventId}`,
+        }),
+      });
     });
 
     it('does not show a Mint POAP button for a non-owner, even with the verified-issuer badge', () => {

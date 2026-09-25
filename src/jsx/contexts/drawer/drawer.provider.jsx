@@ -41,6 +41,8 @@ export function DrawerProvider({ children }) {
     showBackup: false,
     proveOwnership: false,
     showHolderProofs: false,
+    burnToken: false,
+    showLinkQr: false,
     open: false,
     poapEvents: [],
     poapCollection: [],
@@ -137,6 +139,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
       };
     case 'SHOW_MIDNIGHT_WALLET':
@@ -160,6 +164,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true
       };
     case 'CREATE_SOUL':
@@ -183,6 +189,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true
       };
     case 'CREATE_SOUL_TOKEN':
@@ -206,6 +214,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
         collection: action.payload
       };
@@ -230,6 +240,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true, 
         items: action.payload
       };
@@ -254,6 +266,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
           open: true,
           token: action.payload
         };
@@ -278,8 +292,12 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
-        mintEvent: action.payload
+        mintEvent: action.payload,
+        // Holder code from a mint link (mintLink.jsx), pre-filled as the recipient.
+        mintRecipient: action.recipient || null
       };
     case 'GET_HOLDER_KEY':
       return {
@@ -302,6 +320,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true
       };
     case 'SHOW_SUBSCRIBERS':
@@ -325,6 +345,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
         subscribers: action.payload
       };
@@ -349,6 +371,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
         blockchainInfo: action.payload
       };
@@ -373,6 +397,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: true,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
         holderProofsContext: action.payload
       };
@@ -397,8 +423,62 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: true,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
         ownershipProof: action.payload
+      };
+    case 'SHOW_BURN_TOKEN':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showMidnightWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: false,
+        createOwner: false,
+        checkCollection: false,
+        viewToken: false,
+        createMint: false,
+        getHolderKey: false,
+        showSubscribers: false,
+        showBlockchainInfo: false,
+        publishDisclosureRequest: false,
+        showBackup: false,
+        proveOwnership: false,
+        showHolderProofs: false,
+        burnToken: true,
+        showLinkQr: false,
+        open: true,
+        burnTokenContext: action.payload
+      };
+    case 'SHOW_LINK_QR':
+      return {
+        ...state,
+        showCardanoWallet: false,
+        showMidnightWallet: false,
+        createSoul: false,
+        createSoulToken: false,
+        createPoap: false,
+        createEvent: false,
+        createIssuer: false,
+        createOwner: false,
+        checkCollection: false,
+        viewToken: false,
+        createMint: false,
+        getHolderKey: false,
+        showSubscribers: false,
+        showBlockchainInfo: false,
+        publishDisclosureRequest: false,
+        showBackup: false,
+        proveOwnership: false,
+        showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: true,
+        open: true,
+        linkQr: action.payload
       };
     case 'SHOW_BACKUP':
       return {
@@ -421,6 +501,8 @@ function drawerReducer(state, action) {
         showBackup: true,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true
       };
     case 'PUBLISH_DISCLOSURE_REQUEST':
@@ -444,6 +526,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
         disclosureEvent: action.payload
       };
@@ -468,6 +552,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: false
       };
     case 'CREATE_POAP':
@@ -491,6 +577,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true,
         claimEvent: action.payload
       };
@@ -515,6 +603,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true
       };
     case 'CREATE_ISSUER':
@@ -538,6 +628,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true
       };
     case 'CREATE_OWNER':
@@ -561,6 +653,8 @@ function drawerReducer(state, action) {
         showBackup: false,
         proveOwnership: false,
         showHolderProofs: false,
+        burnToken: false,
+        showLinkQr: false,
         open: true
       };
     case 'UPDATE_EVENTS':

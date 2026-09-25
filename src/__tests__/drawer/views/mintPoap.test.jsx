@@ -75,6 +75,13 @@ describe('MintPoap drawer view', () => {
     expect(screen.queryByLabelText(/Recipient's Key/i)).not.toBeInTheDocument();
   });
 
+  it('pre-fills the recipient from a mint link', () => {
+    const code = `${'11'.repeat(32)}.${'22'.repeat(32)}`;
+    renderWithProviders(<MintPoap />, { drawerValue: { ...buildDrawerValue(jest.fn()), mintRecipient: code } });
+    expect(screen.getByLabelText(/Recipient's Key/i)).toHaveValue(code);
+    expect(screen.getByRole('button', { name: /^next$/i })).toBeEnabled();
+  });
+
   it('starts on the recipient step, with 3 step dots and no Back button', () => {
     const { container } = renderWithProviders(<MintPoap />, { drawerValue: buildDrawerValue(jest.fn()) });
 
@@ -245,6 +252,61 @@ describe('MintPoap drawer view', () => {
       return view;
     }
 
+    it('uses the input for each field type and blocks Next on a value outside its limits', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          name: 'Licencia',
+          credentialAttributeFields: [
+            { fieldId: '03'.repeat(32), label: 'Age', type: 'number', min: 0, max: 120 },
+            { fieldId: '04'.repeat(32), label: 'Birth date', type: 'date' },
+            { fieldId: '05'.repeat(32), label: 'Sector', type: 'list', options: ['Campo', 'Platea'] },
+          ],
+        }),
+      });
+      const view = renderWithProviders(<MintPoap />, {
+        drawerValue: { ...buildDrawerValue(jest.fn()), mintEvent: { ...mintEvent, metadataURI: 'https://example.com/typed.json' } },
+      });
+      await waitFor(() => expect(view.container.querySelectorAll('.step-dot')).toHaveLength(4));
+      await userEvent.type(screen.getByLabelText(/Recipient's Key/i), validRecipientPkHex);
+      await clickNext();
+
+      expect(screen.getByLabelText(/^Age/)).toHaveAttribute('type', 'number');
+      expect(screen.getByLabelText('Birth date')).toHaveAttribute('type', 'date');
+      expect(screen.getByLabelText('Sector').tagName).toBe('SELECT');
+      expect(screen.getByText(/Age \(0 to 120\)/)).toBeInTheDocument();
+
+      await userEvent.type(screen.getByLabelText(/^Age/), '130');
+      expect(screen.getByText(/must be at most 120/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^next$/i })).toBeDisabled();
+
+      await userEvent.clear(screen.getByLabelText(/^Age/));
+      await userEvent.type(screen.getByLabelText(/^Age/), '30');
+      expect(screen.getByRole('button', { name: /^next$/i })).toBeEnabled();
+    });
+
+    it('pre-fills a validity credential\'s "Valid until" from the event\'s validity', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          name: 'Matrícula',
+          validity: { amount: 5, unit: 'years' },
+          credentialAttributeFields: [{ fieldId: '06'.repeat(32), label: 'Valid until', type: 'date', auto: 'validUntil' }],
+        }),
+      });
+      const view = renderWithProviders(<MintPoap />, {
+        drawerValue: { ...buildDrawerValue(jest.fn()), mintEvent: { ...mintEvent, metadataURI: 'https://example.com/valid.json' } },
+      });
+      await waitFor(() => expect(view.container.querySelectorAll('.step-dot')).toHaveLength(4));
+      await userEvent.type(screen.getByLabelText(/Recipient's Key/i), validRecipientPkHex);
+      await clickNext();
+
+      const expected = new Date(Date.now());
+      expected.setUTCFullYear(expected.getUTCFullYear() + 5);
+      expect(screen.getByLabelText('Valid until')).toHaveValue(expected.toISOString().slice(0, 10));
+      expect(screen.getByText(/set from the event's validity/i)).toBeInTheDocument();
+    });
+
     async function fillAndMint(code) {
       await userEvent.type(screen.getByLabelText(/Recipient's Key/i), code);
       await clickNext();
@@ -264,7 +326,7 @@ describe('MintPoap drawer view', () => {
       await fillAndMint(`${validRecipientPkHex}.${'dd'.repeat(32)}`);
 
       await waitFor(() => expect(deliverCredentialPackage).toHaveBeenCalled());
-      expect(buildCredentialAttributes).toHaveBeenCalledWith(FIELDS, { [FIELDS[0].fieldId]: 'Campo' });
+      expect(buildCredentialAttributes).toHaveBeenCalledWith(FIELDS, { [FIELDS[0].fieldId]: 'Campo', [FIELDS[1].fieldId]: '' });
       expect(mintTo).toHaveBeenCalledWith(
         expect.any(Uint8Array),
         Uint8Array.from(Buffer.from(validRecipientPkHex, 'hex')),

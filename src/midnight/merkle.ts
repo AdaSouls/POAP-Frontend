@@ -112,6 +112,12 @@ function zeroLeafDigest(): Promise<bigint> {
  * depth must be 8 for an attribute tree or 16 for a set-membership tree (see poap.compact's
  * proveAttributeMembership). leaves.length must be between 1 and 2**depth.
  */
+// transientHash is synchronous WASM, ~0.25 ms per call: a range question's set (tens of thousands of
+// values, see attribute-types.ts) would block the page for seconds. Hand control back to the
+// browser every YIELD_EVERY hashes so the progress popup keeps animating.
+const YIELD_EVERY = 1000;
+const yieldToBrowser = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
 export async function buildMerkleTree(leaves: Uint8Array[], depth: number): Promise<MerkleTreeResult> {
   const capacity = 2 ** depth;
   if (leaves.length < 1 || leaves.length > capacity) {
@@ -138,10 +144,12 @@ export async function buildMerkleTree(leaves: Uint8Array[], depth: number): Prom
   levels[0] = realDigests;
   const nodeAt = (level: number, index: number): bigint =>
     index < levels[level].length ? levels[level][index] : paddingAt[level];
+  let hashed = 0;
   for (let level = 1; level <= depth; level++) {
     const next: bigint[] = new Array(Math.ceil(levels[level - 1].length / 2));
     for (let k = 0; k < next.length; k++) {
       next[k] = transientHash(FIELD_PAIR, [nodeAt(level - 1, 2 * k), nodeAt(level - 1, 2 * k + 1)]);
+      if (++hashed % YIELD_EVERY === 0) await yieldToBrowser();
     }
     levels[level] = next;
   }
