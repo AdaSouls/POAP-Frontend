@@ -2,13 +2,9 @@ import { useEffect, useCallback } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/index";
 import AppHome from "./pages/appHome";
-import Souls from "./pages/souls";
 import SettingsProfile from "./pages/settings-profile";
 import Search from "./pages/search";
 import { Drawer } from "./drawer/drawer";
-import Collection from "./pages/collection-details";
-import SoulboundClaim from "./pages/soulbound-claim";
-import Collections from "./pages/collections";
 import { useDrawerDispatch } from "./contexts/drawer/drawer.provider";
 import ClaimMint from "./pages/claim-mint";
 import { getAllEvents } from "../midnight/indexer.service";
@@ -73,11 +69,7 @@ const Router = () => {
               linked from any nav menu, same reasoning as /app/organizer-dashboard above. */}
           <Route path="/app/admin/deploy" element={<AdminDeploy />} />
           <Route path="/app/share/:pkHex" element={<SharedCollection />} />
-          <Route path="/app/souls" element={<Souls />} />
           <Route path="/app/Settings-profile" element={<SettingsProfile />} />
-          <Route path="/app/soulbounds-claim" element={<SoulboundClaim />} />
-          <Route path="/app/collection/:id" element={<Collection />} />
-          <Route path="/app/collections/:section" element={<Collections />} />
           <Route path="/app/claim-mint" element={<ClaimMint />} />
           <Route path="/app/credential" element={<CredentialImport />} />
           <Route path="/app/verify" element={<VerifyProof />} />

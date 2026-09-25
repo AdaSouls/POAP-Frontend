@@ -1,38 +1,18 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
-import useCardano from './useCardano';
 import useMidnight from './useMidnight';
-import {
-  Blockfrost
-} from "https://unpkg.com/lucid-cardano@0.10.7/web/mod.js";
 
 const DrawerContext = createContext(null);
 const DrawerDispatchContext = createContext(null);
 
 export function DrawerProvider({ children }) {
-  const cardanoState = useCardano(
-    {
-      network: process.env.REACT_APP_BLOCKFROST_NETWORK,
-      provider: new Blockfrost(
-          process.env.REACT_APP_BLOCKFROST_URL,
-          process.env.REACT_APP_BLOCKFROST_PROJECT_ID
-      )
-    }
-  );
-
   const midnightState = useMidnight();
 
   const initialState = {
-    cardano: cardanoState,
     midnight: midnightState,
-    showCardanoWallet: false,
     showMidnightWallet: false,
-    createSoul: false,
-    createSoulToken: false,
     createPoap: false,
     createEvent: false,
     createIssuer: false,
-    checkCollection: false,
-    viewToken: false,
     createMint: false,
     getHolderKey: false,
     showSubscribers: false,
@@ -110,52 +90,14 @@ function drawerReducer(state, action) {
           ...action.payload
         }
       };
-    case 'UPDATE_CARDANO_WALLET':
-      return { 
-        ...state, 
-        cardano: {
-          ...state.cardano,
-          wallet: action.payload
-        }
-      };
-    case 'SHOW_CARDANO_WALLET':
-      return {
-        ...state,
-        showCardanoWallet: true,
-        showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
-        createPoap: false,
-        createEvent: false,
-        createIssuer: false,
-        createOwner: false,
-        checkCollection: false,
-        viewToken: false,
-        createMint: false,
-        getHolderKey: false,
-        showSubscribers: false,
-        showBlockchainInfo: false,
-        publishDisclosureRequest: false,
-        showBackup: false,
-        proveOwnership: false,
-        showHolderProofs: false,
-        burnToken: false,
-        showLinkQr: false,
-        open: true,
-      };
     case 'SHOW_MIDNIGHT_WALLET':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: true,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -168,122 +110,14 @@ function drawerReducer(state, action) {
         showLinkQr: false,
         open: true
       };
-    case 'CREATE_SOUL':
-      return {
-        ...state,
-        showCardanoWallet: false,
-        showMidnightWallet: false,
-        createSoul: true,
-        createSoulToken: false,
-        createPoap: false,
-        createEvent: false,
-        createIssuer: false,
-        createOwner: false,
-        checkCollection: false,
-        viewToken: false,
-        createMint: false,
-        getHolderKey: false,
-        showSubscribers: false,
-        showBlockchainInfo: false,
-        publishDisclosureRequest: false,
-        showBackup: false,
-        proveOwnership: false,
-        showHolderProofs: false,
-        burnToken: false,
-        showLinkQr: false,
-        open: true
-      };
-    case 'CREATE_SOUL_TOKEN':
-      return {
-        ...state,
-        showCardanoWallet: false,
-        showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: true,
-        createPoap: false,
-        createEvent: false,
-        createIssuer: false,
-        createOwner: false,
-        checkCollection: false,
-        viewToken: false,
-        createMint: false,
-        getHolderKey: false,
-        showSubscribers: false,
-        showBlockchainInfo: false,
-        publishDisclosureRequest: false,
-        showBackup: false,
-        proveOwnership: false,
-        showHolderProofs: false,
-        burnToken: false,
-        showLinkQr: false,
-        open: true,
-        collection: action.payload
-      };
-    case 'CHECK_COLLECTION':
-      return {
-        ...state,
-        showCardanoWallet: false,
-        showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
-        createPoap: false,
-        createEvent: false,
-        createIssuer: false,
-        createOwner: false,
-        checkCollection: true,
-        viewToken: false,
-        createMint: false,
-        getHolderKey: false,
-        showSubscribers: false,
-        showBlockchainInfo: false,
-        publishDisclosureRequest: false,
-        showBackup: false,
-        proveOwnership: false,
-        showHolderProofs: false,
-        burnToken: false,
-        showLinkQr: false,
-        open: true, 
-        items: action.payload
-      };
-    case 'VIEW_TOKEN':
-        return {
-          ...state,
-          showCardanoWallet: false,
-          showMidnightWallet: false,
-          createSoul: false,
-          createSoulToken: false,
-          createPoap: false,
-          createEvent: false,
-          createIssuer: false,
-          createOwner: false,
-          checkCollection: false,
-          viewToken: true,
-          createMint: false,
-          getHolderKey: false,
-          showSubscribers: false,
-        showBlockchainInfo: false,
-        publishDisclosureRequest: false,
-        showBackup: false,
-        proveOwnership: false,
-        showHolderProofs: false,
-        burnToken: false,
-        showLinkQr: false,
-          open: true,
-          token: action.payload
-        };
     case 'CREATE_MINT':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: true,
         getHolderKey: false,
         showSubscribers: false,
@@ -302,16 +136,11 @@ function drawerReducer(state, action) {
     case 'GET_HOLDER_KEY':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: true,
         showSubscribers: false,
@@ -327,16 +156,11 @@ function drawerReducer(state, action) {
     case 'SHOW_SUBSCRIBERS':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: true,
@@ -353,16 +177,11 @@ function drawerReducer(state, action) {
     case 'SHOW_BLOCKCHAIN_INFO':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -379,16 +198,11 @@ function drawerReducer(state, action) {
     case 'SHOW_HOLDER_PROOFS':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -405,16 +219,11 @@ function drawerReducer(state, action) {
     case 'SHOW_PROVE_OWNERSHIP':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -431,16 +240,11 @@ function drawerReducer(state, action) {
     case 'SHOW_BURN_TOKEN':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -457,16 +261,11 @@ function drawerReducer(state, action) {
     case 'SHOW_LINK_QR':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -483,16 +282,11 @@ function drawerReducer(state, action) {
     case 'SHOW_BACKUP':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -508,16 +302,11 @@ function drawerReducer(state, action) {
     case 'PUBLISH_DISCLOSURE_REQUEST':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -534,16 +323,11 @@ function drawerReducer(state, action) {
     case 'CLOSE_DRAWER':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -559,16 +343,11 @@ function drawerReducer(state, action) {
     case 'CREATE_POAP':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: true,
         createEvent: false,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -585,16 +364,11 @@ function drawerReducer(state, action) {
     case 'CREATE_EVENT':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: true,
         createIssuer: false,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -610,16 +384,11 @@ function drawerReducer(state, action) {
     case 'CREATE_ISSUER':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: true,
         createOwner: false,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,
@@ -635,16 +404,11 @@ function drawerReducer(state, action) {
     case 'CREATE_OWNER':
       return {
         ...state,
-        showCardanoWallet: false,
         showMidnightWallet: false,
-        createSoul: false,
-        createSoulToken: false,
         createPoap: false,
         createEvent: false,
         createIssuer: false,
         createOwner: true,
-        checkCollection: false,
-        viewToken: false,
         createMint: false,
         getHolderKey: false,
         showSubscribers: false,

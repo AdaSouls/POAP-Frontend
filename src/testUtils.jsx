@@ -6,9 +6,6 @@ import { UserRolesContext } from './jsx/contexts/user-roles/user-roles.provider'
 
 // Mock drawer context
 export const mockDrawerContext = {
-  cardano: {
-    wallet: null,
-  },
   midnight: {
     provider: null,
     connecting: false,
@@ -19,9 +16,7 @@ export const mockDrawerContext = {
   poapEvents: [],
   poapCollection: [],
   poapIssuer: null,
-  showCardanoWallet: false,
   showMidnightWallet: false,
-  createSoul: false,
   createPoap: false,
   createEvent: false,
   open: false,

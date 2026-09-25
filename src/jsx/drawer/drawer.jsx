@@ -1,14 +1,9 @@
 import React, { useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useDrawer, useDrawerDispatch } from '../contexts/drawer/drawer.provider.jsx';
-import CardanoWallet from './views/cardanoWallet.jsx';
 import LaceWallet from './views/laceWallet.jsx';
-import CreateSoul from './views/createSoul.jsx';
 import CreatePoap from './views/createPoap.jsx';
 import CreateEvent from './views/createEvent.jsx';
-import CreateSoulToken from './views/createSoulToken.jsx';
-import CheckCollection from './views/checkCollection.jsx';
-import ViewToken from './views/viewToken.jsx';
 import CreateIssuer from './views/createIssuer.jsx';
 import MintPoap from './views/mintPoap.jsx';
 import GetHolderKey from './views/getHolderKey.jsx';
@@ -28,19 +23,8 @@ export const Drawer = () => {
 
   const drawerComponent = (state) => {
 
-    if (state?.showCardanoWallet === true) {
-      return <CardanoWallet />;
-    }
-
     if (state?.showMidnightWallet === true) {
       return <LaceWallet />;
-    }
-
-    if (state?.createSoul === true) {
-      return <CreateSoul />;
-    }
-    if (state?.createSoulToken === true) {
-      return <CreateSoulToken />;
     }
 
     if (state?.createPoap === true) {
@@ -53,14 +37,6 @@ export const Drawer = () => {
 
     if (state?.createIssuer === true) {
       return <CreateIssuer />;
-    }
-
-    if (state?.checkCollection === true) {
-      return <CheckCollection />;
-    }
-
-    if (state?.viewToken === true) {
-      return <ViewToken />;
     }
 
     if (state?.createMint === true) {
@@ -109,8 +85,7 @@ export const Drawer = () => {
   // treats switching between views as a transition, but re-renders of the same view (e.g. a
   // token prop changing) don't replay the animation.
   const activeViewKey = [
-    'showCardanoWallet', 'showMidnightWallet', 'createSoul', 'createSoulToken', 'createPoap',
-    'createEvent', 'createIssuer', 'checkCollection', 'viewToken', 'createMint', 'getHolderKey',
+    'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
     'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs', 'burnToken', 'showLinkQr',
   ].find((flag) => state?.[flag] === true) || 'none';
 
@@ -129,16 +104,10 @@ export const Drawer = () => {
   const isOpen = state?.open === true;
   const chromeViewKey = isOpen ? activeViewKey : lastViewKeyRef.current;
 
-  // Views that end in a signed Midnight (or Cardano) transaction get the solid/trust treatment;
-  // pure browsing/info views (viewToken) stay glass. The two Cardano-native views
-  // sharing this same drawer container (showCardanoWallet, createSoul*) default to solid too —
-  // they're also wallet/creation flows, and their content isn't being redesigned here.
-  // Every MODAL_VIEWS member is excluded here (not just showMidnightWallet) — they all get their
-  // own centered-modal glass treatment below instead of the solid lateral one. Functionally inert
-  // either way (.drawer.drawer-modal's own background/border/shadow rule fully overrides the
-  // drawer-solid/drawer-glass tone class), but kept consistent with the stated intent.
-  const SOLID_VIEWS = ['showCardanoWallet', 'createSoul', 'createSoulToken'];
-  const drawerTone = SOLID_VIEWS.includes(chromeViewKey) ? 'drawer-solid' : 'drawer-glass';
+  // The solid tone only ever applied to the removed Cardano views (wallet, createSoul*); every
+  // remaining view is either a centered modal (whose own rule overrides the tone class anyway) or
+  // a lateral glass drawer.
+  const drawerTone = 'drawer-glass';
 
   // Views that opt out of the shared lateral drawer-cart layout in favor of a centered modal (see
   // .drawer-modal in theme-dark-glass.css) — every other view keeps sliding in from the side.

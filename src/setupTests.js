@@ -45,49 +45,6 @@ if (!window.IntersectionObserver) {
   };
 }
 
-// Mock Cardano-related Lucid imports to avoid loading browser modules in tests
-jest.mock('./jsx/contexts/drawer/useCardano', () => {
-  return function useCardanoMock() {
-    return {
-      wallet: null,
-      setWallet: jest.fn(),
-    };
-  };
-});
-
-jest.mock('./utils/util.ts', () => {
-  // Return a minimal mock module without importing the real file,
-  // to avoid resolving the browser Lucid module in tests.
-  return {
-    Lucid: {
-      new: jest.fn(() => ({
-        selectWallet: () => ({}),
-        wallet: { address: jest.fn(async () => 'addr_test1...' ) },
-        utils: {},
-      })),
-    },
-    applyParamsToScript: jest.fn(),
-    applyDoubleCborEncoding: jest.fn(),
-    Data: {},
-    SpendingValidator: jest.fn(),
-    MintingPolicy: jest.fn(),
-    toHex: jest.fn(),
-    fromText: jest.fn(),
-  };
-});
-
-jest.mock('./utils/util', () => {
-  return {
-    Lucid: {
-      new: jest.fn(() => ({
-        selectWallet: () => ({}),
-        wallet: { address: jest.fn(async () => 'addr_test1...' ) },
-        utils: {},
-      })),
-    },
-  };
-});
-
 // Mock react-apexcharts globally — it renders to canvas/SVG via browser APIs jsdom doesn't
 // implement (ResizeObserver etc.), which crashes the real component in tests. Tests that care
 // about chart data can assert on these props instead.
@@ -120,14 +77,11 @@ jest.mock('./jsx/contexts/drawer/drawer.provider', () => {
   const DrawerDispatchContext = createContext(null);
 
   const defaultDrawerContext = {
-    cardano: { wallet: null },
     ethereum: { provider: null, address: null },
     poapEvents: [],
     poapCollection: [],
     poapIssuer: null,
-    showCardanoWallet: false,
     showEthereumWallet: false,
-    createSoul: false,
     createPoap: false,
     createEvent: false,
     open: false,
