@@ -104,11 +104,13 @@ function isPackageFor(pkg: any, eventIdHex: string, holderPkHex: string): pkg is
 }
 
 // Returns the first delivered package that decrypts with this holder's key, is addressed to this
-// (holder, event) and whose attributes rebuild the root it claims. Saves it locally.
+// (holder, event), whose attributes rebuild the root it claims and that passes `accept` (the
+// on-chain check for one token, see holder-proofs.ts). Saves it locally.
 export async function fetchDeliveredPackage(
   eventIdHex: string,
   holderPkHex: string,
   keys: EncryptionKeyPair,
+  accept: (pkg: CredentialPackage) => Promise<boolean> = async () => true,
 ): Promise<CredentialPackage | null> {
   const lookupId = await deliveryLookupId(holderPkHex, eventIdHex);
   const response = await fetch(`${IPFS_API_URL}/api/credential-delivery/${lookupId}`);
@@ -117,7 +119,7 @@ export async function fetchDeliveredPackage(
   for (const envelope of envelopes || []) {
     try {
       const pkg = JSON.parse(new TextDecoder().decode(await openEnvelope(envelope, keys)));
-      if (isPackageFor(pkg, eventIdHex, holderPkHex) && (await packageRootMatches(pkg))) {
+      if (isPackageFor(pkg, eventIdHex, holderPkHex) && (await packageRootMatches(pkg)) && (await accept(pkg))) {
         saveCredentialPackage(pkg);
         return pkg;
       }

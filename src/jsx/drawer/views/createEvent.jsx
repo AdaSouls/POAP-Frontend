@@ -31,6 +31,7 @@ import {
 import eventNormal from "../../../images/svg/event-normal.svg";
 import { txHashOf } from "../../../midnight/tx-result";
 import { VALID_UNTIL_FIELD, VALIDITY_UNITS, parseValidity } from "../../../midnight/validity";
+import SelectDropdown from "../../components/SelectDropdown";
 
 // NOTE: createEvent(eventId, maxSupply, expiration, isPublicMint, metadataURI) circuit — the
 // metadataURI is a pointer to off-chain JSON (name/description/image/category/…), not stored
@@ -433,17 +434,15 @@ export default function CreateEvent() {
                     disabled={!validityUnit}
                     onChange={(event) => setValidityAmount(event.target.value)}
                   />
-                  <select
-                    className="form-control"
-                    aria-label="Validity unit"
+                  <SelectDropdown
+                    ariaLabel="Validity unit"
                     value={validityUnit}
-                    onChange={(event) => setValidityUnit(event.target.value)}
-                  >
-                    <option value="">No expiry</option>
-                    {VALIDITY_UNITS.map((unit) => (
-                      <option key={unit} value={unit}>{unit[0].toUpperCase() + unit.slice(1)}</option>
-                    ))}
-                  </select>
+                    onChange={setValidityUnit}
+                    options={[
+                      { value: "", label: "No expiry" },
+                      ...VALIDITY_UNITS.map((unit) => ({ value: unit, label: unit[0].toUpperCase() + unit.slice(1) })),
+                    ]}
+                  />
                 </div>
                 <small className="form-text text-muted">
                   Optional. How long each POAP stays valid,{" "}

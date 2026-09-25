@@ -230,13 +230,15 @@ describe('CreateEvent drawer view', () => {
       configureBeforeLastNext: async () => {
         await userEvent.click(screen.getByRole('button', { name: /add private field/i }));
         await userEvent.type(screen.getByLabelText('Attribute label'), 'Age');
-        await userEvent.selectOptions(screen.getByLabelText('Field type'), 'number');
+        await userEvent.click(screen.getByLabelText('Field type'));
+        await userEvent.click(screen.getByRole('option', { name: 'Number' }));
         await userEvent.type(screen.getByLabelText('Minimum value'), '0');
         await userEvent.type(screen.getByLabelText('Maximum value'), '120');
 
         await userEvent.click(screen.getByRole('button', { name: /add private field/i }));
         await userEvent.type(screen.getAllByLabelText('Attribute label')[1], 'Sector');
-        await userEvent.selectOptions(screen.getAllByLabelText('Field type')[1], 'list');
+        await userEvent.click(screen.getAllByLabelText('Field type')[1]);
+        await userEvent.click(screen.getByRole('option', { name: 'List' }));
         await userEvent.type(screen.getByLabelText('List options'), 'Campo');
         expect(screen.getByText(/at least two options/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /^create$/i })).toBeDisabled();
@@ -266,7 +268,8 @@ describe('CreateEvent drawer view', () => {
     await clickNext(); // image -> supply
     await userEvent.type(screen.getByLabelText(/Maximum Supply/i), '0');
     expect(screen.getByLabelText('Validity')).toBeDisabled();
-    await userEvent.selectOptions(screen.getByLabelText('Validity unit'), 'years');
+    await userEvent.click(screen.getByLabelText('Validity unit'));
+    await userEvent.click(screen.getByRole('option', { name: 'Years' }));
     expect(screen.getByRole('button', { name: /^next$/i })).toBeDisabled(); // unit without an amount
     await userEvent.type(screen.getByLabelText('Validity'), '5');
     while (screen.queryByRole('button', { name: /^next$/i })) {

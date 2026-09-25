@@ -273,7 +273,7 @@ describe('MintPoap drawer view', () => {
 
       expect(screen.getByLabelText(/^Age/)).toHaveAttribute('type', 'number');
       expect(screen.getByLabelText('Birth date')).toHaveAttribute('type', 'date');
-      expect(screen.getByLabelText('Sector').tagName).toBe('SELECT');
+      expect(screen.getByLabelText('Sector')).toHaveAttribute('aria-haspopup', 'listbox');
       expect(screen.getByText(/Age \(0 to 120\)/)).toBeInTheDocument();
 
       await userEvent.type(screen.getByLabelText(/^Age/), '130');

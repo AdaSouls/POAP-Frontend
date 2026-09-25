@@ -136,7 +136,7 @@ const EventCard = forwardRef(({
             value: event.issuerPk,
             copyable: true,
             copyAriaLabel: "Copy organizer key",
-            hint: "Share this with the credential recipient so they can generate their own key for you (My Subscriptions → Get My Key).",
+            hint: "Share this with the credential recipient so they can generate their own key for you (My Subscriptions → Paste Link).",
           }
         : { key: "organizer", label: "Organizer", value: event.issuerPk },
       { key: "block", label: "Block", value: event.createdBlock ?? "N/A", href: explorerBlockUrl(event.createdBlock) },
@@ -293,6 +293,8 @@ const EventCard = forwardRef(({
   // token shares the event's own image anyway), so skip the fetch there entirely.
   const [eventTokens, setEventTokens] = useState([]);
   const [tokensLoading, setTokensLoading] = useState(false);
+  // Organizer view only, once the event's tokens have loaded and there is at least one.
+  const showRecipientsButton = variant !== "explore" && !tokensLoading && eventTokens.length > 0;
 
   useEffect(() => {
     if (!isExpanded || variant === "explore") return undefined;
@@ -424,7 +426,10 @@ const EventCard = forwardRef(({
                 the card's own resize — with the image effectively disappearing from view for a
                 moment in between. */}
             <div className={isExpanded ? "row" : undefined}>
-              <div className={isExpanded ? "col-md-7" : undefined}>
+              {/* Expanded: both columns are flex columns stretched to the row's height, and each one's
+                  bottom buttons sit in an mt-auto block, so the left and right button rows always
+                  end on the same line, whichever column is taller. */}
+              <div className={isExpanded ? "col-md-7 d-flex flex-column" : undefined}>
                 <div className={isExpanded ? "d-flex align-items-start" : "d-flex align-items-stretch card-media-row"}>
                   {/* The image is never part of textStyle's fade — only text fades out before the
                       resize and back in after; the image stays visible throughout. */}
@@ -537,7 +542,7 @@ const EventCard = forwardRef(({
                      taxonomy breakdown column, then optional channels/organization block, then raw
                      blockchain detail. textStyle fades this whole block out before the resize and
                      back in after (TEXT_FADE_MS above), separately from the header row above. */
-                  <div style={textStyle}>
+                  <div className="d-flex flex-column flex-grow-1" style={textStyle}>
                   <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
 
                   <div className="row no-gutters">
@@ -629,8 +634,16 @@ const EventCard = forwardRef(({
                     </>
                   )}
 
+                  {!event.isActive && event.deactivatedBlock && (
+                    <p className="text-muted small mt-3 mb-0">
+                      Deactivated at block <span className="text-white">{event.deactivatedBlock}</span>.
+                    </p>
+                  )}
+
+                  <div className="mt-auto">
                   <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
 
+                  <div className="d-flex flex-wrap" style={{ gap: "8px" }}>
                   <button
                     type="button"
                     className="btn btn-card-detail-action btn-sm"
@@ -643,7 +656,7 @@ const EventCard = forwardRef(({
                   {isOwnEvent &&
                     (ownershipRequestPublished ? (
                       <span
-                        className="btn btn-card-detail-action btn-sm ml-2 disabled"
+                        className="btn btn-card-detail-action btn-sm disabled"
                         title="Holders can prove they hold this POAP (by token, or anonymously) with one signature."
                       >
                         <BadgeCheck size={14} className="mr-2" />
@@ -652,7 +665,7 @@ const EventCard = forwardRef(({
                     ) : (
                       <button
                         type="button"
-                        className="btn btn-card-detail-action btn-sm ml-2"
+                        className="btn btn-card-detail-action btn-sm"
                         onClick={askForProofOfOwnership}
                         disabled={ownershipRequestPublished === null || publishingOwnershipRequest}
                         title="Publish a request so holders can prove they hold this POAP — by token, or anonymously — with one signature."
@@ -665,26 +678,22 @@ const EventCard = forwardRef(({
                   {privateAttributeFields.length > 0 && (
                     <button
                       type="button"
-                      className="btn btn-card-detail-action btn-sm ml-2"
+                      className="btn btn-card-detail-action btn-sm"
                       onClick={openPublishDisclosureRequestDrawer}
                     >
                       <Lock size={14} className="mr-2" />
                       Ask for a Disclosure
                     </button>
                   )}
-
-                  {!event.isActive && event.deactivatedBlock && (
-                    <p className="text-muted small mt-3 mb-0">
-                      Deactivated at block <span className="text-white">{event.deactivatedBlock}</span>.
-                    </p>
-                  )}
+                  </div>
+                  </div>
                   </div>
                 )}
               </div>
 
               {isExpanded && (
                 <div
-                  className="col-md-5"
+                  className="col-md-5 d-flex flex-column"
                   style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px", ...textStyle }}
                 >
                   <div className="d-flex align-items-center justify-content-end mb-3">
@@ -758,35 +767,24 @@ const EventCard = forwardRef(({
                           <Chart options={statsChartOptions} series={statsChartSeries} type="donut" height={180} />
                         </div>
                       )}
-
-                      {tokensLoading ? (
-                        <p className="text-muted small mt-3">Loading…</p>
-                      ) : (
-                        eventTokens.length > 0 && (
-                          <button
-                            type="button"
-                            className="btn btn-card-detail-action btn-sm mt-3"
-                            onClick={openSubscribersDrawer}
-                          >
-                            View {subscriberListLabel} ({eventTokens.length})
-                          </button>
-                        )
-                      )}
                     </>
                   )}
 
-                  {(canMintForEvent || variant === "explore") && (
-                    <div className="card-detail-actions">
-                      {canMintForEvent && (
+                  {/* Bottom row, on the same line as the left column's buttons: the recipients list
+                      on the left, the actions on the right (Invite Link, then Mint POAP). */}
+                  {(showRecipientsButton || canMintForEvent || variant === "explore") && (
+                    <div className="card-detail-actions card-detail-actions-inline mt-auto pt-3">
+                      {showRecipientsButton && (
                         <button
                           type="button"
-                          className="btn btn-card-detail-action btn-card-detail-action-role btn-sm"
-                          onClick={openMintDrawer}
+                          className="btn btn-card-detail-action btn-sm"
+                          onClick={openSubscribersDrawer}
                         >
-                          Mint POAP
+                          View {subscriberListLabel} ({eventTokens.length})
                         </button>
                       )}
 
+                      <div className="d-flex flex-wrap justify-content-end ml-auto" style={{ gap: "8px" }}>
                       {canMintForEvent && (
                         <button
                           type="button"
@@ -795,6 +793,16 @@ const EventCard = forwardRef(({
                         >
                           <Link2 size={14} className="mr-2" />
                           Invite Link
+                        </button>
+                      )}
+
+                      {canMintForEvent && (
+                        <button
+                          type="button"
+                          className="btn btn-card-detail-action btn-card-detail-action-role btn-sm"
+                          onClick={openMintDrawer}
+                        >
+                          Mint POAP
                         </button>
                       )}
 
@@ -808,6 +816,7 @@ const EventCard = forwardRef(({
                           {isSubscribed ? claimLabel.done : claimLabel.action}
                         </button>
                       )}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer } from "../contexts/drawer/drawer.provider";
 import { useEventMetadata } from "../hooks/useEventMetadata";
@@ -15,13 +15,16 @@ import loadingGif from "../../images/loading.gif";
 export default function KeyInvite() {
   const { midnight } = useDrawer();
   const service = midnight?.provider?.service;
-  const [invite] = useState(() => parseInviteFragment(window.location.hash || ""));
+  // From the router, not window.location: Paste Link can open another invite while this page is up.
+  const { hash } = useLocation();
+  const invite = useMemo(() => parseInviteFragment(hash || ""), [hash]);
   const [event, setEvent] = useState(null);
   const { metadata } = useEventMetadata(event?.metadataURI);
   const [code, setCode] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    setEvent(null);
     if (!invite?.eventIdHex) return undefined;
     let cancelled = false;
     getEvent(invite.eventIdHex)
@@ -37,6 +40,7 @@ export default function KeyInvite() {
   useEffect(() => {
     if (!invite || !service) return undefined;
     let cancelled = false;
+    setCode(null);
     setError(null);
     generateHolderCode(service, invite.organizerPkHex)
       .then((generated) => {

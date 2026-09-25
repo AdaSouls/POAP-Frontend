@@ -810,12 +810,27 @@ select option,
    to guess which field is last), a bolder/uppercase label so it out-weighs the value instead of
    the reverse, and the copy button sitting directly next to the (possibly multi-line) value instead
    of stretched to the row's far edge. */
+/* One boxed item per field (blockchainInfoModal.jsx), same box as proofHistory.jsx's
+   .proof-history-item: darker fill, soft border, copy button on the right edge. */
 .blockchain-field {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-hover);
 }
 
 .blockchain-field:last-child {
   margin-bottom: 0;
+}
+
+.blockchain-field .blockchain-field-row {
+  justify-content: space-between;
+}
+
+.blockchain-field .info-hint-card {
+  margin-top: 8px;
+  background: transparent;
 }
 
 /* Inline with its value (see BlockchainField in eventCard.jsx) — "Label: value" reads as one line
@@ -918,6 +933,25 @@ select option,
 
 .poap-verified-seal-icon {
   color: #34c38f;
+}
+
+/* poapCard.jsx's validity seal: expired / not proven yet. */
+.poap-verified-seal-card.is-expired {
+  background: rgba(244, 106, 106, 0.08);
+  border-color: rgba(244, 106, 106, 0.35);
+}
+
+.poap-verified-seal-card.is-expired .poap-verified-seal-icon {
+  color: #f46a6a;
+}
+
+.poap-verified-seal-card.is-pending {
+  background: rgba(116, 120, 141, 0.08);
+  border-color: rgba(116, 120, 141, 0.35);
+}
+
+.poap-verified-seal-card.is-pending .poap-verified-seal-icon {
+  color: #a6b0cf;
 }
 
 /* Same shield as the ownership seal, blurred: the anonymous proof doesn't say which POAP it was. */
@@ -1205,6 +1239,46 @@ select option,
   cursor: help;
 }
 
+/* Collapsed POAP card: Proven / validity as round icon pills, the same 30px height as the
+   CategoryBadge on the same row (12px text, 1.5 line-height, 5px padding, 1px border). On hover the
+   label slides out to the right. Colors come from .poap-proven-badge / .poap-validity-badge. */
+.card-poap .poap-card-icon-pill {
+  height: 30px; /* measured: identical to .category-badge's rendered height */
+  min-width: 30px;
+  padding: 0 7px;
+  border-radius: 999px;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  transition: padding 0.25s ease;
+}
+
+.card-poap .poap-card-icon-pill svg {
+  flex-shrink: 0;
+}
+
+.card-poap .poap-card-icon-pill-label {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease, opacity 0.2s ease, margin-left 0.3s ease;
+}
+
+.card-poap .poap-card-icon-pill:hover {
+  padding: 0 12px 0 8px;
+}
+
+.card-poap .poap-card-icon-pill:hover .poap-card-icon-pill-label {
+  max-width: 220px;
+  opacity: 1;
+  margin-left: 6px;
+}
+
 .card-poap .poap-validity-badge.is-expired {
   border-color: #f46a6a;
   color: #f46a6a;
@@ -1326,6 +1400,14 @@ select option,
   gap: 8px;
 }
 
+/* eventCard.jsx's expanded right column: in the flow at the column's bottom (mt-auto), so it lines
+   up with the left column's buttons instead of floating in the card's corner. */
+.card-detail-actions.card-detail-actions-inline {
+  position: static;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 /* Drawer — singleton chrome, gets the real blur. drawer.jsx computes a `drawer-glass`/
    `drawer-solid` modifier from the same activeViewKey it already derives for the
    AnimatePresence key, since the drawer hosts both browsing views (viewToken) and
@@ -1421,16 +1503,22 @@ select option,
    modals instead. Separate class from .drawer-modal-wide (which only controls width) — createEvent
    carries both classes, createMint (mintPoap.jsx's Recipient's Key input, flagged as reading
    "black" against this form's own glass surface) carries just this one, staying its default
-   (narrower) width. See drawer.jsx's isGlassFormView. */
+   (narrower) width. See drawer.jsx's isGlassFormView. verifyProof.jsx's "Verify another proof"
+   input and ProofReceipt.jsx's copyable verify link (Prove a Private Detail / Prove Ownership
+   popups) sit on the same kind of glass surface, so they get the same treatment. */
 .drawer-modal-glass-form .form-control,
-.drawer-modal-glass-form .form-select {
+.drawer-modal-glass-form .form-select,
+.verify-proof-card .form-control,
+.proof-receipt .form-control {
   background: transparent;
   border-color: var(--glass-border);
   color: var(--text-on-glass);
 }
 
 .drawer-modal-glass-form .form-control:hover,
-.drawer-modal-glass-form .form-select:hover {
+.drawer-modal-glass-form .form-select:hover,
+.verify-proof-card .form-control:hover,
+.proof-receipt .form-control:hover {
   background: transparent;
   border-color: var(--glass-border);
 }
@@ -1438,13 +1526,19 @@ select option,
 .drawer-modal-glass-form .form-control:focus,
 .drawer-modal-glass-form .form-control:active,
 .drawer-modal-glass-form .form-select:focus,
-.drawer-modal-glass-form .form-select:active {
+.drawer-modal-glass-form .form-select:active,
+.verify-proof-card .form-control:focus,
+.verify-proof-card .form-control:active,
+.proof-receipt .form-control:focus,
+.proof-receipt .form-control:active {
   background: transparent;
   border-color: var(--palette-5);
   box-shadow: 0 0 0 0.2rem rgba(155, 168, 171, 0.25) !important;
 }
 
-.drawer-modal-glass-form .form-control::placeholder {
+.drawer-modal-glass-form .form-control::placeholder,
+.verify-proof-card .form-control::placeholder,
+.proof-receipt .form-control::placeholder {
   color: var(--text-on-glass-muted);
 }
 

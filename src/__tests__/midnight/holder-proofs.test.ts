@@ -1,13 +1,15 @@
 import {
   fetchRequestRule,
   listAnswerableRequests,
+  loadCredentialPackage,
   proveAttendance,
   proveAttribute,
   valueQualifies,
 } from '../../midnight/holder-proofs';
 import { getAllDisclosureRequests } from '../../midnight/indexer.service';
 import { fetchRequestRuleCandidates } from '../../midnight/disclosure-sets';
-import { credentialPathOnChain } from '../../midnight/credential-delivery';
+import { credentialPathOnChain, fetchDeliveredPackage } from '../../midnight/credential-delivery';
+import { saveCredentialPackage } from '../../midnight/credential-store';
 import { buildMerkleTree } from '../../midnight/merkle';
 
 // WASM-backed modules (compiled contract, transientHash) are mocked — see merkle.test.ts.
@@ -62,6 +64,37 @@ beforeEach(() => {
       return { set: true };
     },
   }));
+});
+
+describe('loadCredentialPackage', () => {
+  const token = { tokenId: 7, eventId: EVENT, issuerPk: ORGANIZER, holderPk: PKG.holderPk };
+  const service = () => ({
+    getState: jest.fn(async () => ({ ledger: { credentials: {} } })),
+    getEncryptionKeyPair: jest.fn(async () => ({ publicKeyHex: 'ee'.repeat(32) })),
+  });
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    jest.clearAllMocks();
+  });
+
+  it('uses the local copy when it matches the token on-chain', async () => {
+    saveCredentialPackage(PKG);
+    (credentialPathOnChain as jest.Mock).mockResolvedValue({ cred: true });
+    const svc = service();
+    await expect(loadCredentialPackage(svc as any, token)).resolves.toEqual(PKG);
+    expect(credentialPathOnChain).toHaveBeenCalledWith({}, 7, EVENT, PKG.holderPk, PKG.credAttrRoot);
+    expect(fetchDeliveredPackage).not.toHaveBeenCalled();
+  });
+
+  it("skips a local copy left by a burned credential of the same event and fetches this token's", async () => {
+    const stale = { ...PKG, credAttrRoot: 'ab'.repeat(32) };
+    const fresh = { ...PKG, credAttrRoot: 'cd'.repeat(32) };
+    saveCredentialPackage(stale);
+    (credentialPathOnChain as jest.Mock).mockImplementation(async (_c, _t, _e, _h, root) => (root === fresh.credAttrRoot ? { cred: true } : null));
+    (fetchDeliveredPackage as jest.Mock).mockImplementation(async (_e, _h, _k, accept) => ((await accept(stale)) ? stale : (await accept(fresh)) ? fresh : null));
+    await expect(loadCredentialPackage(service() as any, token)).resolves.toEqual(fresh);
+  });
 });
 
 describe('listAnswerableRequests', () => {

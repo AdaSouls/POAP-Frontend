@@ -41,6 +41,35 @@ export function parseMintFragment(hash: string): { holderCode: string; eventIdHe
   return { holderCode: to.trim(), eventIdHex: event ? event.toLowerCase() : null };
 }
 
+export type PastedInput =
+  | { kind: 'invite' | 'mint'; route: string }
+  | { kind: 'key'; organizerPkHex: string };
+
+// What someone pasted into "Paste Link" (getHolderKey.jsx): an invite link, a mint link, or an
+// organizer's bare key. Links come back as an in-app route (path + fragment) so opening them is a
+// client-side navigation that keeps the wallet connected. Their origin is ignored, so a link built
+// on another deployment of the portal still opens here.
+export function parsePastedInput(text: string): PastedInput | null {
+  const trimmed = (text || '').trim();
+  if (HEX_64.test(trimmed)) return { kind: 'key', organizerPkHex: trimmed.toLowerCase() };
+  let url: URL;
+  try {
+    url = new URL(trimmed, 'http://paste.invalid');
+  } catch {
+    return null;
+  }
+  if (url.pathname === '/app/key' && parseInviteFragment(url.hash)) return { kind: 'invite', route: `/app/key${url.hash}` };
+  if (url.pathname === '/app/mint' && parseMintFragment(url.hash)) return { kind: 'mint', route: `/app/mint${url.hash}` };
+  return null;
+}
+
+// Mint POAP's recipient field takes either the holder code or the whole mint link it came in.
+export function holderCodeFromInput(text: string): string {
+  const pasted = parsePastedInput(text);
+  if (pasted?.kind !== 'mint') return text;
+  return parseMintFragment(pasted.route.slice(pasted.route.indexOf('#')))?.holderCode ?? text;
+}
+
 type HolderCodeService = {
   getHolderPkHex(issuerId: Uint8Array): Promise<string>;
   getEncryptionKeyPair(issuerId: Uint8Array): Promise<{ publicKeyHex: string }>;

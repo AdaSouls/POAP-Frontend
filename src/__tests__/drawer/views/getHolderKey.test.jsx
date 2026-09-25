@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event';
 import GetHolderKey from '../../../jsx/drawer/views/getHolderKey';
 import { mockDrawerContext, renderWithProviders } from '../../../testUtils';
 
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
 describe('GetHolderKey drawer view', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -12,7 +18,25 @@ describe('GetHolderKey drawer view', () => {
   it('shows a connect-wallet message when there is no provider', () => {
     renderWithProviders(<GetHolderKey />);
     expect(screen.getByText(/connect your wallet first/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/organizer public key/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/link or organizer key/i)).not.toBeInTheDocument();
+  });
+
+  it('opens a pasted invite link in-app, closing the popup, without deriving anything', async () => {
+    const getHolderPkHex = jest.fn();
+    const dispatch = jest.fn();
+    const drawerValue = {
+      ...mockDrawerContext,
+      midnight: { ...mockDrawerContext.midnight, provider: { service: { getHolderPkHex } } },
+    };
+    renderWithProviders(<GetHolderKey />, { drawerValue, drawerDispatch: dispatch });
+
+    const organizer = 'ab'.repeat(32);
+    await userEvent.type(screen.getByLabelText(/link or organizer key/i), `https://velum.example/app/key#organizer=${organizer}`);
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CLOSE_DRAWER' });
+    expect(mockNavigate).toHaveBeenCalledWith(`/app/key#organizer=${organizer}`);
+    expect(getHolderPkHex).not.toHaveBeenCalled();
   });
 
   it('rejects an invalid issuer public key without calling the service', async () => {
@@ -23,8 +47,8 @@ describe('GetHolderKey drawer view', () => {
     };
     renderWithProviders(<GetHolderKey />, { drawerValue });
 
-    await userEvent.type(screen.getByLabelText(/organizer public key/i), 'not-a-valid-key');
-    await userEvent.click(screen.getByRole('button', { name: /generate my key/i }));
+    await userEvent.type(screen.getByLabelText(/link or organizer key/i), 'not-a-valid-key');
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(getHolderPkHex).not.toHaveBeenCalled();
   });
@@ -42,8 +66,8 @@ describe('GetHolderKey drawer view', () => {
     };
     renderWithProviders(<GetHolderKey />, { drawerValue });
 
-    await userEvent.type(screen.getByLabelText(/organizer public key/i), issuerPkHex);
-    await userEvent.click(screen.getByRole('button', { name: /generate my key/i }));
+    await userEvent.type(screen.getByLabelText(/link or organizer key/i), issuerPkHex);
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     await waitFor(() => {
       expect(getHolderPkHex).toHaveBeenCalledWith(Uint8Array.from(Buffer.from(issuerPkHex, 'hex')));

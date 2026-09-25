@@ -11,6 +11,7 @@ import {
   ruleSize,
   todayIso,
 } from "../../midnight/attribute-types";
+import SelectDropdown from "./SelectDropdown";
 
 // Above this many accepted values, holders wait a few seconds while their browser builds the set.
 const SLOW_SET_SIZE = 2000;
@@ -129,13 +130,12 @@ export default function QuestionBuilder({ field, onChange }) {
       {ops.length > 1 && (
         <div className="col-12">
           <label className="form-label" htmlFor="questionOp">Question</label>
-          <select id="questionOp" className="form-control" value={op} onChange={(e) => setOp(e.target.value)}>
-            {ops.map((option) => (
-              <option key={option.value} value={option.value}>
-                {field.label} {option.label}
-              </option>
-            ))}
-          </select>
+          <SelectDropdown
+            id="questionOp"
+            value={op}
+            onChange={setOp}
+            options={ops.map((option) => ({ value: option.value, label: `${field.label} ${option.label}` }))}
+          />
         </div>
       )}
 
@@ -143,7 +143,7 @@ export default function QuestionBuilder({ field, onChange }) {
         <div className="col-12">
           <label className="form-label">Accepted values</label>
           {(field.options || []).map((option) => (
-            <div className="form-check" key={option}>
+            <div className="form-check form-switch share-toggle-row mb-2" key={option}>
               <input
                 className="form-check-input"
                 type="checkbox"

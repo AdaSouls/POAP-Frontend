@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Award, BadgeCheck, Calendar, Database, ExternalLink, Eye, EyeOff, Flame, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
+import { Award, BadgeCheck, Calendar, CalendarClock, CalendarX, Database, ExternalLink, Eye, EyeOff, Flame, History, ImageOff, Info, Lock, ShieldCheck, Ticket, X } from "lucide-react";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import eventOwnerIcon from "../../icons/svg/collection-owner.svg";
 import { useEventMetadata } from "../hooks/useEventMetadata";
@@ -19,7 +19,7 @@ import {
 import { loadCredentialPackage } from "../../midnight/holder-proofs";
 import { decodeValueHex } from "../../midnight/credential-store";
 import { getProofHistory, PROOF_HISTORY_EVENT } from "../../midnight/proof-history";
-import { blockTimestamp, PROOF_KINDS, verifyUrl } from "../../midnight/proof-verification";
+import { blockTimestamp, verifyUrl } from "../../midnight/proof-verification";
 import { describeValidity, formatUntil, parseValidity, validityStatus } from "../../midnight/validity";
 import { TOKEN_BURNED_EVENT } from "../../midnight/token-events";
 
@@ -228,6 +228,19 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     });
   };
 
+  // proofHistory.jsx — the list that used to sit in this card; each record keeps its Verify link.
+  const openProofHistory = () => {
+    dispatch({
+      type: "SHOW_PROOF_HISTORY",
+      payload: {
+        records: proofHistory,
+        eventName: eventMetadata?.name || metadata?.name || null,
+        validity: eventMetadata?.validity,
+        isSubscription: eventMetadata?.category === "subscription",
+      },
+    });
+  };
+
   // Permanent: burnToken.jsx asks for confirmation first.
   const openBurn = () => {
     dispatch({
@@ -263,18 +276,6 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   const lastProof = proofHistory[0] || null;
   const lastOwnershipProof = proofHistory.find((record) => record.kind === "proveTokenOwnership") || null;
   const lastAnonymousProof = proofHistory.find((record) => record.kind === "proveEventAttendance") || null;
-  const proofBadge = lastProof && (
-    <Tooltip
-      multiline
-      label={`Last proof: ${PROOF_KINDS[lastProof.kind]?.title || "Proof"} · ${new Date(lastProof.provenAt).toLocaleString()}. Only you see this.`}
-    >
-      <span className="badge poap-proven-badge" style={{ fontSize: "10px", padding: "2px 8px" }}>
-        <ShieldCheck size={10} className="mr-1" />
-        Proven · {formatDateToDDMMYYYY(lastProof.provenAt)}
-      </span>
-    </Tooltip>
-  );
-
   // Validity (validity.ts), if the event sets one. Subscription: counted from the last ownership
   // proof made here (anonymous or not). Event/Credential: from the mint block's time — or, for a
   // credential, its own private "Valid until" date once its details are loaded (that's the value
@@ -310,31 +311,58 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
     const untilMs = Date.parse(`${decodeValueHex(credentialValidUntil.valueHex)}T23:59:59.999Z`);
     if (!Number.isNaN(untilMs)) validityState = { state: untilMs > Date.now() ? "active" : "expired", untilMs };
   }
-  const validityBadge = !isBurned && validity && validityState.state !== "none" && validityState.state !== "unknown" && (
-    <Tooltip
-      multiline
-      label={
-        isSubscription
-          ? `Stays active for ${describeValidity(validity)} after each proof of ownership. Prove it again to renew.`
-          : eventMetadata?.category === "credential"
-            ? "Set by the issuer. Only they can renew it, by issuing a new one."
-            : `Valid for ${describeValidity(validity)} from when you got it.`
-      }
-    >
-      {validityState.state === "pending" ? (
-        <span className="badge poap-validity-badge is-pending" style={{ fontSize: "10px", padding: "2px 8px" }}>
-          Not proven yet
-        </span>
-      ) : validityState.state === "active" ? (
-        <span className="badge poap-validity-badge" style={{ fontSize: "10px", padding: "2px 8px" }}>
-          {isSubscription ? "Active" : "Valid"} until {formatUntil(validityState.untilMs, validity)}
-        </span>
-      ) : (
-        <span className="badge poap-validity-badge is-expired" style={{ fontSize: "10px", padding: "2px 8px" }}>
-          Expired · {formatUntil(validityState.untilMs, validity)}
+  // Proven / validity: in the collapsed card they're round icon pills (.poap-card-icon-pill) next
+  // to the category badge that widen on hover to show their text — no tooltip; the explanation
+  // lives in the expanded card instead (proof history, the validity block).
+  const proofText = lastProof && `Proven · ${formatDateToDDMMYYYY(lastProof.provenAt)}`;
+  const showValidity = !isBurned && validity && validityState.state !== "none" && validityState.state !== "unknown";
+  const validityText = !showValidity
+    ? null
+    : validityState.state === "pending"
+      ? "Not proven yet"
+      : validityState.state === "active"
+        ? `${isSubscription ? "Active" : "Valid"} until ${formatUntil(validityState.untilMs, validity)}`
+        : `Expired · ${formatUntil(validityState.untilMs, validity)}`;
+  const validityStateClass =
+    validityState.state === "pending" ? " is-pending" : validityState.state === "expired" ? " is-expired" : "";
+  const ValidityIcon = validityState.state === "expired" ? CalendarX : CalendarClock;
+  const isCredential = eventMetadata?.category === "credential";
+  const validityExplanation = !showValidity
+    ? null
+    : validityState.state === "expired"
+      ? isSubscription
+        ? `Prove ownership again to renew it for ${describeValidity(validity)}.`
+        : isCredential
+          ? "Only the issuer can renew it, by issuing a new one."
+          : `It was valid for ${describeValidity(validity)} from when you got it.`
+      : isSubscription
+        ? `Stays active for ${describeValidity(validity)} after each proof of ownership. Prove it again to renew.`
+        : isCredential
+          ? "Set by the issuer. Only they can renew it, by issuing a new one."
+          : `Valid for ${describeValidity(validity)} from when you got it.`;
+  const validitySealTitle = !showValidity
+    ? null
+    : validityState.state === "pending"
+      ? "Not active yet"
+      : validityState.state === "expired"
+        ? `Expired on ${formatUntil(validityState.untilMs, validity)}`
+        : validityText;
+
+  const iconPills = (lastProof || showValidity) && (
+    <div className="d-flex align-items-center mr-auto" style={{ gap: "6px" }}>
+      {lastProof && (
+        <span className="poap-proven-badge poap-card-icon-pill">
+          <ShieldCheck size={13} aria-hidden="true" />
+          <span className="poap-card-icon-pill-label">{proofText}</span>
         </span>
       )}
-    </Tooltip>
+      {showValidity && (
+        <span className={`poap-validity-badge poap-card-icon-pill${validityStateClass}`}>
+          <ValidityIcon size={13} aria-hidden="true" />
+          <span className="poap-card-icon-pill-label">{validityText}</span>
+        </span>
+      )}
+    </div>
   );
 
   // No "pending"/claim state exists for a POAP — mintTo() (organizer push-mint) and claim()
@@ -447,7 +475,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                         {poapStatusLabel}
                       </span>
                     </div>
-                    {(poap.isSoulbound || proofBadge || validityBadge) && (
+                    {poap.isSoulbound && (
                       <div className="d-flex align-items-center flex-wrap mb-2" style={{ gap: "6px" }}>
                         {poap.isSoulbound && (
                           <Tooltip multiline label="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet.">
@@ -456,8 +484,6 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                             </span>
                           </Tooltip>
                         )}
-                        {proofBadge}
-                        {validityBadge}
                       </div>
                     )}
 
@@ -479,6 +505,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     </ul>
 
                     <div className="d-flex justify-content-end mt-auto">
+                      {iconPills}
                       <CategoryBadge category={metadata?.category} />
                     </div>
                   </div>
@@ -580,59 +607,6 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     </>
                   )}
 
-                  {proofHistory.length > 0 && (
-                    <>
-                      <div className="proof-history">
-                        <div className="d-flex align-items-center justify-content-between mb-2">
-                          <span className="d-flex align-items-center small font-weight-semibold">
-                            <ShieldCheck size={14} className="mr-2" />
-                            Proof history
-                          </span>
-                          {proofBadge}
-                        </div>
-                        <ul className="list-unstyled m-0 d-flex flex-column" style={{ gap: "8px" }}>
-                          {proofHistory.map((record) => (
-                            <li key={`${record.provenAt}-${record.txHash}`} className="proof-history-item">
-                              <div style={{ minWidth: 0 }}>
-                                <p className="m-0 small font-weight-semibold">
-                                  {PROOF_KINDS[record.kind]?.title || "Proof"}
-                                </p>
-                                <p className="m-0 small text-muted text-truncate">{record.question}</p>
-                                <p className="m-0 small text-muted">
-                                  {new Date(record.provenAt).toLocaleString()}
-                                  {isSubscription &&
-                                    validity &&
-                                    (record.kind === "proveTokenOwnership" || record.kind === "proveEventAttendance") &&
-                                    ` · valid until ${formatUntil(
-                                      validityStatus(validity, Date.parse(record.provenAt)).untilMs,
-                                      validity,
-                                    )}`}
-                                </p>
-                              </div>
-                              {record.txHash && (
-                                <a
-                                  href={verifyUrl(record.txHash)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="btn btn-card-detail-action btn-sm flex-shrink-0"
-                                >
-                                  <ExternalLink size={14} className="mr-2" />
-                                  Verify
-                                </a>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="m-0 mt-2 small text-muted">
-                          Only you see this list — it's kept in this browser and in your backup. Each proof
-                          stays on-chain; anyone can check it with its Verify link. It shows you held this
-                          POAP at that moment; prove again to show you still do.
-                        </p>
-                      </div>
-                      <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
-                    </>
-                  )}
-
                   <div className="d-flex flex-wrap" style={{ gap: "8px" }}>
                     <button
                       type="button"
@@ -642,6 +616,12 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                       <Database size={14} className="mr-2" />
                       View Blockchain Info
                     </button>
+                    {proofHistory.length > 0 && (
+                      <button type="button" className="btn btn-card-detail-action btn-sm" onClick={openProofHistory}>
+                        <History size={14} className="mr-2" />
+                        Proof History ({proofHistory.length})
+                      </button>
+                    )}
                     {!isBurned && (
                       <button
                         type="button"
@@ -766,6 +746,18 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                       </div>
                     </div>
                   ))}
+
+                {/* Validity seal (validity.ts), same family as the ones above: green while valid,
+                    red once expired, gray for a subscription with no ownership proof yet. */}
+                {showValidity && (
+                  <div className={`poap-verified-seal-card mt-2${validityStateClass}`}>
+                    <ValidityIcon size={36} className="poap-verified-seal-icon flex-shrink-0" aria-hidden="true" />
+                    <div style={{ minWidth: 0 }}>
+                      <p className="m-0 font-weight-semibold">{validitySealTitle}</p>
+                      <p className="m-0 text-muted small">{validityExplanation}</p>
+                    </div>
+                  </div>
+                )}
 
                 <hr style={{ marginTop: "18px", marginBottom: "18px" }} />
 

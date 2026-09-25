@@ -45,7 +45,8 @@ it('keeps a birth date and the automatic Valid until on their own fields', async
   await userEvent.type(screen.getByLabelText(/Recipient's Key/i), 'dd'.repeat(32));
   await userEvent.click(screen.getByRole('button', { name: /^next$/i }));
 
-  await userEvent.selectOptions(screen.getByLabelText('Sector'), 'Campo');
+  await userEvent.click(screen.getByLabelText('Sector'));
+  await userEvent.click(screen.getByRole('option', { name: 'Campo' }));
   await userEvent.type(screen.getByLabelText(/^Asiento/), '12');
   await userEvent.type(screen.getByLabelText('Titular'), 'Juan Perez');
   await userEvent.type(screen.getByLabelText('Nacimiento'), '2000-05-17');

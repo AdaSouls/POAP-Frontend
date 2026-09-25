@@ -129,6 +129,11 @@ const MyEvents = () => {
                   </button>
                 </Tooltip>
               )}
+              {provider && (
+                <button className="btn btn-white btn-small" onClick={() => dispatch({ type: "GET_HOLDER_KEY" })}>
+                  Paste Link
+                </button>
+              )}
               <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} role="organizer" />
             </div>
           </div>

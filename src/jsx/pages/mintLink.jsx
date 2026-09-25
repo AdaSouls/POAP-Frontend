@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import { useUserRoles } from "../contexts/user-roles/user-roles.provider";
@@ -38,7 +39,9 @@ export default function MintLink() {
   const dispatch = useDrawerDispatch();
   const { isAdmin } = useUserRoles();
   const myPk = midnight?.provider?.address;
-  const [link] = useState(() => parseMintFragment(window.location.hash || ""));
+  // From the router, not window.location: Paste Link can open another link while this page is up.
+  const { hash } = useLocation();
+  const link = useMemo(() => parseMintFragment(hash || ""), [hash]);
   const [event, setEvent] = useState(undefined); // undefined = loading, null = not found
   const [ownEvents, setOwnEvents] = useState(null);
   const { metadata } = useEventMetadata(event?.metadataURI);
@@ -48,6 +51,12 @@ export default function MintLink() {
     (target) => dispatch({ type: "CREATE_MINT", payload: target, recipient: link.holderCode }),
     [dispatch, link],
   );
+
+  useEffect(() => {
+    openedRef.current = false;
+    setEvent(undefined);
+    setOwnEvents(null);
+  }, [link]);
 
   useEffect(() => {
     if (!link?.eventIdHex) return undefined;
@@ -93,7 +102,7 @@ export default function MintLink() {
     if (!link) {
       return (
         <div className="alert alert-danger" role="alert">
-          This link doesn't contain a valid key. Ask the person to copy it again from Get My Key.
+          This link doesn't contain a valid key. Ask the person to copy it again.
         </div>
       );
     }

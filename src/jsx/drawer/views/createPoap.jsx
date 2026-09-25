@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Award, Calendar, Ticket, ImageOff, Lock, Repeat } from 'lucide-react';
+import { X, Award, Calendar, Ticket, ImageOff } from 'lucide-react';
 import { useDrawer, useDrawerDispatch } from '../../contexts/drawer/drawer.provider';
 import { loadingFunction, errorFunction, succesfullBlockchainCreation } from '../../toasts/sweetAlerts';
 import eventOwnerIcon from '../../../icons/svg/collection-owner.svg';
@@ -20,8 +20,9 @@ import { txHashOf } from "../../../midnight/tx-result";
 // into this drawer anymore, so selectedEvent comes from claimEvent alone, no event picker needed.
 export default function CreatePoap() {
   const [loading, setLoading] = useState(false);
-  const [isSoulbound, setIsSoulbound] = useState(false);
-  // Step 1: event preview (read-only). Step 2: soulbound choice + confirm/submit.
+  // Step 1: event preview (read-only). Step 2: the POAP to receive + confirm/submit.
+  // No soulbound choice: the contract stores the flag but has no transfer circuit, so every POAP is
+  // non-transferable in practice and the switch only suggested a feature that doesn't exist.
   const [step, setStep] = useState(1);
   const [imgLoadError, setImgLoadError] = useState(false);
 
@@ -71,7 +72,7 @@ export default function CreatePoap() {
     try {
       loadingFunction(claimLabel.loading, "Preparing transaction…", "");
       const eventIdBytes = Uint8Array.from(Buffer.from(selectedEvent.eventId, 'hex'));
-      const txHash = txHashOf(await provider.service.claim(eventIdBytes, isSoulbound));
+      const txHash = txHashOf(await provider.service.claim(eventIdBytes, false));
 
       succesfullBlockchainCreation(`${claimLabel.done} Successfully`, `Transaction: ${txHash}`, "");
       closeDrawer();
@@ -163,17 +164,6 @@ export default function CreatePoap() {
           {eventStatusLabel(selectedEvent)}
         </span>
       )}
-      {isPoap && (
-        // Pinned bottom-right, out of the vertically-centered text block above — a quiet summary
-        // of the switch below rather than another line competing with the title for space.
-        <span
-          className="d-flex align-items-center small text-muted"
-          style={{ position: "absolute", bottom: "12px", right: "16px", gap: "6px" }}
-        >
-          {isSoulbound ? <Lock size={14} /> : <Repeat size={14} />}
-          {isSoulbound ? 'Soulbound — non-transferable' : 'Transferable'}
-        </span>
-      )}
     </div>
     );
   };
@@ -233,25 +223,6 @@ export default function CreatePoap() {
           {step === 2 && selectedEvent && (
             <>
               <div className="col-12 mb-3">{renderEventPreviewCard("poap")}</div>
-
-              <div className="col-12 mt-3 mb-3">
-                <div className="drawer-modal-preview-card">
-                  <div className="d-flex align-items-center" style={{ gap: "14px" }}>
-                    <div className="form-check form-switch mb-0 flex-shrink-0">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="isSoulbound"
-                        checked={isSoulbound}
-                        onChange={(e) => setIsSoulbound(e.target.checked)}
-                      />
-                    </div>
-                    <label className="form-check-label mb-0" htmlFor="isSoulbound">
-                      Soulbound (non-transferable)
-                    </label>
-                  </div>
-                </div>
-              </div>
             </>
           )}
         </form>

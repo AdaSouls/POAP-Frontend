@@ -18,6 +18,7 @@ import { uploadImageToIPFS, uploadJSONToIPFS } from "../../../services/ipfs.serv
 import { getCroppedImageBlob } from "../../../utils/cropImage";
 import { txHashOf } from "../../../midnight/tx-result";
 import { parseHolderCode } from "../../../midnight/credential-crypto";
+import { holderCodeFromInput } from "../../../midnight/invite-links";
 import {
   buildCredentialAttributes,
   deliverCredentialPackage,
@@ -25,6 +26,7 @@ import {
 } from "../../../midnight/credential-delivery";
 import { canonicalValue, fieldType } from "../../../midnight/attribute-types";
 import { parseValidity, validUntilIso } from "../../../midnight/validity";
+import SelectDropdown from "../../components/SelectDropdown";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -127,7 +129,7 @@ export default function MintPoap() {
     if (!isRecipientValid()) {
       errorFunction(
         "Invalid Public Key",
-        "Paste the code the recipient generated in My Subscriptions → Get My Key.",
+        "Paste the code the recipient generated in My Subscriptions → Paste Link.",
         ""
       );
       return;
@@ -337,17 +339,17 @@ export default function MintPoap() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Code from the recipient's Get My Key"
+                    placeholder="Code or mint link the recipient sent you"
                     id="recipientPkHex"
                     name="recipientPkHex"
                     value={recipientPkHex}
-                    onChange={(event) => setRecipientPkHex(event.target.value)}
+                    onChange={(event) => setRecipientPkHex(holderCodeFromInput(event.target.value))}
                     required
                   />
                   <small className="form-text text-muted">
                     Not their wallet address — this has to be the key they generate specifically for
                     you. Send them your organizer public key ({truncateHex(mintEvent.issuerPk)}), have
-                    them open My Subscriptions → Get My Key and paste it in, and they'll get back the
+                    them open My Subscriptions → Paste Link and paste it in, and they'll get back the
                     value to paste here.
                   </small>
                 </div>
@@ -376,12 +378,12 @@ export default function MintPoap() {
                     <div className="mb-3" key={field.fieldId}>
                       <label className="form-label" htmlFor={inputId}>{field.label}{range}</label>
                       {type === "list" ? (
-                        <select id={inputId} className="form-control" value={value} onChange={(event) => setValue(event.target.value)}>
-                          <option value="">—</option>
-                          {(field.options || []).map((option) => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
+                        <SelectDropdown
+                          id={inputId}
+                          value={value}
+                          onChange={setValue}
+                          options={[{ value: "", label: "—" }, ...(field.options || []).map((option) => ({ value: option, label: option }))]}
+                        />
                       ) : (
                         <input
                           id={inputId}

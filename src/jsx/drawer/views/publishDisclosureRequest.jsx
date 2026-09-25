@@ -15,6 +15,7 @@ import { getDisclosureRequestsByVerifier } from "../../../midnight/indexer.servi
 import { publishRequestRule } from "../../../midnight/disclosure-sets";
 import { describeRule, expandRule, ruleSize } from "../../../midnight/attribute-types";
 import QuestionBuilder from "../../components/QuestionBuilder";
+import SelectDropdown from "../../components/SelectDropdown";
 
 const REQUEST_ID_POLL_ATTEMPTS = 10;
 const REQUEST_ID_POLL_DELAY_MS = 1500;
@@ -159,18 +160,12 @@ export default function PublishDisclosureRequest() {
           <form className="row g-3" onSubmit={handlePublish}>
             <div className="col-12">
               <label className="form-label" htmlFor="disclosureField">Attribute</label>
-              <select
+              <SelectDropdown
                 id="disclosureField"
-                className="form-control"
                 value={fieldId}
-                onChange={(event) => setFieldId(event.target.value)}
-              >
-                {fields.map((field) => (
-                  <option key={field.fieldId} value={field.fieldId}>
-                    {field.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setFieldId}
+                options={fields.map((field) => ({ value: field.fieldId, label: field.label }))}
+              />
             </div>
 
             {selectedField && <QuestionBuilder field={selectedField} onChange={onQuestionChange} />}

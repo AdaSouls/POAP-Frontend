@@ -136,7 +136,7 @@ const MySubscriptions = () => {
             <div className="inner-header-row-right">
               {provider && (
                 <button className="btn btn-white btn-small" onClick={openGetHolderKey}>
-                  Get My Key
+                  Paste Link
                 </button>
               )}
               {provider && myPoaps.length > 0 && (

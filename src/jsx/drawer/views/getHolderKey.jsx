@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, Copy, Check } from "lucide-react";
 import {
   useDrawer,
   useDrawerDispatch,
 } from "../../contexts/drawer/drawer.provider";
 import { errorFunction } from "../../toasts/sweetAlerts";
-import { generateHolderCode, mintLink } from "../../../midnight/invite-links";
+import { generateHolderCode, mintLink, parsePastedInput } from "../../../midnight/invite-links";
 import LinkQrCard from "../../components/LinkQrCard";
 
 // getHolderPk(issuerId) is a per-organizer pseudonym (poap.compact) — deliberately DIFFERENT from
@@ -23,9 +24,14 @@ import LinkQrCard from "../../components/LinkQrCard";
 // The result also comes as a mint link + QR (invite-links.ts): opening it opens Mint POAP with this
 // code filled in. An organizer's invite link (/app/key, keyInvite.jsx) does all of this without
 // pasting their key first.
+//
+// Opening one of those links in the address bar reloads the page and drops the wallet connection,
+// so this popup ("Paste Link") also takes the links themselves: an invite or mint link is opened
+// with an in-app navigation instead, keeping the session. A bare organizer key still works as before.
 export default function GetHolderKey() {
   const { midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
+  const navigate = useNavigate();
 
   const [issuerPkHex, setIssuerPkHex] = useState("");
   const [holderPkHex, setHolderPkHex] = useState(null);
@@ -40,13 +46,18 @@ export default function GetHolderKey() {
     e.preventDefault();
     if (!midnight?.provider) return;
 
-    const trimmed = issuerPkHex.trim();
-    if (!/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    const pasted = parsePastedInput(issuerPkHex);
+    if (!pasted) {
       errorFunction(
-        "Invalid Public Key",
-        "Organizer public key must be a 32-byte hex string (64 hex characters).",
+        "Not a Link or Key",
+        "Paste an invite link, a mint link, or an organizer's public key (64 hex characters).",
         ""
       );
+      return;
+    }
+    if (pasted.kind !== "key") {
+      closeDrawer();
+      navigate(pasted.route);
       return;
     }
 
@@ -54,7 +65,7 @@ export default function GetHolderKey() {
     setHolderPkHex(null);
     setCopied(false);
     try {
-      setHolderPkHex(await generateHolderCode(midnight.provider.service, trimmed));
+      setHolderPkHex(await generateHolderCode(midnight.provider.service, pasted.organizerPkHex));
     } catch (error) {
       console.error("Error generating holder key:", error);
       errorFunction("Error", error.message || "Failed to generate your key. Please try again.", "");
@@ -81,7 +92,7 @@ export default function GetHolderKey() {
           <X size={15} />
         </button>
         <h4 className="text-center w-100 m-0 font-weight-semibold">
-          Get My Key
+          Paste Link
         </h4>
       </div>
 
@@ -89,21 +100,21 @@ export default function GetHolderKey() {
         {midnight?.provider ? (
           <form name="getHolderKeyForm" className="row g-3" onSubmit={handleGenerate}>
             <div className="col-12">
-              <label className="form-label" htmlFor="issuerPkHex">Organizer Public Key (hex)</label>
+              <label className="form-label" htmlFor="issuerPkHex">Link or organizer key</label>
               <input
                 id="issuerPkHex"
                 type="text"
                 className="form-control"
-                placeholder="64-character hex public key"
+                placeholder="https://…/app/key#… or 64-character key"
                 name="issuerPkHex"
                 value={issuerPkHex}
                 onChange={(event) => setIssuerPkHex(event.target.value)}
                 required
               />
               <small className="form-text text-muted">
-                Ask the organizer for their public key — this is different from your own wallet
-                address, and is specific to this one organizer only (sharing it with someone else
-                doesn't let them link it back to your other POAPs).
+                Paste an invite link or a mint link someone sent you — it opens here without
+                disconnecting your wallet. An organizer's public key also works: it generates your
+                key for that one organizer (sharing it doesn't link it back to your other POAPs).
               </small>
             </div>
 
@@ -140,7 +151,7 @@ export default function GetHolderKey() {
           </form>
         ) : (
           <div className="alert alert-info" role="alert">
-            Connect your wallet first to generate a key.
+            Connect your wallet first, then paste the link here.
           </div>
         )}
       </div>
@@ -153,7 +164,7 @@ export default function GetHolderKey() {
             onClick={handleGenerate}
             disabled={loading}
           >
-            {loading ? "Generating…" : "Generate My Key"}
+            {loading ? "Generating…" : "Continue"}
           </button>
         </div>
       )}

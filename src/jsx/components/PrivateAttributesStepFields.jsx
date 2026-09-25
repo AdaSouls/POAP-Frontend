@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { canonicalValue, FIELD_TYPES } from "../../midnight/attribute-types";
 import OptionChipsInput from "./OptionChipsInput";
+import SelectDropdown from "./SelectDropdown";
 
 const TYPE_LABELS = { text: "Text", number: "Number", date: "Date", list: "List" };
 
@@ -81,17 +82,13 @@ export default function PrivateAttributesStepFields({ values, onChange }) {
                 value={attribute.fieldName}
                 onChange={(event) => updateAttribute(index, { fieldName: event.target.value })}
               />
-              <select
-                className="form-control"
-                aria-label="Field type"
+              <SelectDropdown
+                ariaLabel="Field type"
                 style={{ maxWidth: "120px", flexShrink: 0 }}
                 value={type}
-                onChange={(event) => updateAttribute(index, { type: event.target.value })}
-              >
-                {FIELD_TYPES.map((option) => (
-                  <option key={option} value={option}>{TYPE_LABELS[option]}</option>
-                ))}
-              </select>
+                onChange={(newType) => updateAttribute(index, { type: newType })}
+                options={FIELD_TYPES.map((option) => ({ value: option, label: TYPE_LABELS[option] }))}
+              />
               <button
                 type="button"
                 className="btn btn-card-detail-action btn-sm flex-shrink-0"

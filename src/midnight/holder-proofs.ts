@@ -44,11 +44,18 @@ type Service = {
 
 // ── The holder's private details ──────────────────────────────────────────────
 
+// Packages are stored and delivered per (event, holder), not per token: after a credential is
+// burned and issued again to the same wallet, both the local copy and the delivery service still
+// hold the old one. So a package is only used if it matches what the ledger stored for this
+// tokenId (burn() clears the old token's leaf, so the old package never matches).
 export async function loadCredentialPackage(service: Service, token: HolderToken): Promise<CredentialPackage | null> {
+  const { ledger } = await service.getState();
+  const matchesToken = async (pkg: CredentialPackage) =>
+    Boolean(await credentialPathOnChain(ledger.credentials, token.tokenId, token.eventId, token.holderPk, pkg.credAttrRoot));
   const local = getCredentialPackage(token.eventId, token.holderPk);
-  if (local) return local;
+  if (local && (await matchesToken(local))) return local;
   const keys = await service.getEncryptionKeyPair(fromHex(token.issuerPk));
-  return fetchDeliveredPackage(token.eventId, token.holderPk, keys);
+  return fetchDeliveredPackage(token.eventId, token.holderPk, keys, matchesToken);
 }
 
 // ── Requests the holder can answer ────────────────────────────────────────────

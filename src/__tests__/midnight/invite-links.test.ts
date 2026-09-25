@@ -1,9 +1,11 @@
 import {
   generateHolderCode,
+  holderCodeFromInput,
   inviteLink,
   mintLink,
   parseInviteFragment,
   parseMintFragment,
+  parsePastedInput,
 } from '../../midnight/invite-links';
 
 const ORG = 'ab'.repeat(32);
@@ -45,5 +47,31 @@ describe('invite-links', () => {
     };
     await expect(generateHolderCode(service, ORG)).resolves.toBe(CODE);
     expect(service.getHolderPkHex).toHaveBeenCalledWith(Uint8Array.from(Buffer.from(ORG, 'hex')));
+  });
+
+  it('recognizes a pasted invite link, mint link or bare organizer key, from any origin', () => {
+    expect(parsePastedInput(`  ${inviteLink('https://elsewhere.example', ORG, EVENT)} `)).toEqual({
+      kind: 'invite',
+      route: `/app/key#organizer=${ORG}&event=${EVENT}`,
+    });
+    expect(parsePastedInput(mintLink('http://localhost:3000', CODE, EVENT))).toEqual({
+      kind: 'mint',
+      route: `/app/mint#to=${CODE}&event=${EVENT}`,
+    });
+    expect(parsePastedInput(ORG.toUpperCase())).toEqual({ kind: 'key', organizerPkHex: ORG });
+  });
+
+  it('rejects pasted text that is neither a valid link nor a key', () => {
+    expect(parsePastedInput('')).toBeNull();
+    expect(parsePastedInput('hello')).toBeNull();
+    expect(parsePastedInput('https://app.test/app/key#organizer=xyz')).toBeNull();
+    expect(parsePastedInput(`https://app.test/app/other#organizer=${ORG}`)).toBeNull();
+    expect(parsePastedInput(CODE)).toBeNull();
+  });
+
+  it('takes the holder code out of a pasted mint link, and leaves anything else as typed', () => {
+    expect(holderCodeFromInput(mintLink('https://app.test', CODE, EVENT))).toBe(CODE);
+    expect(holderCodeFromInput(CODE)).toBe(CODE);
+    expect(holderCodeFromInput('abc')).toBe('abc');
   });
 });
