@@ -33,7 +33,7 @@ describe('sealForRecipient / openEnvelope', () => {
   it('round-trips a payload for the intended recipient', async () => {
     const keys = await deriveEncryptionKeyPair(secretKey, organizerA);
     const envelope = await sealForRecipient(keys.publicKeyHex, new TextEncoder().encode('Sector: Campo'));
-    expect(envelope.format).toBe('adasouls-credential');
+    expect(envelope.format).toBe('velum-credential');
     expect(envelope.ciphertext).not.toContain('Campo');
     expect(text(await openEnvelope(envelope, keys))).toBe('Sector: Campo');
   });

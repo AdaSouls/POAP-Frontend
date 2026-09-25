@@ -189,7 +189,7 @@ export function normalizeRecoveryCode(input: string): string {
 
 // ── Per-wallet key store ──────────────────────────────────────────────────────
 
-const KEY_PREFIX = 'adasouls:storageKey:';
+const KEY_PREFIX = 'velum:storageKey:';
 type StoredKey = { code: string; saved: boolean };
 const savedListeners = new Set<() => void>();
 

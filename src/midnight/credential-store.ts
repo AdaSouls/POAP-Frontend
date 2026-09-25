@@ -5,7 +5,7 @@
 // import only ever lives here.
 import { markBackupDirty } from './backup-status';
 
-export const CREDENTIAL_PACKAGE_PREFIX = 'adasouls:midnight:credential:';
+export const CREDENTIAL_PACKAGE_PREFIX = 'velum:midnight:credential:';
 
 export type CredentialField = {
   fieldId: string; // hex, 32 bytes — names the field in disclosure requests

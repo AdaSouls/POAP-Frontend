@@ -20,7 +20,7 @@ import {
 
 // The fixed password every browser's private state was encrypted with before each wallet got its
 // own key. Only used here, to migrate those stores — never to write anything new.
-export const LEGACY_STORAGE_PASSWORD = 'AdaSouls-Local-Dev-2026!';
+export const LEGACY_STORAGE_PASSWORD = 'Velum-Local-Dev-2026!';
 
 // Everything here goes through get/set/remove of our single private-state key, which only ever
 // touches that one entry. The SDK store is shared by every contract address this wallet has used in

@@ -257,7 +257,7 @@ export default function LaceWallet() {
               <img src={loadingGif} width="16" height="16" alt="" className="mr-2" />
               <span>
                 Your {selectedWalletNoun} is locked. Click the {selectedWalletName} extension icon in
-                your browser toolbar and unlock it — AdaSouls will connect automatically.
+                your browser toolbar and unlock it — Velum will connect automatically.
               </span>
             </div>
           )}
@@ -269,7 +269,7 @@ export default function LaceWallet() {
                 : errorToShow.name === "LaceVersionMismatchError"
                   ? errorToShow.message
                   : errorToShow.name === "LaceNotAuthorizedError"
-                    ? `AdaSouls is not authorized by your ${selectedWalletNoun}. Approve the connection request in the extension.`
+                    ? `Velum is not authorized by your ${selectedWalletNoun}. Approve the connection request in the extension.`
                     : errorToShow.name === "LaceLockedError"
                       ? `Your ${selectedWalletNoun} is still locked (or set to a different network). Unlock it, check it's on the right network, then try connecting again.`
                       : errorToShow.name === "ConnectTimeoutError"

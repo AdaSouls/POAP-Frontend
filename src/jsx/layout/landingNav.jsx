@@ -62,7 +62,7 @@ const LandingNav = () => (
       <div className="landing-nav-content">
         <Link to="/" className="brand-logo landing-nav-brand">
           <img src={logo} alt="" />
-          <span>AdaSouls</span>
+          <span>Velum</span>
         </Link>
 
         <nav className="landing-nav-links">

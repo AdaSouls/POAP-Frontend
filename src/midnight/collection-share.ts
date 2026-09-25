@@ -11,7 +11,7 @@
 // One entry per (issuerPkHex, tokenId) now, not per (issuerPkHex, eventId): since claim() mints a
 // brand-new token per event (poap.compact), a token maps to exactly one event already — there's
 // no separate "which of this token's events" granularity left to toggle.
-export const VISIBILITY_PREFIX = "adasouls:midnight:shareVisibility:";
+export const VISIBILITY_PREFIX = "velum:midnight:shareVisibility:";
 
 function visibilityKey(issuerPkHex: string, tokenId: string | number | bigint): string {
   return `${VISIBILITY_PREFIX}${issuerPkHex}:${tokenId}`;

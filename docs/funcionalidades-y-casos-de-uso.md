@@ -1,4 +1,4 @@
-# AdaSouls POAP en Midnight — funcionalidades y casos de uso
+# Velum — funcionalidades y casos de uso
 
 Estado al 2026-09-24. Proyecto Catalyst Fund 11 #1100234. Describe el producto tal como está en la
 rama `feature/production`: qué puede hacer cada tipo de usuario y para qué sirve cada categoría de

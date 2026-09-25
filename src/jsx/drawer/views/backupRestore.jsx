@@ -45,16 +45,16 @@ export default function BackupRestore() {
   };
 
   const downloadCode = () => {
-    const text = `AdaSouls recovery code
+    const text = `Velum recovery code
 
 ${recoveryCode}
 
-Keep it private. With it (and your wallet) you can restore your AdaSouls identity in any browser.
+Keep it private. With it (and your wallet) you can restore your Velum identity in any browser.
 `;
     const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = "adasouls-recovery-code.txt";
+    link.download = "velum-recovery-code.txt";
     document.body.appendChild(link);
     link.click();
     link.remove();

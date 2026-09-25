@@ -18,7 +18,7 @@ export type BackupStatus = StoredBackupStatus & {
 
 type BackupContext = { coinPublicKey: string; contractAddress: string };
 
-const STATUS_PREFIX = 'adasouls:backup:';
+const STATUS_PREFIX = 'velum:backup:';
 // Auto cloud backup is on unless the user turned it off: the key lives in this browser, so
 // there's nothing to ask for and no reason to wait for a manual first backup.
 const EMPTY: StoredBackupStatus = { lastBackupAt: null, dirty: false, autoBackup: true };

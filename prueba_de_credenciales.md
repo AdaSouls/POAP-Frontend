@@ -7,7 +7,7 @@ validez, el revocado y las pruebas por rango.
 
 Sigue los pasos **en orden**: cada parte usa algo que se creó en la anterior.
 
-Estado al 2026-09-24 (noche): contrato `073ec6615f85f72bbaf9285db6ba9718556731a0e9378284c57d84ee7c047356`.
+Estado al 2026-09-24 (noche): contrato `95865f538ded8aecd481a924a7f0230c60a8f27f56f1dc33998431698eb6a1b1`.
 Tests: 421 pasan; fallan los 5 de siempre (MyEvents/EventFilters). Las partes 1–6 del circuito
 básico ya se probaron en vivo; **las mejoras del MVP (links + QR, campos con tipo y rangos, aviso de
 anonimato, validez, revocar/burn) no se probaron nunca contra el nodo**. La sección "Checklist" al

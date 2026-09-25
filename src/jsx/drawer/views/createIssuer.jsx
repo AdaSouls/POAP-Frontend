@@ -98,7 +98,7 @@ export default function CreateIssuer() {
         ) : (
           <div className="alert alert-info" role="alert">
             Registering event organizers is an admin-only action on this contract. Contact the
-            AdaSouls admin to be added as an organizer.
+            Velum admin to be added as an organizer.
           </div>
         )}
       </div>

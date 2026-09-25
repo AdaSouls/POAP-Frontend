@@ -43,10 +43,10 @@
   --bs-gray: #6c757d;
   --bs-gray-dark: #343a40;
   --bs-primary: #824A96;
-  --bs-adasouls-one: #824A96;
-  --bs-adasouls-two: #7C6AAD;
-  --bs-adasouls-three: #5CA4DA;
-  --bs-adasouls-four: #76C2C3;
+  --bs-velum-one: #824A96;
+  --bs-velum-two: #7C6AAD;
+  --bs-velum-three: #5CA4DA;
+  --bs-velum-four: #76C2C3;
   --bs-soul-second: #7C6AAD;
   --bs-secondary: #74788d;
   --bs-success: #34c38f;
@@ -3263,7 +3263,7 @@ fieldset:disabled .btn {
 
 .btn-gradient-purple {
   color: #000;
-  background: linear-gradient(90deg, var(--bs-adasouls-two) 0%, var(--bs-adasouls-three) 100%);
+  background: linear-gradient(90deg, var(--bs-velum-two) 0%, var(--bs-velum-three) 100%);
   transition: 0.5s;
   border: 1px solid #5CA4DA;
 }
@@ -12928,11 +12928,11 @@ button,
 .btn-negative{
   background: var(--bs-white);
   border: none;
-  color: var(--bs-adasouls-three);
+  color: var(--bs-velum-three);
 }
 
 .btn-negative:hover{
-  background: var(--bs-adasouls-four);
+  background: var(--bs-velum-four);
   color: var(--bs-white);
 }
 
@@ -12946,7 +12946,7 @@ button,
 
 .simple-link:hover{
   text-decoration: none;
-  color: var(--bs-adasouls-three);
+  color: var(--bs-velum-three);
 }
 
 button:hover,
@@ -13132,7 +13132,7 @@ button:active,
 }
 
 .card-create div:nth-child(2) span i{
-  color: var(--bs-adasouls-three);
+  color: var(--bs-velum-three);
   font-weight: 800;
 }
 

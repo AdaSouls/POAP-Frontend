@@ -47,14 +47,14 @@ export default function IdentityStep({ request }) {
       <div className="password-step-header d-flex align-items-center mb-2">
         <KeyRound size={18} className="mr-2" />
         <h5 className="mb-0">
-          {mode === "locked" ? "Restore your identity" : restoring ? "Restore from a backup" : "Welcome to AdaSouls"}
+          {mode === "locked" ? "Restore your identity" : restoring ? "Restore from a backup" : "Welcome to Velum"}
         </h5>
       </div>
 
       {!restoring ? (
         <>
           <p className="text-muted small mb-3">
-            First time using this wallet in this browser. AdaSouls will create your identity and back it
+            First time using this wallet in this browser. Velum will create your identity and back it
             up automatically — you'll get a recovery code to keep.
           </p>
           <button type="button" className="btn btn-gradient w-100" onClick={continueAsNew} disabled={submitting}>
@@ -66,7 +66,7 @@ export default function IdentityStep({ request }) {
             onClick={() => setRestoring(true)}
             disabled={submitting}
           >
-            I used AdaSouls before — restore with my recovery code
+            I used Velum before — restore with my recovery code
           </button>
         </>
       ) : (

@@ -89,7 +89,7 @@ describe('delivery', () => {
         posted.push(JSON.parse(init.body));
         return { ok: true, json: async () => ({ ok: true }) };
       }
-      const junk = { format: 'adasouls-credential', version: 1, epk: 'ee'.repeat(32), iv: '00'.repeat(12), ciphertext: 'AAAA' };
+      const junk = { format: 'velum-credential', version: 1, epk: 'ee'.repeat(32), iv: '00'.repeat(12), ciphertext: 'AAAA' };
       return { ok: true, json: async () => ({ envelopes: [junk, posted[0].envelope] }) };
     }) as any;
 

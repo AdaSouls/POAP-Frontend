@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { SITE_ROLES } from "./useSiteRole";
 
-const STORAGE_KEY = "adasouls:lastRolePath";
+const STORAGE_KEY = "velum:lastRolePath";
 
 // Where a role lands when there's no remembered page for it yet — first item of that role's own
 // header.jsx ROLE_NAV_ITEMS list.

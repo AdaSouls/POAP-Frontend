@@ -22,9 +22,9 @@ const Overview = () => {
         <div className="col-12">
           <div className="card">
             <div className="card-body">
-              <h2>AdaSouls on Midnight</h2>
+              <h2>Velum on Midnight</h2>
               <p className="text-muted">
-                AdaSouls issues privacy-preserving POAPs on the Midnight network. A single Compact
+                Velum issues privacy-preserving POAPs on the Midnight network. A single Compact
                 smart contract mints a token per event you claim: the public ledger records that a
                 valid POAP exists, while your wallet identity is derived locally and never shared
                 directly with an organizer.

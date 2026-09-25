@@ -27,7 +27,7 @@ import {
 import { saveCredentialPackage, type CredentialField, type CredentialPackage } from './credential-store';
 
 const IPFS_API_URL = process.env.REACT_APP_IPFS_API_URL || 'http://localhost:4000';
-const LOOKUP_DOMAIN = new TextEncoder().encode('adasouls:credential-delivery:v1:');
+const LOOKUP_DOMAIN = new TextEncoder().encode('velum:credential-delivery:v1:');
 
 const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString('hex');
 const fromHex = (value: string) => Uint8Array.from(Buffer.from(value, 'hex'));

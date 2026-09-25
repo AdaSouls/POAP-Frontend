@@ -6,7 +6,7 @@ import { mockDrawerContext, mockDrawerDispatch, renderWithProviders } from '../.
 describe('Overview Page', () => {
   it('renders overview page title', () => {
     renderWithProviders(<Overview />);
-    expect(screen.getByText(/AdaSouls on Midnight/i)).toBeInTheDocument();
+    expect(screen.getByText(/Velum on Midnight/i)).toBeInTheDocument();
   });
 
   it('shows a prompt to connect when no wallet is connected', () => {

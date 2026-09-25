@@ -54,7 +54,7 @@ describe('backup', () => {
     const payload = { privateState: serializeState(samplePrivateState()), localStorage: { a: 'secret-draft' } };
     const envelope = await encryptBackupPayload(payload, PASSWORD, META);
 
-    expect(envelope).toMatchObject({ format: 'adasouls-backup', version: 1, contractAddress: CONTRACT });
+    expect(envelope).toMatchObject({ format: 'velum-backup', version: 1, contractAddress: CONTRACT });
     expect(JSON.stringify(envelope)).not.toContain('secret-draft');
     await expect(decryptBackupPayload(envelope, PASSWORD)).resolves.toEqual(payload);
   });
@@ -64,7 +64,7 @@ describe('backup', () => {
     await expect(decryptBackupPayload(envelope, 'Wrong-Horse-Battery-9')).rejects.toBeInstanceOf(BackupPasswordError);
   });
 
-  it('parses only AdaSouls backup files', async () => {
+  it('parses only Velum backup files', async () => {
     const envelope = await encryptBackupPayload({ privateState: null, localStorage: {} }, PASSWORD, META);
     expect(parseBackupEnvelope(JSON.stringify(envelope))).toEqual(envelope);
     expect(() => parseBackupEnvelope('not json')).toThrow(BackupFormatError);

@@ -7,8 +7,8 @@
 //   - it's different per organizer, like holder_pk, so two organizers can't link one holder by it.
 // The public half travels inside the holder's "Get My Key" code (see formatHolderCode).
 
-const KEY_DOMAIN = new TextEncoder().encode('adasouls:enc-key:v1:');
-const HKDF_INFO = new TextEncoder().encode('adasouls:credential-delivery:v1');
+const KEY_DOMAIN = new TextEncoder().encode('velum:enc-key:v1:');
+const HKDF_INFO = new TextEncoder().encode('velum:credential-delivery:v1');
 // DER prefix of a PKCS#8 X25519 private key (RFC 8410) — Web Crypto can't import a raw X25519
 // private key, only PKCS#8 or JWK.
 const PKCS8_X25519_PREFIX = Uint8Array.from([
@@ -16,7 +16,7 @@ const PKCS8_X25519_PREFIX = Uint8Array.from([
 ]);
 const X25519 = { name: 'X25519' } as any;
 
-export const ENVELOPE_FORMAT = 'adasouls-credential';
+export const ENVELOPE_FORMAT = 'velum-credential';
 
 export type SealedEnvelope = {
   format: typeof ENVELOPE_FORMAT;
@@ -100,7 +100,7 @@ export async function sealForRecipient(recipientPublicKeyHex: string, plaintext:
 // Throws on a wrong key or a tampered envelope (AES-GCM authentication).
 export async function openEnvelope(envelope: SealedEnvelope, keys: EncryptionKeyPair): Promise<Uint8Array> {
   if (envelope?.format !== ENVELOPE_FORMAT || !HEX_64.test(envelope.epk)) {
-    throw new Error('Not an AdaSouls credential envelope.');
+    throw new Error('Not a Velum credential envelope.');
   }
   const ephemeralPub = fromHex(envelope.epk);
   const ephemeralKey = await crypto.subtle.importKey('raw', ephemeralPub, X25519, false, []);

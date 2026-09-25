@@ -27,6 +27,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import LandingNav from "../layout/landingNav";
+import adasoulsLogo from "../../images/adasouls.png";
 
 // Each use case now carries three related icons (instead of one) — rendered as an overlapping
 // collage by UseCaseCollage below rather than a single centered glyph. Order matters: [0] is the
@@ -449,7 +450,7 @@ const HeroSection = React.forwardRef(({ scrollerRef }, ref) => {
           <span className="role-eyebrow index-hero-eyebrow">Privacy-preserving proof, on Midnight</span>
           <h1 className="role-hero-title index-hero-title">One token. Endless ways to prove it.</h1>
           <p className="text-muted role-hero-desc index-hero-desc">
-            AdaSouls issues privacy-preserving POAPs on the Midnight network — a single Compact
+            Velum issues privacy-preserving POAPs on the Midnight network — a single Compact
             contract that can represent far more than event badges, while your wallet identity is
             derived locally and shared with an organizer only when you choose to.
           </p>
@@ -528,7 +529,7 @@ RoleSection.displayName = "RoleSection";
 // the same scroll-linked dwell-zone curve as before (not useSectionReveal above: this one also
 // needs opposite left/right x-offsets per column, which the shared hook doesn't produce), but the
 // row itself is now the whole 100vh section rather than a compact block in a long page. `showIntro`
-// renders the old "What you can build with AdaSouls" header inline on the first slide only, so it
+// renders the old "What you can build with Velum" header inline on the first slide only, so it
 // still appears once without needing its own dedicated full-screen section.
 //
 // align-items-center (was align-items-start, top-aligning icon and text so the title started on
@@ -577,7 +578,7 @@ const UseCaseRow = React.forwardRef(({ icons, role, title, description, iconLeft
             className="index-section-header index-section-header-compact usecase-intro-header"
             style={{ opacity }}
           >
-            <h4 className="mb-1">What you can build with AdaSouls</h4>
+            <h4 className="mb-1">What you can build with Velum</h4>
             <p className="text-muted small mb-0">
               The same underlying token can stand in for a lot more than a conference badge.
             </p>
@@ -748,6 +749,26 @@ const Dashboard = () => {
       <LandingNav />
       <LandingDotNav activeIndex={activeIndex} onSelect={goToSection} />
 
+      {/* Fixed to the bottom from the second screen on (the hero stays clean). AdaSouls is the
+          company behind Velum. */}
+      <footer className={`landing-fixed-footer${activeIndex > 0 ? " is-visible" : ""}`} aria-hidden={activeIndex === 0}>
+        <div className="container landing-fixed-footer-content">
+          <p className="text-muted small mb-0">© 2026 Velum — built on Midnight.</p>
+          <p className="landing-powered-by mb-0">
+            <span>Powered by</span>
+            <a
+              href="https://adasouls.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="AdaSouls (opens adasouls.io)"
+              tabIndex={activeIndex === 0 ? -1 : undefined}
+            >
+              <img src={adasoulsLogo} alt="AdaSouls" width="104" height="32" />
+            </a>
+          </p>
+        </div>
+      </footer>
+
       {/* Reuses Layout's own .content-body wrapper directly rather than rendering <Layout>, since
           Layout unconditionally also renders the app's <Header/> with no way to opt out — but
           adds landing-scroll-body alongside it (theme-dark-glass.css) to cancel out
@@ -777,11 +798,6 @@ const Dashboard = () => {
             />
           ))}
 
-          <footer className="landing-snap-footer">
-            <div className="container">
-              <p className="text-muted small mb-0">© 2026 AdaSouls — built on Midnight.</p>
-            </div>
-          </footer>
         </div>
       </div>
     </div>

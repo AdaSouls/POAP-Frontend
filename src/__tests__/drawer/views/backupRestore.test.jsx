@@ -92,7 +92,7 @@ describe('BackupRestore drawer view', () => {
 
   it('restores from the cloud, then disconnects so the restored identity is loaded on reconnect', async () => {
     restoreIntoSession.mockResolvedValue(undefined);
-    window.localStorage.setItem(`adasouls:midnight:callerPkHex:${COIN_PK}:${CONTRACT}`, 'stale-pk');
+    window.localStorage.setItem(`velum:midnight:callerPkHex:${COIN_PK}:${CONTRACT}`, 'stale-pk');
     const dispatch = jest.fn();
     const drawerValue = connectedDrawer();
     renderWithProviders(<BackupRestore />, { drawerValue, drawerDispatch: dispatch });
@@ -107,7 +107,7 @@ describe('BackupRestore drawer view', () => {
     expect(await screen.findByText(/backup restored/i)).toBeInTheDocument();
     expect(drawerValue.midnight.disconnect).toHaveBeenCalled();
     expect(dispatch).toHaveBeenCalledWith({ type: 'UPDATE_MIDNIGHT_WALLET', payload: null });
-    expect(window.localStorage.getItem(`adasouls:midnight:callerPkHex:${COIN_PK}:${CONTRACT}`)).toBeNull();
+    expect(window.localStorage.getItem(`velum:midnight:callerPkHex:${COIN_PK}:${CONTRACT}`)).toBeNull();
 
     await userEvent.click(screen.getByRole('button', { name: /connect wallet/i }));
     expect(dispatch).toHaveBeenCalledWith({ type: 'SHOW_MIDNIGHT_WALLET' });

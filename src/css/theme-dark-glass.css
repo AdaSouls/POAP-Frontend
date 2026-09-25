@@ -14,7 +14,7 @@
 :root {
   /* "Color Palette For Coding" reference (dark → light: #06141B, #11212D, #253745, #4A5C6A,
      #9BA8AB, #CCD0CF) — a monochrome slate scale, replacing the old blue/violet brand palette
-     (--bs-adasouls-*) everywhere in this file. Not just the named accent vars below: every
+     (--bs-velum-*) everywhere in this file. Not just the named accent vars below: every
      hardcoded rgba(124,106,173,…) (old violet) / rgba(92,164,218,…) (old blue) in this file was
      swapped to the matching palette-3/-4/-5 rgb triplets too, so nothing blue/violet is left. */
   --palette-1: #06141b; /* rgb(6, 20, 27) */
@@ -48,7 +48,7 @@
   --solid-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 
   /* accents — same variable names every other rule in this file already reads from, repointed to
-     the new palette instead of the AdaSouls brand purple/blue (--bs-adasouls-*, style.css/legacy
+     the new palette instead of the old brand purple/blue (--bs-velum-*, style.css/legacy
      Cardano-native pages only now). */
   --accent-violet: var(--palette-4);
   --accent-violet-2: var(--palette-3);
@@ -367,8 +367,8 @@ body.role-subscriber::-webkit-scrollbar-thumb {
   border-style: dashed;
 }
 
-/* sharedCollection.jsx's "← AdaSouls" link. Deliberately not .simple-link: that class resolves to
-   --bs-primary/--bs-adasouls-three (leftover purple/blue), which the monochrome-only palette
+/* sharedCollection.jsx's "← Velum" link. Deliberately not .simple-link: that class resolves to
+   --bs-primary/--bs-velum-three (leftover purple/blue), which the monochrome-only palette
    decision (see theme-dark-glass-decisions memory) dropped everywhere except the still-in-scope
    Cardano-native pages that also use .simple-link — retheming the shared class would bleed into
    those out-of-scope pages. */
@@ -2992,12 +2992,75 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    still needs its own scroll-snap-align so it's a valid place for the scroller to rest once the
    user scrolls past the last use-case slide, instead of being unreachable/bounced back under
    `scroll-snap-type: y mandatory`. */
-.landing-snap-footer {
-  scroll-snap-align: start;
-  margin-top: 40px;
-  padding: 24px 0 48px;
-  border-top: 1px solid var(--glass-border);
-  text-align: center;
+/* Landing footer (index.jsx): fixed to the bottom, shown from the second screen on — copyright on
+   the left, "Powered by AdaSouls" (the company behind Velum) on the right. Transparent, with no
+   separator line, like the top nav. The logo's wordmark is white, made for this. */
+.landing-fixed-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 21;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s linear 0.25s;
+}
+
+.landing-fixed-footer.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s;
+}
+
+.landing-fixed-footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-fixed-footer,
+  .landing-fixed-footer.is-visible {
+    transform: none;
+    transition: none;
+  }
+}
+
+.landing-powered-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bs-body-color, #a6b0cf);
+  opacity: 0.8;
+}
+
+.landing-powered-by img {
+  height: 32px;
+  width: auto;
+}
+
+.landing-powered-by a {
+  display: inline-flex;
+  border-radius: 6px;
+  transition: opacity 0.15s ease;
+}
+
+.landing-powered-by a:hover {
+  opacity: 0.75;
+}
+
+.landing-powered-by a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
 }
 
 /* Right-edge section dot-nav (index.jsx's LandingDotNav) — fixed to the viewport like

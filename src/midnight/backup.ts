@@ -34,7 +34,7 @@ import {
 
 const IPFS_API_URL = process.env.REACT_APP_IPFS_API_URL || 'http://localhost:4000';
 
-export const BACKUP_FORMAT = 'adasouls-backup';
+export const BACKUP_FORMAT = 'velum-backup';
 export const BACKUP_VERSION = 1;
 export const BACKUP_KDF_ITERATIONS = 600_000;
 const AUTO_BACKUP_DEBOUNCE_MS = 5_000;
@@ -75,7 +75,7 @@ export class BackupPasswordError extends Error {
 }
 
 export class BackupFormatError extends Error {
-  constructor(message = 'This is not an AdaSouls backup file.') {
+  constructor(message = 'This is not a Velum backup file.') {
     super(message);
     this.name = 'BackupFormatError';
   }
@@ -180,7 +180,7 @@ export async function computeBackupLookupId(password: string, coinPublicKey: str
     {
       name: 'PBKDF2',
       hash: 'SHA-256',
-      salt: new TextEncoder().encode(`adasouls-backup-lookup:${coinPublicKey}`),
+      salt: new TextEncoder().encode(`velum-backup-lookup:${coinPublicKey}`),
       iterations: BACKUP_KDF_ITERATIONS,
     },
     await passwordKeyMaterial(password),
@@ -287,7 +287,7 @@ export function downloadBackupFile(envelope: BackupEnvelope): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `adasouls-backup-${envelope.createdAt.slice(0, 10)}.json`;
+  link.download = `velum-backup-${envelope.createdAt.slice(0, 10)}.json`;
   document.body.appendChild(link);
   link.click();
   link.remove();

@@ -202,7 +202,7 @@ const Header = () => {
         <div className="header-content">
           <Link to="/app" className="brand-logo">
             <img src={logo} alt="" />
-            <span>AdaSouls</span>
+            <span>Velum</span>
           </Link>
 
           <nav className={`header-nav${isRoleSelectionHub ? "" : ` role-${role}`}`}>

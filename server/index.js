@@ -204,11 +204,11 @@ app.post('/api/ipfs/private-signed-url', async (req, res) => {
 //
 // The frontend (src/midnight/backup.ts) encrypts the backup in the browser with the user's password
 // before sending it; this server only ever sees ciphertext. Files are tagged with a Pinata keyvalue
-// `adasoulsBackup=<lookupId>` — lookupId is derived from the password + wallet, so someone who
+// `velumBackup=<lookupId>` — lookupId is derived from the password + wallet, so someone who
 // only knows the wallet can't even fetch the ciphertext. Filter syntax (metadata[key]=value on
 // GET /v3/files/private) verified against the real Pinata API on 2026-09-23.
 const LOOKUP_ID_PATTERN = /^[0-9a-f]{64}$/;
-const BACKUP_KEYVALUE = 'adasoulsBackup';
+const BACKUP_KEYVALUE = 'velumBackup';
 
 async function listPrivateFiles(keyName, value) {
   const params = new URLSearchParams({ [`metadata[${keyName}]`]: value, order: 'DESC', limit: '20' });
@@ -240,12 +240,12 @@ app.post('/api/backup', async (req, res) => {
       res.status(400).json({ error: 'Expected a 32-byte hex "lookupId"' });
       return;
     }
-    if (envelope?.format !== 'adasouls-backup' || typeof envelope.ciphertext !== 'string') {
-      res.status(400).json({ error: 'Expected an encrypted AdaSouls backup envelope' });
+    if (envelope?.format !== 'velum-backup' || typeof envelope.ciphertext !== 'string') {
+      res.status(400).json({ error: 'Expected an encrypted Velum backup envelope' });
       return;
     }
     const blob = new Blob([JSON.stringify(envelope)], { type: 'application/json' });
-    const { id } = await pinToIpfs(blob, `adasouls-backup-${lookupId}.json`, 'private', {
+    const { id } = await pinToIpfs(blob, `velum-backup-${lookupId}.json`, 'private', {
       [BACKUP_KEYVALUE]: lookupId,
     });
     // Keep only the newest backup per lookupId. Best-effort: a failed cleanup doesn't fail the backup.
@@ -296,7 +296,7 @@ app.get('/api/backup/:lookupId', async (req, res) => {
 // sha256(domain, holderPk, eventId), which the holder can recompute from their own token.
 // Nothing is deleted on a new upload: anyone can post under a lookupId, so the holder's browser
 // downloads every candidate and keeps the one that decrypts and matches the credential on-chain.
-const DELIVERY_KEYVALUE = 'adasoulsCredential';
+const DELIVERY_KEYVALUE = 'velumCredential';
 const MAX_CANDIDATES = 10;
 
 app.post('/api/credential-delivery', async (req, res) => {
@@ -306,12 +306,12 @@ app.post('/api/credential-delivery', async (req, res) => {
       res.status(400).json({ error: 'Expected a 32-byte hex "lookupId"' });
       return;
     }
-    if (envelope?.format !== 'adasouls-credential' || typeof envelope.ciphertext !== 'string') {
-      res.status(400).json({ error: 'Expected an encrypted AdaSouls credential envelope' });
+    if (envelope?.format !== 'velum-credential' || typeof envelope.ciphertext !== 'string') {
+      res.status(400).json({ error: 'Expected an encrypted Velum credential envelope' });
       return;
     }
     const blob = new Blob([JSON.stringify(envelope)], { type: 'application/json' });
-    await pinToIpfs(blob, `adasouls-credential-${lookupId}.json`, 'private', { [DELIVERY_KEYVALUE]: lookupId });
+    await pinToIpfs(blob, `velum-credential-${lookupId}.json`, 'private', { [DELIVERY_KEYVALUE]: lookupId });
     res.json({ ok: true });
   } catch (error) {
     console.error('[ipfs-server] credential delivery upload failed:', error);
@@ -345,7 +345,7 @@ app.get('/api/credential-delivery/:lookupId', async (req, res) => {
 // question to answer it). Same anyone-can-post caveat as above: the client expands the rule,
 // recomputes the root and ignores rules that don't match the request's on-chain setRoot.
 // Older entries stored a bare { members } list; they're served back as a oneOf rule.
-const SET_KEYVALUE = 'adasoulsRequestSet';
+const SET_KEYVALUE = 'velumRequestSet';
 const MAX_SET_MEMBERS = 64;
 const MAX_RULE_BYTES = 4096;
 const RANGE_OPS = { number: ['gte', 'lte', 'between'], date: ['onOrAfter', 'onOrBefore', 'between'] };
@@ -385,7 +385,7 @@ app.post('/api/disclosure-sets', async (req, res) => {
       return;
     }
     const blob = new Blob([JSON.stringify({ requestId, rule })], { type: 'application/json' });
-    await pinToIpfs(blob, `adasouls-request-set-${requestId}.json`, 'private', { [SET_KEYVALUE]: requestId });
+    await pinToIpfs(blob, `velum-request-set-${requestId}.json`, 'private', { [SET_KEYVALUE]: requestId });
     res.json({ ok: true });
   } catch (error) {
     console.error('[ipfs-server] disclosure set upload failed:', error);

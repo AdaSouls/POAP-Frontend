@@ -180,7 +180,7 @@ export default function VerifyProof() {
                       ? "Failed transaction"
                       : result.isOurContract
                         ? "Not a proof"
-                        : "Not an AdaSouls POAP transaction"}
+                        : "Not a Velum POAP transaction"}
                 </p>
                 {valid && <span className="badge verify-proof-valid-badge">Valid proof</span>}
                 <p className="m-0 text-muted">
@@ -190,7 +190,7 @@ export default function VerifyProof() {
                       ? "The transaction was recorded but did not succeed, so it proves nothing."
                       : result.isOurContract
                         ? `This transaction called "${result.entryPoint}", which doesn't prove anything about a POAP.`
-                        : "This transaction exists, but it doesn't call the AdaSouls POAP contract."}
+                        : "This transaction exists, but it doesn't call the Velum POAP contract."}
                 </p>
               </div>
 

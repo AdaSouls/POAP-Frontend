@@ -5,7 +5,7 @@ import { mockDrawerContext, renderWithProviders } from '../../testUtils';
 import { markBackedUp, markBackupDirty, setBackupContext } from '../../midnight/backup-status';
 import { markRecoveryCodeSaved, storeRecoveryCode } from '../../midnight/storage-password';
 
-const STORAGE_KEY = 'adasouls:siteRole';
+const STORAGE_KEY = 'velum:siteRole';
 
 describe('Header nav', () => {
   beforeEach(() => {

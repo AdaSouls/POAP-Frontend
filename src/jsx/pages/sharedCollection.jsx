@@ -118,7 +118,7 @@ const SharedCollection = () => {
       )}
 
       <Link to="/" className="shared-collection-back-link small">
-        &larr; AdaSouls
+        &larr; Velum
       </Link>
     </div>
   );

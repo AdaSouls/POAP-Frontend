@@ -149,7 +149,7 @@ describe('VerifyProof page', () => {
       { hash: TX, block: { height: 5, timestamp: null }, contractActions: [{ __typename: 'ContractCall', address: 'ff'.repeat(32), entryPoint: 'proveEventAttendance' }] },
     ]);
     renderAt(TX);
-    expect(await screen.findByText(/not an adasouls poap transaction/i)).toBeInTheDocument();
+    expect(await screen.findByText(/not a velum poap transaction/i)).toBeInTheDocument();
   });
 
   it('says when the transaction does not exist', async () => {

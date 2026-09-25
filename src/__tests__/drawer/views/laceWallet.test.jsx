@@ -125,7 +125,7 @@ describe('LaceWallet drawer view', () => {
     it('welcomes a wallet new to this browser with a single Continue', async () => {
       const { getSubmission } = await renderWithPrompt('welcome');
 
-      expect(await screen.findByText(/welcome to adasouls/i)).toBeInTheDocument();
+      expect(await screen.findByText(/welcome to velum/i)).toBeInTheDocument();
       expect(screen.queryByLabelText(/recovery code/i)).not.toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: /^continue$/i }));
 
@@ -163,7 +163,7 @@ describe('LaceWallet drawer view', () => {
 
     it('goes back to the wallet picker without an error when the step is cancelled', async () => {
       await renderWithPrompt('welcome');
-      await screen.findByText(/welcome to adasouls/i);
+      await screen.findByText(/welcome to velum/i);
 
       await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
 

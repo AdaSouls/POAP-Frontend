@@ -45,4 +45,18 @@ describe('Dashboard Page (landing)', () => {
     expect(screen.getByRole('link', { name: /organizer/i })).toHaveAttribute('href', '/organizer');
     expect(screen.getByRole('link', { name: /subscriber/i })).toHaveAttribute('href', '/subscriber');
   });
+
+  it('says in the footer that it is powered by AdaSouls', () => {
+    renderWithProviders(<Dashboard />);
+    expect(screen.getByText(/powered by/i)).toBeInTheDocument();
+    expect(screen.getByAltText('AdaSouls').closest('a')).toHaveAttribute('href', 'https://adasouls.io');
+    expect(screen.getByText(/© 2026 Velum/)).toBeInTheDocument();
+  });
+
+  it('keeps the footer hidden on the hero (it shows from the second screen on)', () => {
+    const { container } = renderWithProviders(<Dashboard />);
+    const footer = container.querySelector('.landing-fixed-footer');
+    expect(footer).not.toHaveClass('is-visible');
+    expect(footer).toHaveAttribute('aria-hidden', 'true');
+  });
 });

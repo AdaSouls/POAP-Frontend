@@ -176,7 +176,7 @@ describe('PoapCard Component', () => {
 
     it('shows an ownership seal and a blurred anonymous seal once proofs were made', () => {
       const owned = { ...poap, ownerPk: 'dd'.repeat(32) };
-      const key = `adasouls:midnight:proofs:${owned.ownerPk}:42`;
+      const key = `velum:midnight:proofs:${owned.ownerPk}:42`;
       window.localStorage.setItem(
         key,
         JSON.stringify([

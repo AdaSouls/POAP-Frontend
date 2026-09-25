@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-const STORAGE_KEY = "adasouls:siteRole";
+const STORAGE_KEY = "velum:siteRole";
 
 export const SITE_ROLES = {
   SUBSCRIBER: "subscriber",

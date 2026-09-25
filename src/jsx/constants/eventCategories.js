@@ -133,7 +133,7 @@ export const EVENT_CATEGORIES = {
     icon: Calendar,
     detailsFields: {
       nameLabel: "Event Name",
-      namePlaceholder: "e.g. AdaSouls Meetup 2026",
+      namePlaceholder: "e.g. Velum Meetup 2026",
       descriptionLabel: "Description",
       descriptionPlaceholder: "What's this event about?",
     },
@@ -151,7 +151,7 @@ export const EVENT_CATEGORIES = {
     icon: Users,
     detailsFields: {
       nameLabel: "Subscription Name",
-      namePlaceholder: "e.g. AdaSouls Weekly Update",
+      namePlaceholder: "e.g. Velum Weekly Update",
       descriptionLabel: "Description",
       descriptionPlaceholder: "What are people subscribing to?",
     },

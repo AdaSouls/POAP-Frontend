@@ -6,8 +6,8 @@
 // backup with the rest of the local-only data.
 import { markBackupDirty } from './backup-status';
 
-export const PROOF_HISTORY_PREFIX = 'adasouls:midnight:proofs:';
-export const PROOF_HISTORY_EVENT = 'adasouls:proof-history';
+export const PROOF_HISTORY_PREFIX = 'velum:midnight:proofs:';
+export const PROOF_HISTORY_EVENT = 'velum:proof-history';
 const MAX_ENTRIES = 50;
 
 export type ProofRecord = {
