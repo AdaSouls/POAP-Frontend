@@ -4144,3 +4144,75 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.85;
   min-width: 0;
 }
+
+/* OptionChipsInput.jsx — a List field's options as chips inside what looks like one input. The
+   wrapper carries .form-control's border; the real <input> inside is borderless and grows to fill
+   the rest of the line. */
+.option-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  min-height: calc(1.5em + 0.94rem + 2px);
+  cursor: text;
+}
+
+.option-chips:focus-within {
+  border-color: var(--palette-5, #9ba8ab);
+  box-shadow: 0 0 0 0.2rem rgba(155, 168, 171, 0.25);
+}
+
+.option-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 4px 2px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-bg-light);
+  color: var(--text-on-glass, #fff);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.option-chip-label {
+  overflow-wrap: anywhere;
+}
+
+.option-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.option-chip-remove:hover,
+.option-chip-remove:focus-visible {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+
+.option-chips-input {
+  flex: 1 1 120px;
+  min-width: 80px;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.option-chips-input::placeholder {
+  color: var(--text-on-glass-muted, rgba(255, 255, 255, 0.5));
+}

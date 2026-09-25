@@ -80,7 +80,7 @@ export default function CreateEvent() {
   const [channels, setChannels] = useState([]);
   const [taxonomyValues, setTaxonomyValues] = useState({});
   const [organizationProfile, setOrganizationProfile] = useState({});
-  // { fieldName, type, min, max, optionsText }[] — Credential only: each credential's private fields.
+  // { fieldName, type, min, max, options, optionDraft }[] — Credential only: each credential's private fields.
   const [privateAttributes, setPrivateAttributes] = useState([]);
   const [usePoapImage, setUsePoapImage] = useState(false);
   // Separate {imageFile, croppedAreaPixels} pair — EventImageField hardcodes those two field names

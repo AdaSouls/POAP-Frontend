@@ -1,14 +1,16 @@
 import { Plus, Trash2 } from "lucide-react";
 import { canonicalValue, FIELD_TYPES } from "../../midnight/attribute-types";
+import OptionChipsInput from "./OptionChipsInput";
 
 const TYPE_LABELS = { text: "Text", number: "Number", date: "Date", list: "List" };
 
-// A list field's options are typed comma-separated; each must be a valid 32-byte text value.
-export const splitOptions = (text) =>
-  (text || "")
-    .split(",")
-    .map((option) => option.trim())
-    .filter(Boolean);
+// A List field's options: the chips (row.options) plus whatever is still being typed
+// (row.optionDraft), so an option isn't lost if Create is pressed before it became a chip. Each
+// must be a valid 32-byte text value.
+export const listOptions = (row) => {
+  const draft = (row.optionDraft || "").trim();
+  return [...(row.options || []), ...(draft ? [draft] : [])];
+};
 
 // Why this row can't be saved, or null. Empty rows are fine (ignored at submit).
 export function privateFieldRowError(row) {
@@ -22,8 +24,8 @@ export function privateFieldRowError(row) {
     if (min !== undefined && max !== undefined && min > max) return "Min is above max.";
   }
   if (row.type === "list") {
-    const options = splitOptions(row.optionsText);
-    if (options.length < 2) return "Add at least two options, separated by commas.";
+    const options = listOptions(row);
+    if (options.length < 2) return "Add at least two options (type one and press comma or Enter).";
     if (new Set(options).size !== options.length) return "Each option must appear once.";
     const tooLong = options.find((option) => "error" in canonicalValue({ type: "text" }, option));
     if (tooLong) return `"${tooLong}" is longer than 32 bytes.`;
@@ -38,11 +40,11 @@ export function privateFieldFromRow(row, fieldId) {
     if (row.min !== "" && row.min !== undefined) field.min = Number(row.min);
     if (row.max !== "" && row.max !== undefined) field.max = Number(row.max);
   }
-  if (field.type === "list") field.options = splitOptions(row.optionsText);
+  if (field.type === "list") field.options = listOptions(row);
   return field;
 }
 
-// Repeatable list of a Credential event's private fields ({ fieldName, type, min, max, optionsText }[])
+// Repeatable list of a Credential event's private fields ({ fieldName, type, min, max, options, optionDraft }[])
 // — same controlled, full-array-in/full-array-out contract as ChannelsField.jsx. Empty list is valid
 // (no private fields). The values are filled in per recipient when the credential is issued
 // (mintPoap.jsx); the type decides the input there and the questions that can be asked about it
@@ -60,7 +62,7 @@ export default function PrivateAttributesStepFields({ values, onChange }) {
   };
 
   const addAttribute = () => {
-    onChange([...attributes, { fieldName: "", type: "text", min: "", max: "", optionsText: "" }]);
+    onChange([...attributes, { fieldName: "", type: "text", min: "", max: "", options: [], optionDraft: "" }]);
   };
 
   return (
@@ -122,14 +124,15 @@ export default function PrivateAttributesStepFields({ values, onChange }) {
               </div>
             )}
             {type === "list" && (
-              <input
-                type="text"
-                className="form-control mb-2"
-                placeholder="Options, separated by commas (e.g. Campo, Platea, VIP)"
-                aria-label="List options"
-                value={attribute.optionsText ?? ""}
-                onChange={(event) => updateAttribute(index, { optionsText: event.target.value })}
-              />
+              <div className="mb-2">
+                <OptionChipsInput
+                  options={attribute.options || []}
+                  draft={attribute.optionDraft || ""}
+                  onChange={(options, optionDraft) => updateAttribute(index, { options, optionDraft })}
+                  ariaLabel="List options"
+                  placeholder="Type an option and press comma (e.g. Campo)"
+                />
+              </div>
             )}
             {error && <small className="form-text text-danger d-block">{error}</small>}
           </div>

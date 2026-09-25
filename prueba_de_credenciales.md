@@ -70,8 +70,9 @@ final lista lo que más importa confirmar.
    - **Validity**: al principio el número está desactivado. Elige unidad **Years** → el botón Next
      se desactiva hasta que pongas cantidad → pon `1`.
 5. Paso de **campos privados**: cada campo tiene nombre y **tipo**. Agrega:
-   - `Sector` — **List** — opciones `Campo, Platea, VIP`. (Con una sola opción aparece un error y
-     no deja seguir: prueba escribir solo `Campo` primero.)
+   - `Sector` — **List** — opciones `Campo`, `Platea`, `VIP`: escribe cada una y pon una coma (o
+     Enter) → se convierte en un chip con una **X** para quitarla. Con una sola opción aparece un
+     error y no deja seguir. Prueba también pegar `Campo, Platea, VIP` de una vez.
    - `Fila` — **Number** — min `1`, max `50`.
    - `Titular` — **Text**.
    - `Nacimiento` — **Date**.
