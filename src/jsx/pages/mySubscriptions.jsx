@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Award } from "lucide-react";
+import { Award, Check, ClipboardPaste, Share2 } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import PoapCard from "../components/poapCard";
@@ -18,11 +18,6 @@ function applyPoapFilters(poaps, filters) {
 
   if (filters.issuerSearch) {
     result = result.filter((p) => p.issuerPkHex.toLowerCase().includes(filters.issuerSearch.toLowerCase()));
-  }
-  if (filters.soulbound === "soulbound") {
-    result = result.filter((p) => p.isSoulbound);
-  } else if (filters.soulbound === "transferable") {
-    result = result.filter((p) => !p.isSoulbound);
   }
 
   const sortBy = filters.sortBy || "tokenId";
@@ -62,7 +57,7 @@ const MySubscriptions = () => {
       .filter((poap) => getTokenVisibility(poap.issuerPkHex, poap.tokenId))
       .map((poap) => ({ issuerPkHex: poap.issuerPkHex, tokenId: poap.tokenId }));
     const encoded = encodeShareableCollection(entries);
-    navigator.clipboard?.writeText(buildShareUrl(provider.address, encoded));
+    navigator.clipboard?.writeText(buildShareUrl(encoded));
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
   };
@@ -135,13 +130,25 @@ const MySubscriptions = () => {
             </div>
             <div className="inner-header-row-right">
               {provider && (
-                <button className="btn btn-white btn-small" onClick={openGetHolderKey}>
-                  Paste Link
+                <button className="inner-header-action-btn" onClick={openGetHolderKey}>
+                  <span className="inner-header-action-btn-inner">
+                    <ClipboardPaste size={14} /> Paste Link
+                  </span>
                 </button>
               )}
               {provider && myPoaps.length > 0 && (
-                <button className="btn btn-white btn-small" onClick={copyCollectionShareLink}>
-                  {shareCopied ? "Link copied ✓" : "Share my collection"}
+                <button className="inner-header-action-btn" onClick={copyCollectionShareLink}>
+                  <span className="inner-header-action-btn-inner">
+                    {shareCopied ? (
+                      <>
+                        <Check size={14} /> Link copied
+                      </>
+                    ) : (
+                      <>
+                        <Share2 size={14} /> Share<span className="d-none-phone"> my collection</span>
+                      </>
+                    )}
+                  </span>
                 </button>
               )}
               <PoapFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} />

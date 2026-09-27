@@ -495,7 +495,7 @@ const EventCard = forwardRef(({
                         </li>
                       </ul>
 
-                      <div className="d-flex justify-content-between align-items-center mt-auto">
+                      <div className="d-flex justify-content-between align-items-center mt-auto card-event-footer-row">
                         <small className="text-muted" style={{ fontSize: "11px" }}>
                           Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
                           {available !== undefined && (
@@ -510,7 +510,7 @@ const EventCard = forwardRef(({
                     </div>
                   ) : (
                     <div style={{ flex: 1, minWidth: 0, ...textStyle }}>
-                      <div className="d-flex align-items-center justify-content-between">
+                      <div className="d-flex align-items-center justify-content-between card-detail-top-row">
                         <span
                           className={statusBadgeClass}
                           style={{ fontSize: "11px", padding: "3px 10px" }}
@@ -693,8 +693,8 @@ const EventCard = forwardRef(({
 
               {isExpanded && (
                 <div
-                  className="col-md-5 d-flex flex-column"
-                  style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px", ...textStyle }}
+                  className="col-md-5 d-flex flex-column card-detail-side-col"
+                  style={textStyle}
                 >
                   <div className="d-flex align-items-center justify-content-end mb-3">
                     <button

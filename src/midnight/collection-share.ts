@@ -71,7 +71,9 @@ export function decodeShareableCollection(encoded: string): ShareEntry[] | null 
   }
 }
 
-export function buildShareUrl(pkHex: string, encodedPayload?: string): string {
-  const base = `${window.location.origin}/share/${pkHex}`;
-  return encodedPayload ? `${base}?d=${encodedPayload}` : base;
+// /app/share?d=… (sharedCollection.jsx). No wallet address in the link: tokens are owned by a
+// different pseudonym per organizer (holder_pk in poap.compact), so the address can't be used to
+// look anything up — and putting it next to the list would link those pseudonyms to the wallet.
+export function buildShareUrl(encodedPayload: string): string {
+  return `${window.location.origin}/app/share?d=${encodedPayload}`;
 }

@@ -288,6 +288,24 @@ body.role-subscriber::-webkit-scrollbar-thumb {
   flex-direction: column;
 }
 
+/* Phones: a 140px thumb leaves the text column ~170px, not enough for "Minted: 1/500 (Available:
+   499)" plus the category badge on one line — smaller thumb, and that footer row may wrap. */
+@media (max-width: 575px) {
+  .card-media-row {
+    gap: 12px;
+  }
+
+  .card-media-row .card-media-thumb-wrap {
+    width: 104px;
+    height: 104px;
+  }
+
+  .card-event-footer-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+}
+
 /* Hover on POAP/event/pending cards: original small upward y-translate
    (`whileHover={{ y: -2 }}` in poapCard.jsx/eventCard.jsx; a plain CSS transform via
    .card-hover-lift in myPendingApprovals.jsx's own inline card, which has no framer-motion
@@ -360,25 +378,64 @@ body.role-subscriber::-webkit-scrollbar-thumb {
   transition: width 0.3s ease;
 }
 
-/* sharedCollection.jsx's "declared by holder" cards — same card-outline-only shell as the
-   verified ones, just a dashed border so the two stay visually distinguishable (verified fact vs.
-   holder-reported, unverified claim) without relying on color alone. */
-.shared-collection-item--declared {
-  border-style: dashed;
-}
-
-/* sharedCollection.jsx's "← Velum" link. Deliberately not .simple-link: that class resolves to
-   --bs-primary/--bs-velum-three (leftover purple/blue), which the monochrome-only palette
-   decision (see theme-dark-glass-decisions memory) dropped everywhere except the still-in-scope
-   Cardano-native pages that also use .simple-link — retheming the shared class would bleed into
-   those out-of-scope pages. */
-.shared-collection-back-link {
-  text-decoration: none;
+/* /app/share (sharedCollection.jsx) — the /app/verify certificate card (.verify-proof-*) with one
+   row per shared POAP. Status badges are outlines in their semantic color, like the card badges. */
+.shared-collection-declared-badge {
+  background: transparent;
+  border: 1px solid var(--glass-border);
   color: var(--text-on-glass-muted);
+  font-size: 11px;
+  padding: 3px 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.shared-collection-back-link:hover {
-  color: var(--text-on-glass);
+.shared-collection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shared-collection-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.shared-collection-item.is-revoked,
+.shared-collection-item.is-expired,
+.shared-collection-item.is-missing {
+  opacity: 0.7;
+}
+
+.shared-collection-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.shared-collection-status {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid currentColor;
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+.shared-collection-status.is-active {
+  color: #34c38f;
+}
+
+.shared-collection-status.is-expired,
+.shared-collection-status.is-missing {
+  color: #f1b44c;
+}
+
+.shared-collection-status.is-revoked {
+  color: #f46a6a;
 }
 
 /* ── Generic Bootstrap elements with no prior dark treatment ─────────────────────
@@ -633,6 +690,56 @@ select option,
    this modifier only cancels the positioning when both classes are present. */
 .card-expand-close-btn.card-expand-close-btn-inline {
   position: static;
+}
+
+/* Expanded event/POAP card's side column (eventCard.jsx, poapCard.jsx). Side by side from md up,
+   divided by a vertical line; stacked on phones, where the line turns horizontal and the collapse
+   button moves up to the card's top-right corner (the column's top is mid-card there), with the
+   top row of badges making room for it. */
+.card-detail-side-col {
+  border-left: 1px solid var(--glass-border);
+  padding-left: 20px;
+}
+
+@media (max-width: 767px) {
+  .card-detail-side-col {
+    border-left: none;
+    border-top: 1px solid var(--glass-border);
+    padding-left: 15px;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .card-detail-side-col .card-expand-close-btn.card-expand-close-btn-inline {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+  }
+
+  .card-detail-expanded .card-detail-top-row {
+    margin-right: 36px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .card-detail-expanded .card-media-thumb-wrap {
+    width: 96px;
+    height: 96px;
+  }
+
+  /* POAP: the category badge gets its own row above the header (next to the collapse button),
+     so the name keeps the full width beside the thumb. */
+  .card-detail-expanded .poap-detail-category-badge-corner.card-detail-top-row {
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .card-detail-expanded .poap-detail-header-row {
+    padding-right: 0;
+  }
 }
 
 /* All badges (page-header counters, card status/attribute badges — Active/Expired, Soulbound,
@@ -1002,6 +1109,11 @@ select option,
   position: absolute;
   top: 0;
   right: 20px;
+}
+
+/* Room on the right of the expanded POAP's header row for the corner category badge above. */
+.poap-detail-header-row {
+  padding-right: 160px;
 }
 
 /* poapCard.jsx's expanded left column: the "done" status badge (Received/Attended/Active/Burned)
@@ -2157,18 +2269,30 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .header-horizontal .brand-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  /* Cancels style.css's .header .brand-logo padding-right: 20px so the brand → nav spacing is the
+     same 32px flex gap as the launcher's .landing-nav. */
+  padding-right: 0;
   text-decoration: none;
 }
 
 .header-horizontal .brand-logo img {
-  max-width: 26px;
+  display: block;
+  max-width: 32px;
+  /* style.css's template-era .header .brand-logo img adds margin-right: 5px — cancel it so the
+     logo↔wordmark spacing matches the launcher's .landing-nav-brand exactly. */
+  margin-right: 0;
 }
 
 .header-horizontal .brand-logo span {
+  /* Same for style.css's top: 3px, which pushed the wordmark below the logo's center. */
+  top: 0;
   color: var(--text-on-glass);
-  font-weight: 700;
-  font-size: 16px;
+  font-family: "Google Sans", "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 21px;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
 .header-nav {
@@ -2258,6 +2382,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   position: fixed;
   transform: translateX(-50%);
   min-width: 300px;
+  max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2411,17 +2536,64 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     inset 0 -1px 2px 0 rgba(6, 24, 14, 0.8);
 }
 
+/* Phones: two rows. Row 1 = brand on the left, backup chip + wallet button on the right (their own
+   margin-left:auto); row 2 = the role nav, full width, one line, swiping sideways if it still
+   doesn't fit — never wrapping labels onto two lines. The header's height here is what
+   --header-height below clears, so keep the two in sync. */
 @media only screen and (max-width: 767px) {
+  .header.header-horizontal {
+    padding: 8px 0;
+  }
+
   .header-horizontal .header-content {
     flex-wrap: wrap;
-    row-gap: 10px;
-    padding: 12px 0;
+    column-gap: 12px;
+    row-gap: 6px;
+    min-height: 0;
+  }
+
+  .header-horizontal .brand-logo {
+    order: 1;
+  }
+
+  .header-horizontal .header-backup-chip,
+  .header-horizontal .header-cta {
+    order: 2;
+  }
+
+  .header-horizontal .header-backup-chip {
+    margin-right: -8px;
   }
 
   .header-nav {
-    gap: 2px;
+    order: 3;
+    gap: 0;
     width: 100%;
+    margin: 0 -2px;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .header-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .header-nav > * {
+    flex-shrink: 0;
+  }
+
+  .header-nav .header-nav-dropdown-toggle {
+    padding: 2px;
+  }
+
+  .header-nav .header-nav-dropdown-toggle-inner {
+    white-space: nowrap;
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+
+  .content-body {
+    padding-top: 104px;
   }
 }
 
@@ -2438,6 +2610,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border-radius: 0;
   margin-bottom: 20px;
   padding-bottom: 12px;
+  /* style.css fixes this at 50px; auto so a row that wraps on phones pushes the grid down
+     instead of spilling under the cards. */
+  height: auto;
+  min-height: 50px;
 }
 
 /* Row inside .inner-header (title [+ filter button] on the left, action button on the right) —
@@ -2560,6 +2736,56 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    instead. */
 .inner-header-action-btn.is-locked .inner-header-action-btn-inner {
   opacity: 0.6;
+}
+
+/* Phones: row 1 = the count badge on the left and the filter button on the right; row 2 = the
+   action buttons (Create Event / Paste Link / Share my collection) sharing the full width. The
+   right group dissolves (display: contents) so its children can be placed on either row. */
+@media (max-width: 575px) {
+  .inner-header-row {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .inner-header-row::after {
+    content: "";
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .inner-header-row-left {
+    order: 1;
+  }
+
+  .inner-header-row-right {
+    display: contents;
+  }
+
+  .inner-header-row-right > .filter-icon-btn {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .inner-header-row-right > .inner-header-action-btn {
+    order: 4;
+    flex: 1 1 0;
+    min-width: 0;
+    margin-top: 8px;
+  }
+
+  .inner-header-action-btn-inner {
+    width: 100%;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+}
+
+/* Longer labels drop their tail on narrow phones ("Share my collection" → "Share"). */
+@media (max-width: 400px) {
+  .d-none-phone {
+    display: none;
+  }
 }
 
 /* .btn-gradient/.btn-gradient-purple (style.css) are the template's main CTA button — teal/blue
@@ -2949,19 +3175,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .landing-nav-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   margin-top: 0;
   text-decoration: none;
 }
 
 .landing-nav-brand img {
-  max-width: 26px;
+  display: block;
+  max-width: 32px;
 }
 
 .landing-nav-brand span {
   color: var(--text-on-glass);
-  font-weight: 700;
-  font-size: 16px;
+  font-family: "Google Sans", "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 21px;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
 .landing-nav-links {

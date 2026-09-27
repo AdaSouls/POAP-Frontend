@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Plus, PlusCircle } from "lucide-react";
+import { ClipboardPaste, Plus, PlusCircle } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import EventCard from "../components/eventCard";
@@ -130,8 +130,10 @@ const MyEvents = () => {
                 </Tooltip>
               )}
               {provider && (
-                <button className="btn btn-white btn-small" onClick={() => dispatch({ type: "GET_HOLDER_KEY" })}>
-                  Paste Link
+                <button className="inner-header-action-btn" onClick={() => dispatch({ type: "GET_HOLDER_KEY" })}>
+                  <span className="inner-header-action-btn-inner">
+                    <ClipboardPaste size={14} /> Paste Link
+                  </span>
                 </button>
               )}
               <EventFilters filters={filters} onFilterChange={setFilters} onReset={() => setFilters({})} role="organizer" />

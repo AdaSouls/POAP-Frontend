@@ -68,6 +68,8 @@ const Router = () => {
           {/* Admin-only, gated inside the page itself (REACT_APP_ADMIN_WALLET_ADDRESSES) — not
               linked from any nav menu, same reasoning as /app/organizer-dashboard above. */}
           <Route path="/app/admin/deploy" element={<AdminDeploy />} />
+          <Route path="/app/share" element={<SharedCollection />} />
+          {/* Older links carried the wallet address in the path; it's ignored now (see collection-share.ts). */}
           <Route path="/app/share/:pkHex" element={<SharedCollection />} />
           <Route path="/app/Settings-profile" element={<SettingsProfile />} />
           <Route path="/app/claim-mint" element={<ClaimMint />} />

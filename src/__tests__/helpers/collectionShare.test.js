@@ -63,13 +63,7 @@ describe('collection-share encode/decode', () => {
 });
 
 describe('buildShareUrl', () => {
-  const pkHex = 'ff'.repeat(32);
-
-  it('builds a link with no query when no payload is given', () => {
-    expect(buildShareUrl(pkHex)).toBe(`${window.location.origin}/share/${pkHex}`);
-  });
-
-  it('builds a link with the encoded payload as ?d=', () => {
-    expect(buildShareUrl(pkHex, 'abc123')).toBe(`${window.location.origin}/share/${pkHex}?d=abc123`);
+  it('builds an /app/share link carrying only the encoded payload, no wallet address', () => {
+    expect(buildShareUrl('abc123')).toBe(`${window.location.origin}/app/share?d=abc123`);
   });
 });

@@ -67,13 +67,8 @@ describe('PoapCard Component', () => {
     expect(screen.getByText(/Event:/i)).toBeInTheDocument();
   });
 
-  it('shows a soulbound badge when isSoulbound is true', () => {
+  it('no longer shows a Soulbound badge, even for a token claimed as soulbound', () => {
     renderWithProviders(<PoapCard poap={{ ...mockPoap, isSoulbound: true }} />);
-    expect(screen.getByText(/Soulbound/i)).toBeInTheDocument();
-  });
-
-  it('does not show a soulbound badge when isSoulbound is false or unknown', () => {
-    renderWithProviders(<PoapCard poap={mockPoap} />);
     expect(screen.queryByText(/Soulbound/i)).not.toBeInTheDocument();
   });
 
@@ -145,11 +140,6 @@ describe('PoapCard Component', () => {
       await userEvent.click(screen.getByRole('button', { name: /collapse poap details/i }));
 
       await waitFor(() => expect(onCollapse).toHaveBeenCalled());
-    });
-
-    it('shows a clarifying note that Soulbound is not enforced on-chain', () => {
-      renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
-      expect(screen.getByText(/not enforce this restriction on-chain/i)).toBeInTheDocument();
     });
 
     it('shows the on-chain mint transaction as verified proof, and dispatches it as a copyable field via View Blockchain Info', async () => {
@@ -243,15 +233,15 @@ describe('PoapCard Component', () => {
       expect(getTokenVisibility(issuerPkHex, poap.tokenId)).toBe(false);
     });
 
-    it('copies a share link built from the holder pk and this token', async () => {
+    it('copies an /app/share link for this token, without the wallet address', async () => {
       renderWithProviders(<PoapCard poap={poap} isExpanded />, { drawerValue });
 
       await userEvent.click(screen.getByText(/copy share link/i));
 
       expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1);
       const copiedUrl = navigator.clipboard.writeText.mock.calls[0][0];
-      expect(copiedUrl).toContain(`/share/${holderPkHex}`);
-      expect(copiedUrl).toContain('?d=');
+      expect(copiedUrl).toContain('/app/share?d=');
+      expect(copiedUrl).not.toContain(drawerValue.midnight.provider.address);
       expect(screen.getByText(/link copied/i)).toBeInTheDocument();
     });
 

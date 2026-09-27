@@ -133,10 +133,10 @@ describe('MySubscriptions page', () => {
     await waitFor(() => {
       expect(screen.getByText(/No POAPs Found/i)).toBeInTheDocument();
     });
-    expect(screen.queryByText(/share my collection/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /share my collection/i })).not.toBeInTheDocument();
   });
 
-  it('copies a collection share link keyed by the holder pk once POAPs are loaded', async () => {
+  it('copies a collection share link once POAPs are loaded', async () => {
     navigator.clipboard.writeText.mockClear();
     getTokensByOwner.mockResolvedValue([mockToken()]);
     const drawerValue = connectedDrawerValue();
@@ -146,12 +146,12 @@ describe('MySubscriptions page', () => {
       expect(screen.getByText(/POAP #1/i)).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText(/share my collection/i));
+    await userEvent.click(screen.getByRole('button', { name: /share my collection/i }));
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1);
     const copiedUrl = navigator.clipboard.writeText.mock.calls[0][0];
-    expect(copiedUrl).toContain(`/share/${drawerValue.midnight.provider.address}`);
-    expect(copiedUrl).toContain('?d=');
+    expect(copiedUrl).toContain('/app/share?d=');
+    expect(copiedUrl).not.toContain(drawerValue.midnight.provider.address);
     expect(screen.getByText(/link copied/i)).toBeInTheDocument();
   });
 

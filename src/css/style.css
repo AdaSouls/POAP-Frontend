@@ -25,6 +25,7 @@
 /* @import url(../vendor/perfect-scrollbar/perfect-scrollbar.css);
 @import url(../vendor/basic-table/basictable.css); */
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap");
 @import url("../icons/cryptocoins/css/cryptocoins.css");
 @import url("../icons/cryptocoins/css/cryptocoins-colors.css");
 
@@ -12032,10 +12033,6 @@ strong {
 @media only screen and (max-width: 767px) {
   .header .brand-logo {
     display: block;
-  }
-
-  .header .brand-logo span {
-    display: none;
   }
 }
 

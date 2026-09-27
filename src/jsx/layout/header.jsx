@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Wallet, ChevronUp, ChevronDown, Award, PlusCircle, ShieldAlert, Shield } from "lucide-react";
@@ -60,6 +60,16 @@ const RoleDropdown = ({ role, onSelect, placeholderLabel }) => {
     setMenuPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
     setOpen(true);
   };
+
+  // Centered under the toggle, but kept on screen: on a phone the toggle sits at the left edge and
+  // the menu is wider than twice its distance to it. Measured after render, before paint.
+  useLayoutEffect(() => {
+    if (!open || !menuPos || !menuRef.current) return;
+    const margin = 12;
+    const half = menuRef.current.offsetWidth / 2;
+    const clamped = Math.min(Math.max(menuPos.left, margin + half), window.innerWidth - margin - half);
+    if (Math.abs(clamped - menuPos.left) > 0.5) setMenuPos((pos) => ({ ...pos, left: clamped }));
+  }, [open, menuPos]);
 
   useEffect(() => {
     if (!open) return undefined;

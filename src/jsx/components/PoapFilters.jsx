@@ -3,12 +3,6 @@ import { X } from "lucide-react";
 import FilterPopover from "./FilterPopover";
 import SelectDropdown from "./SelectDropdown";
 
-const TYPE_OPTIONS = [
-  { value: "", label: "All Types" },
-  { value: "soulbound", label: "Soulbound" },
-  { value: "transferable", label: "Transferable" },
-];
-
 const SORT_BY_OPTIONS = [
   { value: "tokenId", label: "Token ID" },
   { value: "mintedBlock", label: "Most Recent" },
@@ -51,17 +45,6 @@ const PoapFilters = ({ filters, onFilterChange, onReset }) => {
           placeholder="hex substring…"
           value={filters.issuerSearch || ""}
           onChange={(e) => handleFilterChange("issuerSearch", e.target.value || undefined)}
-        />
-      </div>
-
-      <div>
-        <label htmlFor="poap-filter-type" className="form-label small text-muted">Type</label>
-        <SelectDropdown
-          id="poap-filter-type"
-          size="sm"
-          value={filters.soulbound || ""}
-          onChange={(value) => handleFilterChange("soulbound", value || undefined)}
-          options={TYPE_OPTIONS}
         />
       </div>
 

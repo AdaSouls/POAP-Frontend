@@ -138,7 +138,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
   const copyShareLink = () => {
     const encoded = encodeShareableCollection([{ issuerPkHex: poap.issuerPkHex, tokenId: poap.tokenId }]);
-    navigator.clipboard?.writeText(buildShareUrl(midnight?.provider?.address, encoded));
+    navigator.clipboard?.writeText(buildShareUrl(encoded));
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
   };
@@ -370,7 +370,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   // lands, with no separate claim/approval step (see mySubscriptions.jsx reading straight from the
   // indexer by holder pk). So the only real states here are "still owned" vs. "burned" — same
   // top-right badge slot/style as eventCard.jsx's own status badge, instead of Burned living down
-  // in the row with Soulbound.
+  // in a row below the title.
   // "Active" said nothing about how you got this POAP — same category-aware verb the explore-events
   // grid uses once claimed (Followed/Attended/Subscribed, see getClaimActionLabel), since every card
   // on this page is by definition already-held (no "Claimable" state exists here).
@@ -425,7 +425,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                 /* Pinned to the column's own top-right corner (not just the header row) — a
                     corner ribbon, independent of the thumb's height, rather than a flex sibling
                     vertically centered against the 140px thumb. */
-                <div className="poap-detail-category-badge-corner" style={textStyle}>
+                <div className="poap-detail-category-badge-corner card-detail-top-row" style={textStyle}>
                   <CategoryBadge category={metadata?.category} />
                 </div>
               )}
@@ -435,8 +435,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                   instead of being flex-stretched to the row's full width, and so it doesn't eat
                   into the flow height the name below centers itself against. */}
               <div
-                className={isExpanded ? "d-flex align-items-stretch mb-2" : "d-flex align-items-stretch card-media-row"}
-                style={isExpanded ? { paddingRight: 160 } : undefined}
+                className={isExpanded ? "d-flex align-items-stretch mb-2 poap-detail-header-row" : "d-flex align-items-stretch card-media-row"}
               >
                 {/* Explicit layout transition, slightly slower than the card's own (0.3s) —
                     without this the thumb used framer-motion's default spring, which finished
@@ -475,18 +474,6 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                         {poapStatusLabel}
                       </span>
                     </div>
-                    {poap.isSoulbound && (
-                      <div className="d-flex align-items-center flex-wrap mb-2" style={{ gap: "6px" }}>
-                        {poap.isSoulbound && (
-                          <Tooltip multiline label="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet.">
-                            <span className="badge bg-info" style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}>
-                              Soulbound
-                            </span>
-                          </Tooltip>
-                        )}
-                      </div>
-                    )}
-
                     <ul
                       className="list-unstyled mb-2 d-flex flex-column justify-content-center flex-grow-1"
                       style={{ fontSize: "12px" }}
@@ -528,20 +515,6 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
 
               {isExpanded && (
                 <div style={textStyle}>
-                  {poap.isSoulbound && (
-                    <div className="mb-2">
-                      <Tooltip multiline label="Marked non-transferable by you at claim time — the contract does not enforce this restriction on-chain yet.">
-                        <span className="badge bg-info" style={{ fontSize: "10px", padding: "2px 8px", cursor: "help" }}>
-                          Soulbound
-                        </span>
-                      </Tooltip>
-                      <small className="text-muted d-block mt-1">
-                        Marked non-transferable by you at claim time — the contract does not enforce
-                        this restriction on-chain yet.
-                      </small>
-                    </div>
-                  )}
-
                   <hr style={{ marginTop: "12px", marginBottom: "18px" }} />
 
                   {/* Only set on individually push-minted Credential tokens (see mintPoap.jsx) — the
@@ -684,8 +657,8 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                  credential's actual document) IS the content, so it keeps identity (thumb + name)
                  up top, then the document image, then the raw blockchain data. */
               <div
-                className="col-md-4"
-                style={{ borderLeft: "1px solid var(--glass-border)", paddingLeft: "20px", ...textStyle }}
+                className="col-md-4 card-detail-side-col"
+                style={textStyle}
               >
                 <div className="d-flex align-items-center justify-content-end mb-3">
                   <button
