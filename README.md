@@ -1,198 +1,132 @@
-# POAP Frontend Application
+# Velum App
 
-A React-based frontend application for managing POAP (Proof of Attendance Protocol) tokens, events, and collections. The application supports Ethereum blockchains with wallet integration.
+**Private, soulbound credentials on [Midnight](https://midnight.network): issue them, hold them,
+and prove things about them in zero knowledge.**
 
-## Summary
+This is the web app for [Velum](https://github.com/AdaSouls/velum). The Compact smart contract,
+the indexer API and the deployment tooling live in [`AdaSouls/velum`](https://github.com/AdaSouls/velum).
+Built by [AdaSouls](https://github.com/AdaSouls).
 
-This frontend application provides a comprehensive interface for:
-- **Event Management**: Create and manage POAP events with backend integration
-- **Token Minting**: Mint POAP tokens directly from smart contracts
-- **Wallet Integration**: Connect with MetaMask, WalletConnect, and Cardano wallets
-- **Dual Architecture**: Supports both integrated (Backend + Smart Contracts) and smart contract-only approaches
+Unlike a POAP on a public chain, the chain never shows who holds a credential or links one person
+across organizers, and holders can prove things about a credential without showing it:
 
-## Prerequisites
+- **A different pseudonym per organizer.** Two organizers can't tell they share an attendee.
+- **Anonymous proofs.** "I hold a valid ticket for this event", without saying which one or which
+  wallet.
+- **Private data per credential.** The chain stores only a Merkle root; the values travel encrypted
+  to the holder.
+- **Range proofs.** "I'm at least 18" or "my credential is valid after today", without revealing
+  the date.
+- **Verification without a wallet.** Whoever receives a proof opens a link and sees it confirmed
+  on-chain.
+- **Validity and revocation.** Credentials can expire, and issuers can revoke them.
 
-Before you begin, ensure you have the following installed:
-- **Node.js** (v14 or higher)
-- **npm** (v6 or higher) or **yarn**
-- A modern web browser (Chrome, Firefox, Safari, or Edge)
+## What you can do
 
-## Installation
+**Event categories:**
 
-1. **Navigate to the App directory:**
-   ```bash
-   cd App
-   ```
+| Category | Who gets it | How | Private data |
+|---|---|---|---|
+| **Event** ("I was there") | Anyone | Claims it themselves | No |
+| **Subscription** ("I'm a member") | Anyone | Claims it themselves | No |
+| **Credential** ("I was certified") | One specific person | Issued by the organizer | Yes, per holder |
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-   
-   Or if you prefer yarn:
-   ```bash
-   yarn install
-   ```
+**Organizers:**
+- Create events with a step-by-step wizard: capacity, deadline, validity period, taxonomy, and
+  typed private fields (text, integer with range, date, list).
+- Invite holders with a link or QR code, and issue credentials with each holder's private values.
+- See their holders, revoke credentials, and ask holders questions about private data ("is one of…",
+  "≥", "between", "at least N years ago").
 
-3. **Verify installation:**
-   ```bash
-   npm list --depth=0
-   ```
+**Holders:**
+- Explore and claim events, and see all their credentials in one place.
+- Prove ownership publicly or anonymously ("Anonymous among N holders", with a warning below 5).
+- Answer an organizer's question about a private detail without revealing the value.
+- Keep a receipt and a history of every proof, and share a public collection page.
 
-## Running the Application
+**Verifiers:** `/app/verify` checks a proof from its link or hash, with no account and no wallet.
+It shows what was proven, for which event, whether the credential is still valid or was revoked,
+and until when.
 
-### Development Mode
+**Identity and backup:** there are no passwords. Each wallet gets a random key in the browser,
+which is also its recovery code. The private state is encrypted in the browser and backed up
+automatically to private IPFS storage (Pinata), with a file download as well.
 
-Start the development server:
+Wallets: [Lace](https://www.lace.io) or 1am, through Midnight's DApp connector.
+
+## Running it
+
+Requires Node.js 24, a Midnight wallet extension, and a proof server.
+
 ```bash
+npm install
+cp .env.example .env   # see the comments in the file
+npm start              # http://localhost:3000
+```
+
+| Variable | What it is |
+|---|---|
+| `REACT_APP_MIDNIGHT_NETWORK_ID` | `undeployed` (local devnet) or `preprod`; must match the wallet and the contract |
+| `REACT_APP_MIDNIGHT_CONTRACT_ADDRESS` | The deployed Velum contract |
+| `REACT_APP_MIDNIGHT_INDEXER_API_URL` | The Velum indexer API (from `AdaSouls/velum`) |
+| `REACT_APP_MIDNIGHT_INDEXER_GRAPHQL_URL` | Midnight's own indexer, used by `/app/verify` |
+| `REACT_APP_MIDNIGHT_PROOF_SERVER_URL` | A local proof server (see `AdaSouls/velum` for the Docker setup) |
+| `REACT_APP_IPFS_API_URL` | The IPFS proxy in `server/` |
+| `REACT_APP_ADMIN_WALLET_ADDRESSES` | Wallets allowed on `/app/admin/deploy` (UI gating only) |
+
+**IPFS proxy (`server/`):** a small Express server that keeps the Pinata key out of the browser
+bundle. It handles event metadata and encrypted backups.
+
+```bash
+cd server
+npm install
+cp .env.example .env   # PINATA_JWT (upload-only scope), PORT, CORS_ALLOWED_ORIGIN
 npm start
 ```
 
-The application will open automatically in your browser at `http://localhost:3000`. The page will reload automatically when you make changes to the code.
+**Contract artifacts:** the compiled contract and its ZK keys come from `AdaSouls/velum`. After the
+contract is recompiled, sync them:
 
-### Build for Production
-
-Create an optimized production build:
 ```bash
-npm run build
+POAP_MIDNIGHT_DIR=../velum ./scripts/sync-midnight-contract.sh
 ```
 
-The build artifacts will be stored in the `build/` directory. This build is ready to be deployed to any static hosting service.
+### Other commands
 
-### Running Tests
-
-Run the test suite:
 ```bash
-npm test
+npm run build          # production build in build/
+npm test               # Jest, watch mode
+CI=true npm test       # single run
 ```
 
-This will launch the test runner in interactive watch mode. Press `a` to run all tests, or press `q` to quit.
-
-To run tests once without watch mode:
-```bash
-CI=true npm test
-```
-
-## Project Structure
+## Project layout
 
 ```
-App/
-├── public/              # Static assets
-├── src/
-│   ├── jsx/
-│   │   ├── components/  # Reusable React components
-│   │   ├── contexts/    # React context providers
-│   │   ├── drawer/     # Drawer components and views
-│   │   ├── layout/     # Layout components (header, sidebar)
-│   │   ├── pages/      # Page components
-│   │   └── router.jsx  # Application routing
-│   ├── services/       # API and blockchain service files
-│   ├── utils/          # Utility functions
-│   ├── __tests__/      # Test files
-│   └── App.js          # Main App component
-├── package.json        # Dependencies and scripts
-└── craco.config.js     # CRACO configuration
+src/
+├── midnight/       # Midnight integration: wallet, providers, contract calls, proofs, backups
+├── jsx/
+│   ├── pages/      # route-level pages (router.jsx)
+│   ├── drawer/     # slide-out forms (create event, mint, connect wallet)
+│   └── contexts/   # app state and roles
+├── services/       # IPFS client
+├── shims/          # CommonJS shims for Midnight packages (see craco.config.js)
+└── __tests__/
+server/             # IPFS proxy
+public/midnight/    # ZK keys and circuits, served to the prover
 ```
 
-## Key Features
+`craco.config.js` adds WebAssembly support, a `Buffer` polyfill, and aliases that make Midnight's
+packages build under Create React App. Read its comments before changing it.
 
-### Event Management
-- Create events with backend integration
-- View all events and event details
-- Real-time data synchronization
+## Known limits
 
-### POAP Token Operations
-- Mint POAP tokens directly from smart contracts
-- View your token collection
-
-### Wallet Integration
-- Connect Ethereum wallets (MetaMask, WalletConnect)
-- View wallet status and balance
-- Transaction management
-
-## Available Scripts
-
-- `npm start` - Runs the app in development mode
-- `npm test` - Launches the test runner
-- `npm run build` - Builds the app for production
-- `npm run eject` - Ejects from Create React App (one-way operation)
-
-## Technologies Used
-
-- **React** 18.2.0 - UI library
-- **React Router** 6.22.3 - Routing
-- **React Bootstrap** 1.4.0 - UI components
-- **Ethers.js** 6.13.1 - Ethereum blockchain interaction
-- **Web3** 1.2.2 - Web3 utilities
-- **WalletConnect** - Wallet connection protocol
-- **CRACO** - Create React App Configuration Override
-- **TypeScript** - Type checking (partial)
-
-## Configuration
-
-The application uses CRACO (Create React App Configuration Override) for custom webpack configuration. The configuration file (`craco.config.js`) includes:
-- WebAssembly support
-- Buffer polyfills for blockchain libraries
-- Hot module replacement
-
-## Testing
-
-The application includes comprehensive test coverage:
-- Component tests
-- Integration tests
-- Service tests
-- Utility function tests
-
-Test files are located in `src/__tests__/` directory.
-
-## Troubleshooting
-
-### Port Already in Use
-If port 3000 is already in use, you can specify a different port:
-```bash
-PORT=3001 npm start
-```
-
-### Module Not Found Errors
-If you encounter module not found errors, try:
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Build Errors
-If the build fails, ensure all dependencies are installed:
-```bash
-npm install
-npm run build
-```
-
-## Browser Support
-
-The application supports:
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Write or update tests
-5. Ensure all tests pass
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-## Environment Setup
-
-1. Copy `.env.example` to `.env`
-2. Fill in the required values (API keys, contract addresses, etc.)
-3. Never commit your `.env` file
+- A proof can be repeated: it shows you hold the credential, but it isn't single-use.
+- Anonymity depends on the size of the event; the app warns below 5 holders.
+- Validity is computed by the app, not the contract.
+- Every proof is a transaction: it costs DUST and takes as long as the network does.
+- Without the recovery code, a lost browser means you can no longer prove your credentials are
+  yours (they still exist on-chain).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
+MIT. See [LICENSE](LICENSE).
