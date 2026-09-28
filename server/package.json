@@ -2,6 +2,9 @@
   "name": "velum-poap-ipfs-server",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "description": "Local proxy that holds the Pinata secret server-side and pins event metadata (image + JSON) to IPFS on behalf of the frontend, which never sees the secret. Local-only for now — see the createEvent metadata plan for production hosting notes.",
   "type": "commonjs",
   "main": "index.js",

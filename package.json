@@ -2,6 +2,9 @@
   "name": "qash-update",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@craco/craco": "^7.1.0",
     "@midnight-ntwrk/compact-runtime": "0.16.0",
