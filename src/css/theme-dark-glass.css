@@ -2416,7 +2416,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    gradient, so the more transparent the color, the less of the page behind gets blurred). Lives on
    a pseudo-element so the bar's own content isn't masked. Also means the bar itself no longer
    carries a backdrop-filter, so nothing inside it hits the nested-blur compositing issue. */
-.header.header-horizontal::before {
+.header.header-horizontal::before,
+.landing-nav::before {
   content: "";
   position: absolute;
   top: 0;
@@ -4902,8 +4903,8 @@ body:has(.drawer-modal-overlay) .swal2-container.swal2-backdrop-show {
   color: var(--text-on-glass-muted, rgba(255, 255, 255, 0.5));
 }
 
-/* Documentation page (pages/docs.jsx). The landing nav is transparent everywhere else; here long
-   text scrolls under it, so it gets a blurred backing. The table of contents sticks below the nav
+/* Documentation page (pages/docs.jsx). The landing nav uses the same fading color + blur as the
+   app nav (.landing-nav::before, shared with .header.header-horizontal::before). The table of contents sticks below the nav
    on wide screens and becomes a dropdown on phones. */
 /* #main-wrapper (style.css) is overflow:hidden, which makes it the scroll container a sticky
    element sticks to, and it never scrolls, so the table of contents would just scroll away.
@@ -4912,13 +4913,6 @@ body:has(.drawer-modal-overlay) .swal2-container.swal2-backdrop-show {
 #main-wrapper:has(.docs-page) {
   overflow: visible;
   overflow-x: clip;
-}
-
-.docs-page .landing-nav {
-  background: rgba(13, 22, 29, 0.82);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-bottom: 1px solid var(--glass-border);
 }
 
 .docs-container {
