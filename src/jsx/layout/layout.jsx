@@ -1,5 +1,6 @@
 import { Fragment, useEffect } from "react";
 import Header from "./header";
+import BottomNav from "./BottomNav";
 import { useSiteRole } from "../hooks/useSiteRole";
 // `activeMenu` is accepted for backwards compatibility with existing page call sites
 // (<Layout activeMenu={N}>) but no longer used — Header derives its active nav link from the
@@ -33,9 +34,11 @@ const Layout = ({ children, activeMenu }) => {
     <Fragment>
       <Header />
 
-      <div className="content-body">
+      <div className="content-body app-content-body">
         <div className="container">{children}</div>
       </div>
+
+      <BottomNav />
     </Fragment>
   );
 };

@@ -8,6 +8,7 @@ import {
 import { errorFunction } from "../../toasts/sweetAlerts";
 import { generateHolderCode, mintLink, parsePastedInput } from "../../../midnight/invite-links";
 import LinkQrCard from "../../components/LinkQrCard";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 // getHolderPk(issuerId) is a per-organizer pseudonym (poap.compact) — deliberately DIFFERENT from
 // the caller pk shown as "your address" everywhere else in the app. It's the only value an
@@ -68,7 +69,7 @@ export default function GetHolderKey() {
       setHolderPkHex(await generateHolderCode(midnight.provider.service, pasted.organizerPkHex));
     } catch (error) {
       console.error("Error generating holder key:", error);
-      errorFunction("Error", error.message || "Failed to generate your key. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "Failed to generate your key. Please try again."), "");
     } finally {
       setLoading(false);
     }

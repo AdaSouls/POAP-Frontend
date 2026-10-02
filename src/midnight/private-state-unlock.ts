@@ -17,6 +17,7 @@ import {
   type PasswordMode,
   type RestoreSource,
 } from './storage-password';
+import { friendlyErrorMessage } from './friendly-error';
 
 // The fixed password every browser's private state was encrypted with before each wallet got its
 // own key. Only used here, to migrate those stores — never to write anything new.
@@ -98,7 +99,7 @@ async function promptUntilResolved(
       storeRecoveryCode(ctx.coinPublicKey, code, true);
       return 'restored';
     } catch (failure) {
-      error = failure instanceof Error ? failure.message : String(failure);
+      error = friendlyErrorMessage(failure, "Couldn't restore with that code. Check it and try again.");
     }
   }
 }

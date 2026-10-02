@@ -1,24 +1,32 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Calendar, PlusCircle, Check } from "lucide-react";
+import { Layers, PlusCircle, QrCode, Lock, ShieldCheck } from "lucide-react";
 import LandingNav from "../layout/landingNav";
 import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
 
 const FEATURES = [
   {
-    icon: Calendar,
-    title: "Create Events",
-    description: "Set up new POAP events with supply limits, expiration, and public or invite-only minting.",
+    icon: Layers,
+    title: "Three kinds of credentials",
+    description:
+      "Events for attendance, Subscriptions for memberships, and Credentials for certificates or documents issued one by one.",
   },
   {
-    icon: PlusCircle,
-    title: "Push-mint POAPs",
-    description: "Mint directly to a wallet — no need for the holder to claim it themselves first.",
+    icon: QrCode,
+    title: "Invite with a link or QR",
+    description:
+      "For open events, people claim it themselves. For the rest, they send you a link back and you issue it in one click. No keys to copy.",
   },
   {
-    icon: Check,
-    title: "Manage attendance",
-    description: "Track who claimed a POAP for your events and keep issuer records up to date.",
+    icon: Lock,
+    title: "Private details",
+    description:
+      "Add fields like a grade, an ID number or an expiry date. They're sent encrypted to the holder; only a fingerprint is stored publicly.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Verify and revoke",
+    description: "Ask holders to prove something about their credential, and revoke one issued by mistake.",
   },
 ];
 
@@ -37,19 +45,20 @@ const OrganizerInfo = () => {
       <div className="role-info-page role-organizer">
         <div className="row role-hero align-items-center">
           <div className="col-md-6">
-            <span className="role-eyebrow">Organizer</span>
-            <h1 className="role-hero-title">Create events, issue POAPs, manage attendance</h1>
+            <span className="role-eyebrow">For organizers</span>
+            <h1 className="role-hero-title">Create, issue and verify credentials</h1>
             <p className="text-muted role-hero-desc">
-              As an organizer, you publish events on Midnight and control who can claim a POAP for
-              them — including push-minting directly to a wallet that hasn't claimed yet.
+              Run events, courses or memberships and give each person a credential they can prove.
+              You decide who receives one and which details stay private.
             </p>
             <Link
               to="/app/my-events"
               className="btn btn-role-cta"
               onClick={() => setRole(SITE_ROLES.ORGANIZER)}
             >
-              Go to My Events
+              Create your first event
             </Link>
+            <p className="text-muted small role-hero-note">You'll need a Midnight wallet (Lace or 1AM).</p>
           </div>
           <div className="col-md-6">
             <div className="role-hero-visual">
@@ -62,7 +71,7 @@ const OrganizerInfo = () => {
 
         <div className="row role-feature-row">
           {FEATURES.map(({ icon: Icon, title, description }) => (
-            <div key={title} className="col-md-4 mb-3 role-feature-card">
+            <div key={title} className="col-md-6 col-lg-3 mb-3 role-feature-card">
               <div className="role-feature-icon">
                 <Icon size={22} />
               </div>

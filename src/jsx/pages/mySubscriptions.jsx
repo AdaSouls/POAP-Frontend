@@ -4,6 +4,7 @@ import { Award, Check, ClipboardPaste, Share2 } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import PoapCard from "../components/poapCard";
+import { useIssuerRegistry } from "../hooks/useBlockedIssuers";
 import PoapFilters from "../components/PoapFilters";
 import walletStatus from "../../images/collections/wallet-status.png";
 import loadingGif from "../../images/loading.gif";
@@ -44,6 +45,7 @@ const MySubscriptions = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [filters, setFilters] = useState({});
   const { poapEvents, midnight: { provider } } = useDrawer();
+  const { blocked: blockedIssuers, verified: verifiedIssuers } = useIssuerRegistry();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
 
@@ -130,14 +132,14 @@ const MySubscriptions = () => {
             </div>
             <div className="inner-header-row-right">
               {provider && (
-                <button className="inner-header-action-btn" onClick={openGetHolderKey}>
+                <button className="inner-header-action-btn inline-on-phone" onClick={openGetHolderKey}>
                   <span className="inner-header-action-btn-inner">
                     <ClipboardPaste size={14} /> Paste Link
                   </span>
                 </button>
               )}
               {provider && myPoaps.length > 0 && (
-                <button className="inner-header-action-btn" onClick={copyCollectionShareLink}>
+                <button className="inner-header-action-btn inline-on-phone" onClick={copyCollectionShareLink}>
                   <span className="inner-header-action-btn-inner">
                     {shareCopied ? (
                       <>
@@ -172,6 +174,8 @@ const MySubscriptions = () => {
                       isExpanded={String(poap.tokenId) === expandedId}
                       onExpand={() => setExpandedId(String(poap.tokenId))}
                       onCollapse={() => setExpandedId(null)}
+                      issuerBlocked={blockedIssuers.has(poap.issuerPkHex)}
+                      issuerVerified={verifiedIssuers.has(poap.issuerPkHex)}
                     />
                   ))}
                 </AnimatePresence>

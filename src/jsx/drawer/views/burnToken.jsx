@@ -4,6 +4,7 @@ import { useDrawer, useDrawerDispatch } from "../../contexts/drawer/drawer.provi
 import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "../../toasts/sweetAlerts";
 import { txHashOf } from "../../../midnight/tx-result";
 import { notifyTokenBurned } from "../../../midnight/token-events";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 // Confirmation popup for poap.compact's burn(tokenId), opened two ways (SHOW_BURN_TOKEN):
 //   "revoke" — the event's organizer, from the subscribers list (subscribersList.jsx);
@@ -52,7 +53,7 @@ export default function BurnToken() {
       succesfullBlockchainCreation(copy.done, txHash ? `Transaction: ${txHash}` : "", "");
     } catch (error) {
       console.error("Error burning token:", error);
-      errorFunction("Error", error.message || "Failed to burn the POAP. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "Failed to burn the POAP. Please try again."), "");
       setSubmitting(false);
     }
   };

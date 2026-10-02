@@ -300,9 +300,44 @@ body.role-subscriber::-webkit-scrollbar-thumb {
     height: 104px;
   }
 
-  .card-event-footer-row {
-    flex-wrap: wrap;
-    row-gap: 6px;
+}
+
+/* eventCard.jsx's collapsed footer: minted text left (wrapping inside its own box if it must), the
+   category badge always bottom-right. Shown inline under the facts beside the image; on phones it
+   moves below the image across the full card width instead. */
+.card-event-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-event-footer-row-inline {
+  margin-top: auto;
+}
+
+.card-event-footer-minted {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.card-event-footer-row > .category-badge {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.card-event-footer-row-below {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .card-event-footer-row-inline {
+    display: none;
+  }
+
+  .card-event-footer-row-below {
+    display: flex;
+    margin-top: 12px;
   }
 }
 
@@ -718,23 +753,58 @@ select option,
   }
 
   .card-detail-expanded .card-detail-top-row {
-    margin-right: 36px;
     flex-wrap: wrap;
     gap: 6px;
+  }
+
+  /* Every expanded card (events and POAPs, both roles): the type badge sits in the card's top-left
+     corner, level with the collapse button in the top-right, on a row of its own above the content
+     (hence the extra top padding). Positioned against .card-outline-only-body, so the POAP card's
+     left column (position: relative inline in poapCard.jsx, for the desktop corner badge) is made
+     static here. */
+  .card-detail-expanded .card-outline-only-body {
+    padding-top: 52px;
+  }
+
+  .card-detail-expanded .card-outline-only-body > .row > [class*="col-"] {
+    position: static !important;
+  }
+
+  /* The phone badge row (.card-mobile-badge-row, in both cards): type then status, one line,
+     both the same pill size. The desktop placements of those badges are hidden. */
+  .card-detail-expanded .card-mobile-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: absolute;
+    top: 11px;
+    left: 16px;
+    right: 56px;
+    min-width: 0;
+  }
+
+  .card-detail-expanded .card-mobile-badge-row > * {
+    height: 30px;
+    margin: 0;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .card-detail-expanded .card-mobile-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    font-weight: 500;
+  }
+
+  .card-detail-expanded .card-detail-top-row,
+  .card-detail-expanded .poap-detail-status-badge-top {
+    display: none !important;
   }
 
   .card-detail-expanded .card-media-thumb-wrap {
     width: 96px;
     height: 96px;
-  }
-
-  /* POAP: the category badge gets its own row above the header (next to the collapse button),
-     so the name keeps the full width beside the thumb. */
-  .card-detail-expanded .poap-detail-category-badge-corner.card-detail-top-row {
-    position: static;
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 10px;
   }
 
   .card-detail-expanded .poap-detail-header-row {
@@ -799,6 +869,12 @@ select option,
   color: var(--text-on-solid) !important;
   border-color: var(--accent-blue);
   filter: none;
+}
+
+/* Phone-only badge row of expanded cards (eventCard.jsx/poapCard.jsx); shown in the max-width:
+   767px block above. */
+.card-mobile-badge-row {
+  display: none;
 }
 
 /* CategoryBadge.jsx — sits where the collapsed-tile action button (Subscribe/Mint POAP/View
@@ -1001,6 +1077,9 @@ select option,
 /* The POAP image itself reads as a medallion/badge, not a square thumbnail — fully round,
    regardless of the source image's own aspect ratio (cover-cropped to a circle). */
 .poap-preview-card-thumb {
+  /* Never squeezed by a long title beside it: on phones the flex row shrank only its width, which
+     turned the circle into a vertical oval. */
+  flex-shrink: 0;
   width: 84px;
   height: 84px;
   border-radius: 50%;
@@ -1240,7 +1319,8 @@ select option,
 /* /app/verify (verifyProof.jsx) — a certificate: one card centered in the viewport (below the
    fixed 68px header, see .content-body), big seal on top, facts, and the search at its foot. */
 .verify-proof-page {
-  min-height: calc(100vh - 68px);
+  min-height: calc(100vh - var(--app-chrome-top) - var(--app-chrome-bottom));
+  min-height: calc(100dvh - var(--app-chrome-top) - var(--app-chrome-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1329,6 +1409,34 @@ select option,
   object-fit: cover;
 }
 
+/* OrganizerLabel.jsx — the organizer's name, then its short key id (muted) and, for an
+   admin-registered issuer, a small outline "Verified" mark in the role accent. */
+.organizer-label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+.organizer-label-key {
+  color: var(--text-on-glass-muted);
+  font-family: SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.organizer-label-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--role-accent, #2ecc71);
+  color: var(--role-accent, #2ecc71);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
 /* "Proven · <date>" on a POAP the holder has proven from this browser (poapCard.jsx, proof-history.ts).
    Same outline treatment as .status-badge-active: the role accent, transparent fill. */
 .card-poap .poap-proven-badge {
@@ -1381,14 +1489,28 @@ select option,
   transition: max-width 0.3s ease, opacity 0.2s ease, margin-left 0.3s ease;
 }
 
-.card-poap .poap-card-icon-pill:hover {
+/* Open on hover (mouse only: on touch screens a tap leaves a sticky :hover that couldn't be closed)
+   or when tapped open (.is-open, poapCard.jsx: one at a time, without expanding the card). */
+.card-poap .poap-card-icon-pill.is-open {
   padding: 0 12px 0 8px;
 }
 
-.card-poap .poap-card-icon-pill:hover .poap-card-icon-pill-label {
+.card-poap .poap-card-icon-pill.is-open .poap-card-icon-pill-label {
   max-width: 220px;
   opacity: 1;
   margin-left: 6px;
+}
+
+@media (hover: hover) {
+  .card-poap .poap-card-icon-pill:hover {
+    padding: 0 12px 0 8px;
+  }
+
+  .card-poap .poap-card-icon-pill:hover .poap-card-icon-pill-label {
+    max-width: 220px;
+    opacity: 1;
+    margin-left: 6px;
+  }
 }
 
 .card-poap .poap-validity-badge.is-expired {
@@ -2148,13 +2270,48 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* Click-outside-to-close only — no dimming of the page behind it, per feedback (the modal's own
-   blur already separates it from the page without needing to darken everything else too). */
+/* Behind every popup: catches click-outside-to-close and dims the page with the nav's dark blue
+   at 30%. The popups' glass is almost transparent, so over a light image their white text got
+   hard to read; dimming the page fixes that while keeping the blur (a darker popup surface was
+   tried and rejected for losing it). Same dim on the progress popup and the alerts below. */
+:root {
+  --popup-dim: rgba(6, 20, 27, 0.3);
+}
+
 .drawer-modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 21;
-  background: transparent;
+  background: var(--popup-dim);
+}
+
+/* Wallet popup's "Connected — 0x…" status line: white like the rest of the popup's text, not
+   the template's #c6c6c6 gray (style.css .card-button .wallet-status). */
+.drawer .card-button .wallet-status {
+  color: var(--text-on-glass);
+}
+
+/* Popups' text and icons (every centered popup via drawer.jsx's drawer-modal-legible, plus the
+   progress popup and the alerts): a crisp 1px dark fill down and right, no blur, so white text
+   keeps an edge over a light image behind the glass. QR codes are left alone so they still scan. */
+
+/* Text and icons get a crisp dark fill offset 1px down and 1px right (no blur: the blurred
+   shadow and halo tried before read as odd). On the usual dark backgrounds it disappears; over a
+   near-white image it gives white text a solid edge. */
+.drawer.drawer-modal.drawer-modal-legible,
+.tx-status-popup,
+.swal2-glass-popup.swal2-popup {
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.65);
+}
+
+.drawer.drawer-modal.drawer-modal-legible svg,
+.tx-status-popup svg,
+.swal2-glass-popup.swal2-popup svg {
+  filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.65));
+}
+
+.drawer.drawer-modal.drawer-modal-legible .link-qr-card-code svg {
+  filter: none;
 }
 
 /* SweetAlert2 popups (sweetAlerts.jsx) — same liquid-glass surface as the wallet-connect popup
@@ -2251,9 +2408,31 @@ input[type="date"]::-webkit-calendar-picker-indicator {
      backdrop-blurs whatever's behind it, a lighter tint here would always average lighter than
      the body color it's blurring, no matter how dark the body gradient itself is — hence the
      separate (darker, palette-1) base instead of reusing --glass-bg. */
-  background: rgba(6, 20, 27, 0.72);
+  background: transparent;
+}
+
+/* The bar's surface fades out downward: the same color peaks at 0.72 opacity a third of the way
+   down and fades to 0 a little below the bar, and the blur behind it fades along with it (the blur layer is masked by the same
+   gradient, so the more transparent the color, the less of the page behind gets blurred). Lives on
+   a pseudo-element so the bar's own content isn't masked. Also means the bar itself no longer
+   carries a backdrop-filter, so nothing inside it hits the nested-blur compositing issue. */
+.header.header-horizontal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: -28px;
+  z-index: -1;
+  pointer-events: none;
+  /* Color: one even fade from the very top (a bit darker than the old 0.72) to opacity 0 at the
+     bottom. Blur: full from the top down to 30% of the height, then fading to none at the bottom
+     (the mask fades the blur layer itself). */
+  background: linear-gradient(to bottom, rgba(6, 20, 27, 0.85) 0%, rgba(6, 20, 27, 0) 100%);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 100%);
 }
 
 /* Logo + nav grouped together on the left, wallet CTA pushed to the far right (margin-left:auto
@@ -2365,6 +2544,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .header-nav-dropdown-toggle.header-nav-role-toggle .header-nav-dropdown-toggle-inner {
   background: var(--role-accent-soft);
   border-color: transparent;
+}
+
+/* On the /app role hub nothing is chosen for this visit yet, whatever role is remembered: no
+   role fill, just the app's neutral outline (same border as an active nav link). */
+.header-nav-dropdown-toggle.header-nav-role-toggle.is-placeholder .header-nav-dropdown-toggle-inner {
+  background: transparent;
+  border-color: rgba(155, 168, 171, 0.3);
+  color: var(--text-on-glass);
+}
+
+.header-nav-dropdown-toggle.header-nav-role-toggle.is-placeholder:hover .header-nav-dropdown-toggle-inner {
+  background: rgba(74, 92, 106, 0.22);
 }
 
 .header-nav-dropdown-toggle.header-nav-role-link:hover .header-nav-dropdown-toggle-inner {
@@ -2565,13 +2756,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     margin-right: -8px;
   }
 
+  /* Phones navigate from BottomNav.jsx instead: the top bar keeps only the brand and the wallet. */
   .header-nav {
-    order: 3;
-    gap: 0;
-    width: 100%;
-    margin: 0 -2px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    display: none !important;
   }
 
   .header-nav::-webkit-scrollbar {
@@ -2593,7 +2780,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .content-body {
-    padding-top: 104px;
+    padding-top: 72px;
+  }
+
+  /* App pages only (layout.jsx): room for the fixed BottomNav so the last content isn't hidden. */
+  .app-content-body {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -2771,6 +2963,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     flex: 1 1 0;
     min-width: 0;
     margin-top: 8px;
+  }
+
+  /* .inline-on-phone actions (Paste Link, Share) stay on the first row, right before the filter,
+     instead of a full-width row of their own below it. */
+  .inner-header-row-right > .inner-header-action-btn.inline-on-phone {
+    order: 2;
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
+  .inner-header-row-right > .inline-on-phone:not(.inline-on-phone ~ .inline-on-phone) {
+    margin-left: auto;
+  }
+
+  .inner-header-row-right > .inline-on-phone ~ .filter-icon-btn {
+    order: 3;
+    margin-left: 0;
   }
 
   .inner-header-action-btn-inner {
@@ -3062,6 +3271,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   max-width: 46ch;
 }
 
+/* organizerInfo.jsx's wallet requirement, right under its button. */
+.role-hero-note {
+  margin: 12px 0 0;
+}
+
 .role-hero-cta-group {
   display: flex;
   flex-wrap: wrap;
@@ -3197,8 +3411,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .landing-nav-links {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-right: auto;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .landing-nav-link {
@@ -3220,53 +3434,45 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--text-on-glass);
 }
 
-.landing-nav-link-disabled {
-  cursor: default;
-  opacity: 0.5;
+/* landingNav.jsx's Documentation link: text on wider screens, icon only on phones. */
+.landing-nav-docs-icon {
+  display: none;
 }
 
-.landing-nav-link-disabled:hover {
-  background: transparent;
-  color: var(--text-on-glass-muted);
+/* Phone widths: tighter spacing, and Documentation shrinks to its icon so the brand wordmark and
+   "Go to App" still fit one row down to 360px. */
+@media (max-width: 575px) {
+  .landing-nav-docs-icon {
+    display: block;
+  }
+
+  .landing-nav-docs-label {
+    display: none;
+  }
+
+  .landing-nav-docs {
+    padding: 8px;
+  }
+
+  .landing-nav-content {
+    gap: 12px;
+  }
+
+  .landing-nav-links {
+    gap: 4px;
+  }
+
+  .landing-nav-link {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+
+  .landing-nav .btn-dual-cta {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
 }
 
-.landing-nav-dropdown {
-  position: relative;
-}
-
-.landing-nav-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  min-width: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  background: var(--glass-bg-light);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  box-shadow: var(--glass-shadow);
-  z-index: 21;
-}
-
-.landing-nav-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  color: var(--text-on-glass);
-  font-size: 14px;
-  text-decoration: none;
-}
-
-.landing-nav-dropdown-item:hover {
-  background: rgba(74, 92, 106, 0.22);
-  color: var(--text-on-glass);
-}
 
 /* Cancels .content-body's own padding-top:68px (still used as-is by every other page, including
    organizerInfo.jsx/subscriberInfo.jsx, the other two pages sharing .landing-page) specifically
@@ -3346,6 +3552,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 24px;
+}
+
+/* Phones: the two don't fit one row, and wrapping left-aligned stacked them unevenly. Centered,
+   one under the other, with a slightly smaller AdaSouls logo. */
+@media (max-width: 575px) {
+  .landing-fixed-footer-content {
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+  }
+
+  .landing-fixed-footer .landing-powered-by img {
+    height: 26px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3446,7 +3667,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 /* pages/appHome.jsx (/app hub) — same viewport-minus-fixed-header centering as .index-hero-section
    above, just without the scroll hint (there's nothing below to scroll to on this page). */
 .app-home-section {
-  min-height: calc(100vh - 68px);
+  min-height: calc(100vh - var(--app-chrome-top) - var(--app-chrome-bottom));
+  min-height: calc(100dvh - var(--app-chrome-top) - var(--app-chrome-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3455,60 +3677,48 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .app-home-title {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 8px;
 }
 
-.app-role-card-grid {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 32px;
-}
-
-/* Whole-card link, not icon+title+desc+separate-button like the landing's .index-role-plain —
-   explicit feedback that treatment read as a near-duplicate of the landing page. Same glass/
-   border language as .card-outline-only (poapCard.jsx/eventCard.jsx's own card shell) so this
-   reads as "the same kind of card" as everywhere else in the app, just square and clickable as a
-   whole. --role-accent/-soft cascade from the .role-organizer/.role-subscriber class each card
-   carries directly (see the "Role accent colors" block below). */
-.app-role-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.app-home-subtitle {
   text-align: center;
-  gap: 12px;
-  width: 260px;
-  height: 260px;
-  padding: 32px;
-  border-radius: 16px;
-  background: var(--glass-bg-light);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(var(--glass-blur-sm));
-  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+  max-width: 52ch;
+  margin: 0 auto 32px;
+  padding: 0 16px;
 }
 
-.app-role-card:hover {
-  border-color: var(--role-accent);
-  background: var(--role-accent-soft);
-  transform: translateY(-2px);
-}
-
-.app-role-card-icon {
+/* The hub's role names, in their role colors (--role-accent from the role-* class). */
+.app-home-role {
   color: var(--role-accent);
+  font-weight: 600;
 }
 
-.app-role-card-title {
-  color: var(--text-on-glass);
-  margin: 0;
+/* Each page as an outline badge in its role's color (role-* class on the badge itself). */
+.app-hub-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
 }
 
-.app-role-card-desc {
-  color: var(--text-on-glass-muted);
-  margin: 0;
+.app-hub-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--role-accent-50);
+  color: var(--role-accent);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.app-hub-badge:hover {
+  background: var(--role-accent-soft);
+  border-color: var(--role-accent);
+  color: var(--role-accent);
 }
 
 /* Wallet-not-connected empty state (myEvents/mySubscriptions/myPendingApprovals) — same
@@ -3522,7 +3732,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    getBoundingClientRect()-measured value, see its comment above) = 86.5px total. */
 .wallet-non-connected-page {
   width: 100%;
-  min-height: calc(100vh - 68px - 86.5px);
+  min-height: calc(100vh - var(--app-chrome-top) - var(--app-chrome-bottom) - 86.5px);
+  min-height: calc(100dvh - var(--app-chrome-top) - var(--app-chrome-bottom) - 86.5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3593,12 +3804,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 /* No box — no border, no background, no blur — per explicit feedback: just the text, sitting
    directly on the page background. Flex/padding here is purely for layout (centering + spacing
    from the button), not a surface. */
+/* The hero's two role buttons (index.jsx) — each carries its own .role-organizer/.role-subscriber
+   class, so .btn-role-cta picks up that role's colors. */
+.index-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
 .index-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   padding: 0 32px;
+}
+
+/* The headline is a full sentence now, so it scales down on phones instead of filling the screen
+   (desktop keeps .role-hero-title's 2.25rem). */
+.index-hero .index-hero-title {
+  font-size: clamp(1.6rem, 5vw + 0.5rem, 2.25rem);
+  max-width: 24ch;
 }
 
 /* Overrides .role-eyebrow's var(--role-accent) text color (undefined here, no role ancestor)
@@ -4009,6 +4236,47 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     height: 78px;
   }
 
+  /* Icons have fixed px sizes in index.jsx (104/76/60, sized for the desktop tiles); on the smaller
+     tiles they nearly filled the circle. Same ~half-of-the-tile ratio as desktop. */
+  .tile-0 .usecase-collage-tile svg {
+    width: 66px;
+    height: 66px;
+  }
+
+  .tile-1 .usecase-collage-tile svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .tile-2 .usecase-collage-tile svg {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* Centering. Each tile wrap is a motion.div whose scroll-linked `y` replaces its CSS
+     translate(-50%, -50%), so the wrap's corner (not its center) sat on the left/top point: the
+     whole collage drifted right (Subscriber rows), and Organizer rows, which also carry the
+     desktop-only -120px shift-left, ended up far left. Here the half-size is subtracted in left/top
+     instead, which nothing overrides, and the desktop shift is dropped. Desktop is unchanged. */
+  .usecase-collage-content-shift-left {
+    transform: none;
+  }
+
+  .usecase-collage-tile-wrap.tile-0 {
+    left: calc(50% - 66px);
+    top: calc(58% - 66px);
+  }
+
+  .usecase-collage-tile-wrap.tile-1 {
+    left: calc(74% - 48px);
+    top: calc(30% - 48px);
+  }
+
+  .usecase-collage-tile-wrap.tile-2 {
+    left: calc(24% - 39px);
+    top: calc(24% - 39px);
+  }
+
   .usecase-text-col {
     order: 2 !important;
   }
@@ -4022,37 +4290,124 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* margin-top used to be 112px (breathing room in a long scrolling page); the role picker is now
-   its own full-screen slide centered by .landing-snap-section's flex, so only a small gap from the
-   "Choose your role" header above it is needed. */
-.index-role-row {
-  margin-top: 32px;
+/* "How it works" slide (index.jsx's HowItWorksSection): three steps side by side, each a bare
+   icon colored by its role (--role-accent from the role-* class on the <li>) over its title and
+   text. On phones the steps stack as compact rows (icon left, text right) so all three fit in the
+   one-screen-tall slide. */
+.index-steps-row {
+  margin: 32px 0 0;
+  padding: 0;
 }
 
-/* No card/box, no icon-circle background — just the icon itself, colored by role
-   (--role-accent, from the .role-organizer/.role-subscriber wrapper each column carries) and
-   sized up, per explicit feedback to drop the container entirely for these two. `gap` spaces the
-   three groups (icon / title+description block / button) generously apart, while the title and
-   description stay close together as their own pair via their own small margin, not this gap. */
-.index-role-plain {
+.index-step {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  gap: 24px;
   padding: 24px;
-  gap: 28px;
+}
+
+.index-step-number {
+  color: var(--role-accent);
+}
+
+.index-step-desc {
+  max-width: 32ch;
+  margin: 0 auto;
 }
 
 /* filter: drop-shadow (not box-shadow, which only draws around the rectangular bounding box) so
-   the glow actually follows the icon's own outline — this is a bare lucide-react <svg> now, no
-   circular backing div to hang a box-shadow glow on. */
+   the glow follows the icon's own outline — a bare lucide-react <svg>, no backing circle. */
 .index-role-plain-icon {
   color: var(--role-accent);
   filter: drop-shadow(0 0 28px var(--role-accent-glow));
 }
 
-.index-role-card-desc {
-  max-width: 32ch;
+/* Single-column text slides (PrivacySection, ReceivedSection, ClosingSection in index.jsx). */
+.index-text-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto;
+  gap: 20px;
+}
+
+.index-text-block > * {
+  margin: 0;
+}
+
+.index-text-title {
+  font-size: 1.85rem;
+  font-weight: 700;
+}
+
+.index-text-desc {
+  font-size: 1rem;
+  max-width: 56ch;
+}
+
+/* The privacy slide's example: the one sentence people should remember, set apart from the body. */
+.index-text-example {
+  padding: 14px 22px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-on-glass);
+}
+
+/* Privacy belongs to both roles, so its icon carries both colors, like the hero eyebrow. */
+.index-text-icon-dual {
+  color: #b24bf3;
+  filter: drop-shadow(-10px 0 22px rgba(178, 75, 243, 0.45)) drop-shadow(10px 0 22px rgba(62, 207, 142, 0.45));
+}
+
+/* The hero's small subscriber link under "Start issuing". */
+.index-hero-secondary-link {
+  margin-top: 18px;
+  font-size: 0.9rem;
+  color: var(--role-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.index-hero-secondary-link:hover {
+  color: var(--text-on-glass);
+}
+
+@media only screen and (max-width: 767px) {
+  .index-steps-row {
+    margin-top: 8px;
+    row-gap: 4px;
+  }
+
+  .index-step {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    gap: 16px;
+    padding: 12px 16px;
+  }
+
+  .index-step-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .index-step-desc {
+    max-width: none;
+  }
+
+  .index-text-title {
+    font-size: 1.5rem;
+  }
+
+  .index-text-block {
+    gap: 16px;
+  }
 }
 
 
@@ -4069,7 +4424,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  background: var(--popup-dim);
+}
+
+/* Opened over a popup that already dims the page: don't dim it twice. */
+body:has(.drawer-modal-overlay) .tx-status-backdrop,
+body:has(.drawer-modal-overlay) .swal2-container.swal2-backdrop-show {
+  background: transparent !important;
 }
 
 .tx-status-popup {
@@ -4539,4 +4900,353 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .option-chips-input::placeholder {
   color: var(--text-on-glass-muted, rgba(255, 255, 255, 0.5));
+}
+
+/* Documentation page (pages/docs.jsx). The landing nav is transparent everywhere else; here long
+   text scrolls under it, so it gets a blurred backing. The table of contents sticks below the nav
+   on wide screens and becomes a dropdown on phones. */
+/* #main-wrapper (style.css) is overflow:hidden, which makes it the scroll container a sticky
+   element sticks to, and it never scrolls, so the table of contents would just scroll away.
+   overflow-x: clip hides overflow the same way without creating a scroll container. Scoped to this
+   page so no other layout changes. */
+#main-wrapper:has(.docs-page) {
+  overflow: visible;
+  overflow-x: clip;
+}
+
+.docs-page .landing-nav {
+  background: rgba(13, 22, 29, 0.82);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.docs-container {
+  padding-top: 112px;
+  padding-bottom: 48px;
+}
+
+.docs-header {
+  margin-bottom: 40px;
+}
+
+.docs-title {
+  font-size: clamp(1.8rem, 4vw + 0.5rem, 2.5rem);
+  font-weight: 700;
+  margin: 8px 0 12px;
+}
+
+.docs-lead {
+  font-size: 1.05rem;
+  max-width: 60ch;
+  margin: 0;
+}
+
+.docs-toc {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 12px;
+}
+
+.docs-toc-group {
+  margin-bottom: 20px;
+}
+
+.docs-toc-group-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-on-glass-muted);
+  margin: 0 0 6px;
+}
+
+.docs-toc-link {
+  display: block;
+  padding: 5px 12px;
+  border-left: 2px solid var(--glass-border);
+  color: var(--text-on-glass-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.docs-toc-link:hover {
+  color: var(--text-on-glass);
+}
+
+.docs-toc-link.active {
+  color: var(--text-on-glass);
+  border-left-color: #b24bf3;
+}
+
+.docs-toc-mobile {
+  display: none;
+}
+
+.docs-content {
+  max-width: 760px;
+}
+
+.docs-section {
+  padding-bottom: 40px;
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.docs-section:last-child {
+  border-bottom: none;
+}
+
+.docs-section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.docs-section h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 24px 0 8px;
+}
+
+.docs-section p,
+.docs-section li {
+  color: var(--text-on-glass-muted);
+  line-height: 1.7;
+}
+
+.docs-section strong {
+  color: var(--text-on-glass);
+  font-weight: 600;
+}
+
+.docs-section ul,
+.docs-section ol {
+  padding-left: 1.3rem;
+}
+
+/* The template's base styles strip list markers (on the li itself); the docs need them back. */
+.docs-section ul {
+  list-style: disc;
+}
+
+.docs-section li {
+  list-style: inherit;
+}
+
+.docs-section ol {
+  list-style: decimal;
+}
+
+.docs-section ul ul {
+  list-style: circle;
+  margin-top: 6px;
+}
+
+.docs-section li::marker {
+  color: #b24bf3;
+}
+
+.docs-section li {
+  margin-bottom: 6px;
+}
+
+.docs-note {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  border-left: 3px solid #3ecf8e;
+  background: var(--glass-bg);
+}
+
+.docs-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.docs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.docs-table th,
+.docs-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--glass-border);
+  text-align: left;
+  vertical-align: top;
+  color: var(--text-on-glass-muted);
+}
+
+.docs-table th {
+  color: var(--text-on-glass);
+  font-weight: 600;
+}
+
+.docs-footer {
+  padding-top: 24px;
+  border-top: 1px solid var(--glass-border);
+}
+
+@media (max-width: 991px) {
+  .docs-toc-col {
+    display: none;
+  }
+
+  .docs-toc-mobile {
+    display: block;
+    position: sticky;
+    top: 72px;
+    z-index: 5;
+    margin-bottom: 28px;
+  }
+
+  .docs-container {
+    padding-top: 96px;
+  }
+}
+
+/* Space the app's fixed chrome takes from the viewport, for the screens that fill exactly one
+   screen (.app-home-section, .verify-proof-page, .wallet-non-connected-page): the top header, and
+   on phones also the BottomNav bar (matches .app-content-body's padding-bottom). With these, those
+   screens fit the viewport exactly instead of leaving a scroll with nothing in it. */
+:root {
+  --app-chrome-top: 68px;
+  --app-chrome-bottom: 0px;
+}
+
+@media only screen and (max-width: 767px) {
+  :root {
+    --app-chrome-top: 72px;
+    --app-chrome-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* style.css (template) adds margin-bottom: 50px to .content-body on phones, for a bottom bar the
+     template had. It was the extra 50px of empty scroll on every page, the launcher included. */
+  .content-body {
+    margin-bottom: 0;
+  }
+}
+
+/* BottomNav.jsx: phone-only app navigation. A glass bar fixed to the bottom, the active role's two
+   pages on either side and a raised round switch in the middle, all tinted by the active role
+   (--role-accent from the role-* class on the bar). */
+.bottom-nav {
+  display: none;
+}
+
+@media only screen and (max-width: 767px) {
+  .bottom-nav {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    height: 64px;
+    padding: 0 12px 8px;
+    border-radius: 22px;
+    background: rgba(13, 22, 29, 0.82);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .bottom-nav-side {
+    display: flex;
+    justify-content: center;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-on-glass-muted);
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .bottom-nav-item:hover,
+  .bottom-nav-item.active {
+    color: var(--role-accent);
+  }
+
+  .bottom-nav-switch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    background: transparent;
+    border: none;
+    color: var(--role-accent);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Raised above the bar, so it reads as the one main control. */
+  .bottom-nav-switch-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    margin-top: -30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--role-accent), var(--palette-3));
+    color: var(--text-on-solid);
+    border: 3px solid rgba(13, 22, 29, 0.95);
+    box-shadow: 0 0 22px var(--role-accent-glow);
+    transition: transform 0.2s ease;
+  }
+
+  .bottom-nav-switch:active .bottom-nav-switch-circle {
+    transform: scale(0.94) rotate(180deg);
+  }
+
+  /* /app hub: no role yet, so the switch is inert and neutral, and each side is a role, already
+     shown in its own color. */
+  .bottom-nav.is-hub .bottom-nav-item {
+    color: var(--role-accent);
+  }
+
+  .bottom-nav-switch.is-disabled {
+    color: var(--text-on-glass-muted);
+    cursor: default;
+  }
+
+  .bottom-nav-switch.is-disabled .bottom-nav-switch-circle {
+    background: rgba(74, 92, 106, 0.55);
+    color: var(--text-on-glass-muted);
+    box-shadow: none;
+  }
+
+  .bottom-nav-switch.is-disabled:active .bottom-nav-switch-circle {
+    transform: none;
+  }
+
+  .bottom-nav-switch:focus-visible .bottom-nav-switch-circle {
+    outline: 2px solid var(--role-accent);
+    outline-offset: 3px;
+  }
+}
+
+/* Page header actions BottomNav.jsx already offers on phones (My Events' Create Event). */
+@media only screen and (max-width: 767px) {
+  .hide-on-phone {
+    display: none !important;
+  }
 }

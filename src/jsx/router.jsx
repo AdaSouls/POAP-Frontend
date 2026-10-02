@@ -16,6 +16,7 @@ import OrganizerDashboard from "./pages/organizerDashboard";
 import SharedCollection from "./pages/sharedCollection";
 import OrganizerInfo from "./pages/organizerInfo";
 import SubscriberInfo from "./pages/subscriberInfo";
+import Docs from "./pages/docs";
 import AdminDeploy from "./pages/adminDeploy";
 import CredentialImport from "./pages/credentialImport";
 import VerifyProof from "./pages/verifyProof";
@@ -54,6 +55,7 @@ const Router = () => {
           <Route path="/" exact element={<Dashboard />} />
           <Route path="/organizer" element={<OrganizerInfo />} />
           <Route path="/subscriber" element={<SubscriberInfo />} />
+          <Route path="/docs" element={<Docs />} />
 
           {/* App */}
           <Route path="/app" element={<AppHome />} />

@@ -41,23 +41,39 @@ describe('Header nav', () => {
   });
 
   it('remembers the last page visited under each role and returns there when switching back to it', () => {
-    window.history.pushState({}, '', '/app/organizer-dashboard');
-    window.localStorage.setItem(STORAGE_KEY, 'organizer');
+    window.history.pushState({}, '', '/app/my-subscriptions');
+    window.localStorage.setItem(STORAGE_KEY, 'subscriber');
     renderWithProviders(<Header />);
 
-    // Switch to subscriber — nothing recorded for it yet, so it lands on its default page.
+    // Switch to organizer — nothing recorded for it yet, so it lands on its default page.
+    fireEvent.click(screen.getByRole('button', { name: /subscriber/i }));
+    fireEvent.click(
+      screen.getByText('Organizer', { selector: '.header-nav-dropdown-item-title' }).closest('button')
+    );
+    expect(window.location.pathname).toBe('/app/my-events');
+
+    // Switch back to subscriber — should return to the page it was on before, not the default.
+    fireEvent.click(screen.getByRole('button', { name: /organizer/i }));
+    fireEvent.click(
+      screen.getByText('Subscriber', { selector: '.header-nav-dropdown-item-title' }).closest('button')
+    );
+    expect(window.location.pathname).toBe('/app/my-subscriptions');
+  });
+
+  it("doesn't remember pages outside a role's own nav, so switching lands on a real role page", () => {
+    window.history.pushState({}, '', '/app/Settings-profile');
+    window.localStorage.setItem(STORAGE_KEY, 'subscriber');
+    renderWithProviders(<Header />);
+
+    fireEvent.click(screen.getByRole('button', { name: /subscriber/i }));
+    fireEvent.click(
+      screen.getByText('Organizer', { selector: '.header-nav-dropdown-item-title' }).closest('button')
+    );
     fireEvent.click(screen.getByRole('button', { name: /organizer/i }));
     fireEvent.click(
       screen.getByText('Subscriber', { selector: '.header-nav-dropdown-item-title' }).closest('button')
     );
     expect(window.location.pathname).toBe('/app/explore-events');
-
-    // Switch back to organizer — should return to the page it was on before, not the default.
-    fireEvent.click(screen.getByRole('button', { name: /subscriber/i }));
-    fireEvent.click(
-      screen.getByText('Organizer', { selector: '.header-nav-dropdown-item-title' }).closest('button')
-    );
-    expect(window.location.pathname).toBe('/app/organizer-dashboard');
   });
 
   it('shows an icon and short description for each role option in the dropdown', () => {

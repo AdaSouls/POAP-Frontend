@@ -1,6 +1,7 @@
 import { VISIBILITY_PREFIX } from './collection-share';
 import { CREDENTIAL_PACKAGE_PREFIX } from './credential-store';
 import { PROOF_HISTORY_PREFIX } from './proof-history';
+import { ORGANIZER_PROFILE_PREFIX } from './organizer-profile';
 import {
   getBackupContext,
   getBackupStatus,
@@ -20,7 +21,8 @@ import {
 
 // Encrypted backup of everything that only exists in this browser: the private state (local_sk —
 // the wallet's identity for this contract — plus its claimed-token cache) and the localStorage
-// secrets that sit next to it (share-visibility choices, credential packages, proof history).
+// secrets that sit next to it (share-visibility choices, credential packages, proof history, the
+// organizer profile).
 //
 // Encrypted here before it goes anywhere, with the wallet's key — which is also the user's recovery
 // code (storage-password.ts): PBKDF2 → AES-GCM (WebCrypto).
@@ -42,6 +44,7 @@ const BACKED_UP_PREFIXES = [
   VISIBILITY_PREFIX,
   CREDENTIAL_PACKAGE_PREFIX,
   PROOF_HISTORY_PREFIX,
+  ORGANIZER_PROFILE_PREFIX,
 ];
 
 export type BackupEnvelope = {

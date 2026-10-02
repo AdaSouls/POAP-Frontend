@@ -6,6 +6,7 @@ import { findOwnershipRequest, proveOwnership } from "../../../midnight/ownershi
 import { addProofRecord } from "../../../midnight/proof-history";
 import ProofReceipt from "../../components/ProofReceipt";
 import loadingGif from "../../../images/loading.gif";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 const PROGRESS_TITLE = "Proving Ownership";
 
@@ -69,7 +70,7 @@ export default function ProveOwnership() {
       succesfullBlockchainCreation("Ownership Proven", proof.txHash ? `Transaction: ${proof.txHash}` : "", "");
     } catch (error) {
       console.error("Error proving ownership:", error);
-      errorFunction("Error", error.message || "Failed to prove ownership. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "Failed to prove ownership. Please try again."), "");
     } finally {
       setSubmitting(false);
     }

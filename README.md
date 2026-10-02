@@ -73,6 +73,7 @@ npm start              # http://localhost:3000
 | `REACT_APP_MIDNIGHT_PROOF_SERVER_URL` | A local proof server (see `AdaSouls/velum` for the Docker setup) |
 | `REACT_APP_IPFS_API_URL` | The IPFS proxy in `server/` |
 | `REACT_APP_ADMIN_WALLET_ADDRESSES` | Wallets allowed on `/app/admin/deploy` (UI gating only) |
+| `REACT_APP_MIDNIGHT_ZK_CONFIG_PATH` | Optional. Where the ZK keys are served from (default `/midnight/poap`). Only for a local devnet running an older contract; never set on Vercel |
 
 **IPFS proxy (`server/`):** a small Express server that keeps the Pinata key out of the browser
 bundle. It handles event metadata and encrypted backups.

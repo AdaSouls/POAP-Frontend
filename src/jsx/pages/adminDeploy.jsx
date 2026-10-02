@@ -8,6 +8,7 @@ import {
 } from "../../midnight/providers";
 import { isAdminWallet, deployPoapContract } from "../../midnight/admin-deploy.service";
 import { downloadBackupFile } from "../../midnight/backup";
+import { friendlyErrorMessage } from "../../midnight/friendly-error";
 
 const truncate = (value, head = 10, tail = 6) =>
   value ? `${value.slice(0, head)}…${value.slice(-tail)}` : "";
@@ -260,7 +261,7 @@ const AdminDeploy = () => {
 
           {error && (
             <div className="alert alert-danger mt-3">
-              {error.message || "Something went wrong."}
+              {friendlyErrorMessage(error, "Something went wrong.")}
               {error.name === "LaceNotAuthorizedError" && (
                 <div className="mt-1">
                   This usually means the network above ("{targetNetwork}") doesn't match what your

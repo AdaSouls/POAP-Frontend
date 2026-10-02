@@ -1,24 +1,26 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Award, Info } from "lucide-react";
+import { Award, ShieldCheck, Share2 } from "lucide-react";
 import LandingNav from "../layout/landingNav";
 import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
 
 const FEATURES = [
   {
-    icon: Calendar,
-    title: "Browse Events",
-    description: "Explore events published on-chain by registered organizers.",
-  },
-  {
     icon: Award,
-    title: "Claim your POAP",
-    description: "Mint your token — repeat claims update your existing token's attendance instead of duplicating it.",
+    title: "Claim or receive",
+    description:
+      "Claim an open event's credential yourself, or receive one an organizer issued to you. Both show up automatically.",
   },
   {
-    icon: Info,
-    title: "Track pending approvals",
-    description: "See claims waiting on an organizer, in one place.",
+    icon: ShieldCheck,
+    title: "Prove without revealing",
+    description:
+      "Answer a verifier's question, like “is it still valid?”, with a yes or no, without showing the details behind it.",
+  },
+  {
+    icon: Share2,
+    title: "Share your collection",
+    description: "Publish a link to the credentials you choose and keep the rest hidden.",
   },
 ];
 
@@ -37,12 +39,12 @@ const SubscriberInfo = () => {
       <div className="role-info-page role-subscriber">
         <div className="row role-hero align-items-center">
           <div className="col-md-6">
-            <span className="role-eyebrow">Subscriber</span>
-            <h1 className="role-hero-title">Discover events, claim POAPs, build your collection</h1>
+            <span className="role-eyebrow">For people who receive credentials</span>
+            <h1 className="role-hero-title">Keep your credentials. Share only what's needed.</h1>
             <p className="text-muted role-hero-desc">
-              As a subscriber, you browse events published by organizers and claim POAPs to your
-              wallet. Tokens an organizer mints directly to you show up here automatically too —
-              no separate approval step.
+              Claim credentials from events you attend, or receive them straight from an organizer.
+              They all appear in one place, and nobody sees your details unless you choose to prove
+              something.
             </p>
             <div className="role-hero-cta-group">
               <Link

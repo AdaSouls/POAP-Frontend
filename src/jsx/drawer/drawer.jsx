@@ -16,6 +16,7 @@ import HolderProofs from './views/holderProofs.jsx';
 import BurnToken from './views/burnToken.jsx';
 import LinkQrPopup from './views/linkQrPopup.jsx';
 import ProofHistory from './views/proofHistory.jsx';
+import OrganizerProfile from './views/organizerProfile.jsx';
 
 export const Drawer = () => {
 
@@ -84,6 +85,10 @@ export const Drawer = () => {
       return <ProofHistory />;
     }
 
+    if (state?.showOrganizerProfile === true) {
+      return <OrganizerProfile />;
+    }
+
   };
 
   // Key names an active flag rather than any content from the view itself, so AnimatePresence
@@ -91,7 +96,7 @@ export const Drawer = () => {
   // token prop changing) don't replay the animation.
   const activeViewKey = [
     'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
-    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs', 'burnToken', 'showLinkQr', 'showProofHistory',
+    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs', 'burnToken', 'showLinkQr', 'showProofHistory', 'showOrganizerProfile',
   ].find((flag) => state?.[flag] === true) || 'none';
 
   // CLOSE_DRAWER flips every view flag to false in the same dispatch as `open: false` (see the
@@ -121,7 +126,7 @@ export const Drawer = () => {
   // panel).
   const MODAL_VIEWS = [
     'showMidnightWallet', 'createPoap', 'createEvent', 'createIssuer', 'createMint', 'getHolderKey',
-    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs', 'burnToken', 'showLinkQr', 'showProofHistory',
+    'showSubscribers', 'showBlockchainInfo', 'publishDisclosureRequest', 'showBackup', 'proveOwnership', 'showHolderProofs', 'burnToken', 'showLinkQr', 'showProofHistory', 'showOrganizerProfile',
   ];
   const isModalView = MODAL_VIEWS.includes(chromeViewKey);
   const drawerLayout = isModalView ? 'drawer-modal' : 'drawer-cart';
@@ -137,7 +142,10 @@ export const Drawer = () => {
   // got the same "reads as a plain black box" feedback (Get My Key is opened from
   // mySubscriptions.jsx/poapCard.jsx context). Independent of isWideModalView — this only swaps
   // input colors, doesn't touch modal width.
-  const isGlassFormView = ['createEvent', 'createMint', 'getHolderKey', 'publishDisclosureRequest'].includes(chromeViewKey);
+  const isGlassFormView = ['createEvent', 'createMint', 'getHolderKey', 'publishDisclosureRequest', 'showOrganizerProfile'].includes(chromeViewKey);
+
+  // Every centered popup: its text and icons get a crisp 1px dark fill so they stay readable over
+  // light images. See .drawer-modal-legible in theme-dark-glass.css.
 
   const closeDrawer = () => dispatch({ type: 'CLOSE_DRAWER' });
 
@@ -159,9 +167,13 @@ export const Drawer = () => {
           instead would leave a full-viewport transparent click-catcher mounted forever after the
           first close, silently blocking every click on the rest of the app until a hard refresh. */}
       {isOpen && isModalView && (
-        <div className="drawer-modal-overlay" onClick={closeDrawer} aria-hidden="true"></div>
+        <div
+          className="drawer-modal-overlay"
+          onClick={closeDrawer}
+          aria-hidden="true"
+        ></div>
       )}
-      <div className={`drawer ${drawerLayout} ${drawerTone} ${isWideModalView ? 'drawer-modal-wide' : ''} ${isGlassFormView ? 'drawer-modal-glass-form' : ''} ${isOpen ? 'open' : ''}`}>
+      <div className={`drawer ${drawerLayout} ${drawerTone} ${isWideModalView ? 'drawer-modal-wide' : ''} ${isGlassFormView ? 'drawer-modal-glass-form' : ''} ${isModalView ? 'drawer-modal-legible' : ''} ${isOpen ? 'open' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeViewKey}

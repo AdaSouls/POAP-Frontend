@@ -7,6 +7,7 @@ import { getEvent } from "../../midnight/indexer.service";
 import { generateHolderCode, mintLink, parseInviteFragment } from "../../midnight/invite-links";
 import LinkQrCard from "../components/LinkQrCard";
 import loadingGif from "../../images/loading.gif";
+import { friendlyErrorMessage } from "../../midnight/friendly-error";
 
 // An organizer's invite link for a Credential event (invite-links.ts → /app/key#organizer=…&event=…).
 // Replaces "ask the organizer for their key, paste it into Get My Key": the code is generated as
@@ -90,7 +91,7 @@ export default function KeyInvite() {
                   </div>
                 ) : error ? (
                   <div className="alert alert-danger" role="alert">
-                    Could not generate your key: {error.message || "unknown error"}.
+                    Could not generate your key: {friendlyErrorMessage(error, "unknown error")}.
                   </div>
                 ) : !code ? (
                   <p className="text-muted small d-flex align-items-center">

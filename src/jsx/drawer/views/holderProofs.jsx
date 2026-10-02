@@ -14,6 +14,7 @@ import { getEvent } from "../../../midnight/indexer.service";
 import { describeRule, ruleSize } from "../../../midnight/attribute-types";
 import ProofReceipt from "../../components/ProofReceipt";
 import loadingGif from "../../../images/loading.gif";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 const PROGRESS_TITLE = "Proving";
 // Below this many live POAPs in the event, "one of the holders" barely hides anyone.
@@ -151,7 +152,7 @@ export default function HolderProofs() {
       succesfullBlockchainCreation("Proof Submitted", txHash ? `Transaction: ${txHash}` : "", "");
     } catch (error) {
       console.error("Error proving:", error);
-      errorFunction("Error", error.message || "The proof failed. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "The proof failed. Please try again."), "");
     } finally {
       setBusyId(null);
     }

@@ -1,32 +1,25 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import {
   Ticket,
   QrCode,
   Calendar,
-  Headphones,
-  Mic,
-  Radio,
-  Video,
-  PlayCircle,
-  Camera,
   Users,
   Lock,
-  Phone,
   GraduationCap,
   Award,
   ScrollText,
   Star,
-  Trophy,
   Heart,
-  FileText,
   FileCheck,
   Fingerprint,
   PlusCircle,
+  ShieldCheck,
   ChevronDown,
 } from "lucide-react";
 import LandingNav from "../layout/landingNav";
+import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
 import adasoulsLogo from "../../images/adasouls.png";
 
 // Each use case now carries three related icons (instead of one) — rendered as an overlapping
@@ -35,53 +28,71 @@ import adasoulsLogo from "../../images/adasouls.png";
 // theme-dark-glass.css).
 const USE_CASES = [
   {
-    icons: [Ticket, QrCode, Calendar],
+    icons: [Ticket, Calendar, QrCode],
     role: "organizer",
-    title: "Event Tickets & Access",
-    description: "Verifiable event passes, claimed straight to your wallet — no separate ticketing platform.",
-  },
-  {
-    icons: [Headphones, Mic, Radio],
-    role: "subscriber",
-    title: "Podcast Subscriptions",
-    description: "Prove you're a paying subscriber without revealing who you are.",
-  },
-  {
-    icons: [Video, PlayCircle, Camera],
-    role: "organizer",
-    title: "Live Streams & Social Content",
-    description: "Gate a stream, a private Discord, or a closed feed behind one reusable token.",
-  },
-  {
-    icons: [Users, Lock, Phone],
-    role: "subscriber",
-    title: "Private Meetings & Calls",
-    description: "Entry to members-only calls, tied to your wallet — not a link anyone could forward.",
+    title: "Event attendance",
+    description: "Give attendees lasting proof they were there: conferences, workshops, meetups, concerts.",
   },
   {
     icons: [GraduationCap, Award, ScrollText],
-    role: "organizer",
-    title: "Diplomas & Certificates",
-    description: "On-chain, verifiable credentials — without publishing your name or record.",
-  },
-  {
-    icons: [Star, Trophy, Heart],
     role: "subscriber",
-    title: "Celebrity & Athlete Subscriptions",
-    description: "Provable fan-club membership, without exposing every fan's identity.",
+    title: "Diplomas & certificates",
+    description:
+      "Issue certificates with private details, like a grade or an expiry date. The holder can prove they passed without showing the grade.",
   },
   {
-    icons: [FileText, FileCheck, Fingerprint],
+    icons: [Users, Heart, Star],
     role: "organizer",
-    title: "Document Delivery",
-    description: "An early path for proofs tied to real documents — possession, not contents.",
+    title: "Memberships & communities",
+    description:
+      "Members prove they belong to your club, community or subscription, without telling anyone who they are.",
+  },
+  {
+    icons: [Lock, Fingerprint, FileCheck],
+    role: "subscriber",
+    title: "Access & age checks",
+    description: "Check that someone holds a valid pass, or is over 18, without asking for their ID.",
   },
 ];
 
-// One dot-nav entry per full-screen section: the intro, the role picker, then one per use case
-// (each use case is its own full-screen slide — see UseCaseRow below). Index into this array is
-// the same index used for sectionRefs/activeIndex in Dashboard.
-const SECTION_LABELS = ["Intro", "Choose your role", ...USE_CASES.map((useCase) => useCase.title)];
+// The three steps of the "How it works" slide. Colors alternate by role like the use cases do.
+const STEPS = [
+  {
+    icon: PlusCircle,
+    role: "organizer",
+    title: "Create",
+    description:
+      "Set up an event, course or membership in a few minutes: name, image, how many credentials, and until when.",
+  },
+  {
+    icon: QrCode,
+    role: "subscriber",
+    title: "Invite",
+    description: "Share a link or a QR code. People claim their credential, or you issue it to them directly.",
+  },
+  {
+    icon: ShieldCheck,
+    role: "organizer",
+    title: "Verify",
+    description:
+      "Anyone can confirm a credential is genuine and ask a yes/no question about it, like “is it still valid?”, without seeing the rest.",
+  },
+];
+
+// One dot-nav entry per full-screen section: the intro, how it works, one per use case (each its
+// own full-screen slide — see UseCaseRow below), then privacy, the subscriber path and the closing
+// call to action. Index into this array is the same index used for sectionRefs/activeIndex in
+// Dashboard.
+const SECTION_LABELS = [
+  "Intro",
+  "How it works",
+  ...USE_CASES.map((useCase) => useCase.title),
+  "Privacy",
+  "Received a credential?",
+  "Get started",
+];
+const FIRST_USE_CASE_INDEX = 2;
+const AFTER_USE_CASES_INDEX = FIRST_USE_CASE_INDEX + USE_CASES.length;
 
 const COLLAGE_BACK_PARTICLE_COUNT = 14;
 const COLLAGE_FRONT_PARTICLE_COUNT = 10;
@@ -127,6 +138,12 @@ function buildParticleField(seed, count, colors) {
   }));
 }
 
+// Shared by every section's reveal. The spring trails the raw scroll position slightly, so
+// elements ease into place instead of tracking each scroll frame one-to-one, and the fade now spans
+// a wider stretch of the scroll (0.22–0.4 in, 0.6–0.78 out) instead of popping in over a short one.
+const REVEAL_SPRING = { stiffness: 70, damping: 22, mass: 0.6, restDelta: 0.001 };
+const REVEAL_OPACITY_STOPS = [0, 0.22, 0.4, 0.6, 0.78, 1];
+
 // Same fade/slide curve used by every full-screen section (hero, role picker, each use case) for
 // a consistent scroll-linked enter/exit: flat+invisible while far from the viewport, ramps in
 // approaching center, holds through a small dwell zone around dead-center, then ramps back out —
@@ -140,12 +157,13 @@ function buildParticleField(seed, count, colors) {
 // updating as the user scrolls the actual (inner) container. That's what caused every section
 // after the first to render permanently invisible (opacity stuck at its frozen initial value) and
 // contributed to a page-wide horizontal scrollbar (UseCaseRow's icon/text columns stuck at their
-// extreme ±520px slide-in offset instead of animating back to 0 — see .landing-snap-scroller's own
+// extreme slide-in offset instead of animating back to 0 — see .landing-snap-scroller's own
 // overflow-x: hidden in theme-dark-glass.css for the other half of that fix).
 function useSectionReveal(ref, containerRef) {
-  const { scrollYProgress } = useScroll({ target: ref, container: containerRef, offset: ["start end", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 0.42, 0.58, 1], [60, 0, 0, -60]);
-  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.42, 0.58, 0.7, 1], [0, 0, 1, 1, 0, 0]);
+  const { scrollYProgress: rawProgress } = useScroll({ target: ref, container: containerRef, offset: ["start end", "end start"] });
+  const scrollYProgress = useSpring(rawProgress, REVEAL_SPRING);
+  const y = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], [36, 0, 0, -36]);
+  const opacity = useTransform(scrollYProgress, REVEAL_OPACITY_STOPS, [0, 0, 1, 1, 0, 0]);
   return { scrollYProgress, y, opacity };
 }
 
@@ -447,15 +465,25 @@ const HeroSection = React.forwardRef(({ scrollerRef }, ref) => {
       <HeroBackdrop />
       <div className="container">
         <motion.div className="index-hero" style={{ y, opacity }}>
-          <span className="role-eyebrow index-hero-eyebrow">Privacy-preserving proof, on Midnight</span>
-          <h1 className="role-hero-title index-hero-title">One token. Endless ways to prove it.</h1>
+          <span className="role-eyebrow index-hero-eyebrow">Private digital credentials</span>
+          <h1 className="role-hero-title index-hero-title">
+            Issue credentials people can prove, without exposing their data.
+          </h1>
           <p className="text-muted role-hero-desc index-hero-desc">
-            Velum issues privacy-preserving POAPs on the Midnight network — a single Compact
-            contract that can represent far more than event badges, while your wallet identity is
-            derived locally and shared with an organizer only when you choose to.
+            Certificates, event attendance, memberships and access passes. You create them, your
+            attendees keep them, and anyone can check they're real without seeing personal details.
           </p>
-          <Link to="/app" className="btn btn-dual-cta">
-            Get Started
+          {/* Organizer first: the organizer is who chooses Velum, so theirs is the one main button.
+              People who received a credential mostly arrive through a link, so they get a small
+              secondary link instead of an equal button. */}
+          <div className="index-hero-actions">
+            <Link to="/organizer" className="btn btn-role-cta role-organizer">
+              <PlusCircle size={16} className="mr-2" />
+              Start issuing
+            </Link>
+          </div>
+          <Link to="/subscriber" className="index-hero-secondary-link role-subscriber">
+            Received a credential? See yours
           </Link>
         </motion.div>
 
@@ -473,57 +501,117 @@ const HeroSection = React.forwardRef(({ scrollerRef }, ref) => {
 });
 HeroSection.displayName = "HeroSection";
 
-// "Choose your role" slide — same full-screen + reveal treatment as HeroSection above.
-const RoleSection = React.forwardRef(({ scrollerRef }, ref) => {
+// "How it works" slide — the three steps an organizer goes through. Same full-screen + reveal
+// treatment as HeroSection above.
+const HowItWorksSection = React.forwardRef(({ scrollerRef }, ref) => {
   const { y, opacity } = useSectionReveal(ref, scrollerRef);
 
   return (
-    <section ref={ref} className="landing-snap-section index-role-section">
+    <section ref={ref} className="landing-snap-section index-steps-section">
       <div className="container">
         <motion.div style={{ y, opacity }}>
           <div className="index-section-header index-section-header-compact">
-            <h4 className="mb-1">Choose your role</h4>
-            <p className="text-muted small mb-0">
-              Every account can be either — pick what fits what you're doing right now.
-            </p>
+            <h4 className="mb-1">How it works</h4>
           </div>
 
-          <div className="row index-role-row">
-            <div className="col-md-6 mb-3 role-organizer">
-              <div className="index-role-plain">
-                <PlusCircle size={88} className="index-role-plain-icon" />
+          <ol className="row index-steps-row list-unstyled">
+            {STEPS.map(({ icon: Icon, role, title, description }, i) => (
+              <li key={title} className={`col-md-4 index-step role-${role}`}>
+                <Icon size={64} className="index-role-plain-icon index-step-icon" />
                 <div>
-                  <h5 className="mb-1">Organizer</h5>
-                  <p className="text-muted small text-center index-role-card-desc">
-                    Create events, issue POAPs, and manage attendance.
-                  </p>
+                  <h5 className="mb-1">
+                    <span className="index-step-number">{i + 1}.</span> {title}
+                  </h5>
+                  <p className="text-muted small index-step-desc">{description}</p>
                 </div>
-                <Link to="/organizer" className="btn btn-role-cta">
-                  Learn more
-                </Link>
-              </div>
-            </div>
-            <div className="col-md-6 mb-3 role-subscriber">
-              <div className="index-role-plain">
-                <Award size={88} className="index-role-plain-icon" />
-                <div>
-                  <h5 className="mb-1">Subscriber</h5>
-                  <p className="text-muted small text-center index-role-card-desc">
-                    Discover events, claim POAPs, and build your collection.
-                  </p>
-                </div>
-                <Link to="/subscriber" className="btn btn-role-cta">
-                  Learn more
-                </Link>
-              </div>
-            </div>
-          </div>
+              </li>
+            ))}
+          </ol>
         </motion.div>
       </div>
     </section>
   );
 });
-RoleSection.displayName = "RoleSection";
+HowItWorksSection.displayName = "HowItWorksSection";
+
+// Privacy explained with one concrete example instead of the cryptography behind it.
+const PrivacySection = React.forwardRef(({ scrollerRef }, ref) => {
+  const { y, opacity } = useSectionReveal(ref, scrollerRef);
+
+  return (
+    <section ref={ref} className="landing-snap-section index-text-section">
+      <div className="container">
+        <motion.div className="index-text-block" style={{ y, opacity }}>
+          <ShieldCheck size={64} className="index-text-icon index-text-icon-dual" />
+          <h4 className="index-text-title">Share the proof, not your data</h4>
+          <p className="text-muted index-text-desc">
+            Proving something usually means handing over a document that says far more than needed.
+            With Velum, a credential's private details stay with the person who holds it. Whoever
+            checks gets a yes or a no. Nothing else.
+          </p>
+          <p className="index-text-example">
+            A venue can confirm a guest is over 18 without learning their birth date.
+          </p>
+          <p className="text-muted small mb-0">
+            Built on Midnight, a blockchain designed for privacy, so credentials can't be forged or
+            quietly changed.
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  );
+});
+PrivacySection.displayName = "PrivacySection";
+
+// The subscriber's path: most arrive through a link an organizer sent, so this is one short slide
+// rather than a role of equal weight on the first screen.
+const ReceivedSection = React.forwardRef(({ scrollerRef }, ref) => {
+  const { y, opacity } = useSectionReveal(ref, scrollerRef);
+  const [, setRole] = useSiteRole();
+
+  return (
+    <section ref={ref} className="landing-snap-section index-text-section">
+      <div className="container">
+        <motion.div className="index-text-block role-subscriber" style={{ y, opacity }}>
+          <Award size={64} className="index-text-icon index-role-plain-icon" />
+          <h4 className="index-text-title">Received a credential?</h4>
+          <p className="text-muted index-text-desc">
+            Open the link you were sent and connect a Midnight wallet (Lace or 1AM). Everything you
+            receive shows up in one place, and you decide what to share.
+          </p>
+          <Link
+            to="/app/my-subscriptions"
+            className="btn btn-role-cta"
+            onClick={() => setRole(SITE_ROLES.SUBSCRIBER)}
+          >
+            See my credentials
+          </Link>
+        </motion.div>
+      </div>
+    </section>
+  );
+});
+ReceivedSection.displayName = "ReceivedSection";
+
+const ClosingSection = React.forwardRef(({ scrollerRef }, ref) => {
+  const { y, opacity } = useSectionReveal(ref, scrollerRef);
+
+  return (
+    <section ref={ref} className="landing-snap-section index-text-section">
+      <div className="container">
+        <motion.div className="index-text-block" style={{ y, opacity }}>
+          <h4 className="index-text-title">Ready to issue your first credential?</h4>
+          <p className="text-muted index-text-desc">Set up your first event in a few minutes.</p>
+          <Link to="/app" className="btn btn-dual-cta btn-glow-border btn-glow-hover">
+            <span className="btn-glow-fill" aria-hidden="true" />
+            <span className="btn-glow-label">Go to App</span>
+          </Link>
+        </motion.div>
+      </div>
+    </section>
+  );
+});
+ClosingSection.displayName = "ClosingSection";
 
 // One full-screen slide per use case — icon/text still slide in from opposite sides and fade via
 // the same scroll-linked dwell-zone curve as before (not useSectionReveal above: this one also
@@ -541,11 +629,12 @@ RoleSection.displayName = "RoleSection";
 const UseCaseRow = React.forwardRef(({ icons, role, title, description, iconLeft, showIntro, scrollerRef }, ref) => {
   // `container: scrollerRef` — see the comment on useSectionReveal above for why this can't be
   // omitted (defaults to tracking window scroll, which never moves in this layout).
-  const { scrollYProgress } = useScroll({
+  const { scrollYProgress: rawProgress } = useScroll({
     target: ref,
     container: scrollerRef,
     offset: ["start end", "end start"],
   });
+  const scrollYProgress = useSpring(rawProgress, REVEAL_SPRING);
 
   // Both position and opacity now hold flat through a small dwell zone around center
   // (0.42–0.58) instead of hitting their target at the single instant progress=0.5 and
@@ -554,13 +643,13 @@ const UseCaseRow = React.forwardRef(({ icons, role, title, description, iconLeft
   // instead of just passing through it.
   const iconX = useTransform(
     scrollYProgress,
-    [0, 0.42, 0.58, 1],
-    iconLeft ? [-520, 0, 0, -520] : [520, 0, 0, 520]
+    [0, 0.4, 0.6, 1],
+    iconLeft ? [-260, 0, 0, -260] : [260, 0, 0, 260]
   );
   const textX = useTransform(
     scrollYProgress,
-    [0, 0.42, 0.58, 1],
-    iconLeft ? [520, 0, 0, 520] : [-520, 0, 0, -520]
+    [0, 0.4, 0.6, 1],
+    iconLeft ? [260, 0, 0, 260] : [-260, 0, 0, -260]
   );
   // Flat 0 while genuinely far (0 to 0.3, and 0.7 to 1) instead of a straight-line ramp across
   // the whole [0, 1] span — a linear ramp meant the row was already partly visible (e.g. ~20%
@@ -568,7 +657,7 @@ const UseCaseRow = React.forwardRef(({ icons, role, title, description, iconLeft
   // away". Ramps fully in/out across the same 0.3–0.42 / 0.58–0.7 windows the position above
   // uses, so fade and slide finish together, then holds at full opacity through the same
   // 0.42–0.58 dwell zone.
-  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.42, 0.58, 0.7, 1], [0, 0, 1, 1, 0, 0]);
+  const opacity = useTransform(scrollYProgress, REVEAL_OPACITY_STOPS, [0, 0, 1, 1, 0, 0]);
 
   return (
     <section ref={ref} className="landing-snap-section usecase-section">
@@ -578,10 +667,7 @@ const UseCaseRow = React.forwardRef(({ icons, role, title, description, iconLeft
             className="index-section-header index-section-header-compact usecase-intro-header"
             style={{ opacity }}
           >
-            <h4 className="mb-1">What you can build with Velum</h4>
-            <p className="text-muted small mb-0">
-              The same underlying token can stand in for a lot more than a conference badge.
-            </p>
+            <h4 className="mb-1">What you can do with Velum</h4>
           </motion.div>
         )}
         <div className={`row align-items-center justify-content-center usecase-row role-${role}`}>
@@ -629,10 +715,14 @@ const LandingDotNav = ({ activeIndex, onSelect }) => (
 // Slower than the browser's own default smooth-scroll pace, per explicit ask — CSS
 // `scroll-behavior: smooth` (still set on .landing-snap-scroller) has no duration knob, so getting
 // a specific, consistent pace means animating `scrollTop` by hand instead.
-const SECTION_SCROLL_DURATION = 900;
+const SECTION_SCROLL_DURATION = 1300;
+// After a section change lands, wheel events are ignored for this long: a trackpad keeps firing
+// inertia events well after the gesture ends, which otherwise kicked off a second jump right away.
+const WHEEL_COOLDOWN_MS = 450;
 
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+// Sine is gentler than the old cubic at both ends and through the middle — less of a lurch.
+function easeInOutSine(t) {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
 }
 
 function animateScrollTo(scroller, targetTop, duration) {
@@ -640,14 +730,23 @@ function animateScrollTo(scroller, targetTop, duration) {
   const delta = targetTop - startTop;
   if (Math.abs(delta) < 1) return Promise.resolve();
 
+  // The scroller's CSS snap (mandatory) and scroll-behavior:smooth both act on every scrollTop
+  // write, fighting this frame-by-frame animation and making it stutter — both are switched off
+  // for its duration and restored once it lands exactly on the section.
+  const { scrollSnapType, scrollBehavior } = scroller.style;
+  scroller.style.scrollSnapType = "none";
+  scroller.style.scrollBehavior = "auto";
+
   return new Promise((resolve) => {
     const startTime = performance.now();
     function step(now) {
       const t = Math.min((now - startTime) / duration, 1);
-      scroller.scrollTop = startTop + delta * easeInOutCubic(t);
+      scroller.scrollTop = startTop + delta * easeInOutSine(t);
       if (t < 1) {
         requestAnimationFrame(step);
       } else {
+        scroller.style.scrollSnapType = scrollSnapType;
+        scroller.style.scrollBehavior = scrollBehavior;
         resolve();
       }
     }
@@ -716,7 +815,9 @@ const Dashboard = () => {
     const targetTop =
       target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     animateScrollTo(scroller, targetTop, SECTION_SCROLL_DURATION).then(() => {
-      isAnimatingRef.current = false;
+      setTimeout(() => {
+        isAnimatingRef.current = false;
+      }, WHEEL_COOLDOWN_MS);
     });
   };
 
@@ -753,7 +854,7 @@ const Dashboard = () => {
           company behind Velum. */}
       <footer className={`landing-fixed-footer${activeIndex > 0 ? " is-visible" : ""}`} aria-hidden={activeIndex === 0}>
         <div className="container landing-fixed-footer-content">
-          <p className="text-muted small mb-0">© 2026 Velum — built on Midnight.</p>
+          <p className="text-muted small mb-0">© 2026 Velum. Built on Midnight.</p>
           <p className="landing-powered-by mb-0">
             <span>Powered by</span>
             <a
@@ -785,12 +886,12 @@ const Dashboard = () => {
       <div className="content-body landing-scroll-body">
         <div className="landing-snap-scroller" ref={scrollerRef}>
           <HeroSection ref={sectionRefs[0]} scrollerRef={scrollerRef} />
-          <RoleSection ref={sectionRefs[1]} scrollerRef={scrollerRef} />
+          <HowItWorksSection ref={sectionRefs[1]} scrollerRef={scrollerRef} />
 
           {USE_CASES.map((useCase, i) => (
             <UseCaseRow
               key={useCase.title}
-              ref={sectionRefs[2 + i]}
+              ref={sectionRefs[FIRST_USE_CASE_INDEX + i]}
               {...useCase}
               iconLeft={i % 2 === 0}
               showIntro={i === 0}
@@ -798,6 +899,9 @@ const Dashboard = () => {
             />
           ))}
 
+          <PrivacySection ref={sectionRefs[AFTER_USE_CASES_INDEX]} scrollerRef={scrollerRef} />
+          <ReceivedSection ref={sectionRefs[AFTER_USE_CASES_INDEX + 1]} scrollerRef={scrollerRef} />
+          <ClosingSection ref={sectionRefs[AFTER_USE_CASES_INDEX + 2]} scrollerRef={scrollerRef} />
         </div>
       </div>
     </div>

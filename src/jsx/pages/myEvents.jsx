@@ -4,6 +4,7 @@ import { ClipboardPaste, Plus, PlusCircle } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import EventCard from "../components/eventCard";
+import { useIssuerRegistry } from "../hooks/useBlockedIssuers";
 import EventFilters from "../components/EventFilters";
 import Tooltip from "../components/Tooltip";
 import loadingGif from "../../images/loading.gif";
@@ -49,6 +50,7 @@ const MyEvents = () => {
   const [filters, setFilters] = useState({});
   const [expandedId, setExpandedId] = useState(null);
   const { midnight: { provider } } = useDrawer();
+  const { blocked: blockedIssuers, verified: verifiedIssuers } = useIssuerRegistry();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
 
@@ -115,14 +117,15 @@ const MyEvents = () => {
             </div>
             <div className="inner-header-row-right">
               {canCreateEvent ? (
-                <button className="inner-header-action-btn" onClick={createEvent}>
+                // Hidden on phones: BottomNav.jsx has Create there.
+                <button className="inner-header-action-btn hide-on-phone" onClick={createEvent}>
                   <span className="inner-header-action-btn-inner">
                     <Plus size={14} /> Create Event
                   </span>
                 </button>
               ) : (
                 <Tooltip label="Connect your wallet to create an event">
-                  <button className="inner-header-action-btn is-outline is-inert">
+                  <button className="inner-header-action-btn is-outline is-inert hide-on-phone">
                     <span className="inner-header-action-btn-inner">
                       <Plus size={14} /> Create Event
                     </span>
@@ -130,7 +133,8 @@ const MyEvents = () => {
                 </Tooltip>
               )}
               {provider && (
-                <button className="inner-header-action-btn" onClick={() => dispatch({ type: "GET_HOLDER_KEY" })}>
+                // On phones it stays on the filter button's row instead of a full-width row below.
+                <button className="inner-header-action-btn inline-on-phone" onClick={() => dispatch({ type: "GET_HOLDER_KEY" })}>
                   <span className="inner-header-action-btn-inner">
                     <ClipboardPaste size={14} /> Paste Link
                   </span>
@@ -159,6 +163,8 @@ const MyEvents = () => {
                   isExpanded={event.eventId === expandedId}
                   onExpand={() => setExpandedId(event.eventId)}
                   onCollapse={() => setExpandedId(null)}
+                  issuerBlocked={blockedIssuers.has(event.issuerPk)}
+                  issuerVerified={verifiedIssuers.has(event.issuerPk)}
                 />
               ))}
             </AnimatePresence>

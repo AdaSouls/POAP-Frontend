@@ -1,49 +1,69 @@
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import Dashboard from '../../jsx/pages/index';
 import { renderWithProviders } from '../../testUtils';
 
 describe('Dashboard Page (landing)', () => {
-  it('renders the hero headline', () => {
+  it('renders the organizer-first hero headline', () => {
     renderWithProviders(<Dashboard />);
-    expect(screen.getByText(/One token\. Endless ways to prove it\./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Issue credentials people can prove, without exposing their data\./i),
+    ).toBeInTheDocument();
   });
 
-  it('renders all seven use-case cards', () => {
+  it('renders the three "How it works" steps', () => {
     renderWithProviders(<Dashboard />);
-    expect(screen.getByText('Event Tickets & Access')).toBeInTheDocument();
-    expect(screen.getByText('Podcast Subscriptions')).toBeInTheDocument();
-    expect(screen.getByText('Live Streams & Social Content')).toBeInTheDocument();
-    expect(screen.getByText('Private Meetings & Calls')).toBeInTheDocument();
-    expect(screen.getByText('Diplomas & Certificates')).toBeInTheDocument();
-    expect(screen.getByText('Celebrity & Athlete Subscriptions')).toBeInTheDocument();
-    expect(screen.getByText('Document Delivery')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'How it works' })).toBeInTheDocument();
+    ['Create', 'Invite', 'Verify'].forEach((step) => {
+      expect(screen.getByRole('heading', { name: new RegExp(`${step}$`) })).toBeInTheDocument();
+    });
   });
 
-  it('links out to both role pages', () => {
+  it('renders the four use cases', () => {
     renderWithProviders(<Dashboard />);
-    expect(screen.getByRole('heading', { name: 'Organizer' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Subscriber' })).toBeInTheDocument();
-    const learnMoreLinks = screen.getAllByRole('link', { name: /learn more/i });
-    expect(learnMoreLinks.map((link) => link.getAttribute('href')).sort()).toEqual([
-      '/organizer',
+    expect(screen.getByText('Event attendance')).toBeInTheDocument();
+    expect(screen.getByText('Diplomas & certificates')).toBeInTheDocument();
+    expect(screen.getByText('Memberships & communities')).toBeInTheDocument();
+    expect(screen.getByText('Access & age checks')).toBeInTheDocument();
+  });
+
+  it('leads with one organizer button and a smaller link for people who received a credential', () => {
+    renderWithProviders(<Dashboard />);
+    expect(screen.queryByRole('button', { name: /^roles/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /start issuing/i })).toHaveAttribute('href', '/organizer');
+    expect(screen.getByRole('link', { name: /received a credential\? see yours/i })).toHaveAttribute(
+      'href',
       '/subscriber',
-    ]);
+    );
   });
 
-  it('has no wallet-connect UI — the hero CTA routes into the app instead', () => {
+  it('has a privacy slide and a slide for people who received a credential', () => {
+    renderWithProviders(<Dashboard />);
+    expect(screen.getByRole('heading', { name: 'Share the proof, not your data' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Received a credential?' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /see my credentials/i })).toHaveAttribute(
+      'href',
+      '/app/my-subscriptions',
+    );
+  });
+
+  it('has no wallet-connect UI — "Go to App" (nav and closing slide) routes into the app instead', () => {
     renderWithProviders(<Dashboard />);
     expect(screen.queryByRole('button', { name: /connect wallet/i })).not.toBeInTheDocument();
-    const getStartedLinks = screen.getAllByRole('link', { name: /get started/i });
-    expect(getStartedLinks.length).toBeGreaterThan(0);
-    getStartedLinks.forEach((link) => expect(link).toHaveAttribute('href', '/app'));
+    expect(screen.queryByRole('link', { name: /get started/i })).not.toBeInTheDocument();
+    const goToApp = screen.getAllByRole('link', { name: /go to app/i });
+    expect(goToApp).toHaveLength(2);
+    goToApp.forEach((link) => expect(link).toHaveAttribute('href', '/app'));
   });
 
-  it('nav "Roles" dropdown links to both role pages', () => {
+  it('links the nav "Documentation" item to /docs', () => {
     renderWithProviders(<Dashboard />);
-    fireEvent.click(screen.getByRole('button', { name: /^roles/i }));
-    expect(screen.getByRole('link', { name: /organizer/i })).toHaveAttribute('href', '/organizer');
-    expect(screen.getByRole('link', { name: /subscriber/i })).toHaveAttribute('href', '/subscriber');
+    expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', '/docs');
+  });
+
+  it('has one dot-nav entry per slide', () => {
+    renderWithProviders(<Dashboard />);
+    expect(screen.getByRole('navigation', { name: 'Section navigation' }).querySelectorAll('button')).toHaveLength(9);
   });
 
   it('says in the footer that it is powered by AdaSouls', () => {

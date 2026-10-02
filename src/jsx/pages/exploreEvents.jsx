@@ -4,6 +4,7 @@ import { Compass } from "lucide-react";
 import Layout from "../layout/layout";
 import { useDrawer, useDrawerDispatch } from "../contexts/drawer/drawer.provider";
 import EventCard from "../components/eventCard";
+import { useIssuerRegistry } from "../hooks/useBlockedIssuers";
 import EventFilters from "../components/EventFilters";
 import loadingGif from "../../images/loading.gif";
 import walletStatus from "../../images/collections/wallet-status.png";
@@ -55,6 +56,7 @@ const ExploreEvents = () => {
   const { midnight: { provider } } = useDrawer();
   const dispatch = useDrawerDispatch();
   const pollRef = useRef(null);
+  const { blocked: blockedIssuers, verified: verifiedIssuers } = useIssuerRegistry();
 
   const handleClaim = (event) => {
     dispatch({ type: "CREATE_POAP", payload: event });
@@ -81,8 +83,13 @@ const ExploreEvents = () => {
 
   const otherEvents = useMemo(() => {
     if (!provider) return [];
-    return filteredEvents.filter((e) => e.isPublicMint && e.issuerPk !== provider.address);
-  }, [filteredEvents, provider]);
+    // Events of an admin-blocked organizer are left out: the contract rejects every claim under
+    // them ("Issuer is deactivated"), and the block is a moderation action, so they shouldn't be
+    // promoted here either.
+    return filteredEvents.filter(
+      (e) => e.isPublicMint && e.issuerPk !== provider.address && !blockedIssuers.has(e.issuerPk),
+    );
+  }, [filteredEvents, provider, blockedIssuers]);
 
   // Which of these events the connected wallet already holds a (non-burned) token for — computed
   // once for the whole list (deduped by issuer, see getMyTokens) rather than per-card, so both the
@@ -176,6 +183,7 @@ const ExploreEvents = () => {
                   onClaim={handleClaim}
                   isSubscribed={mySubscribedEventIds.has(event.eventId)}
                   subscriptionLoading={subscriptionsLoading}
+                  issuerVerified={verifiedIssuers.has(event.issuerPk)}
                 />
               ))}
             </AnimatePresence>

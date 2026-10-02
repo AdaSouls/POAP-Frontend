@@ -22,6 +22,7 @@ import { getProofHistory, PROOF_HISTORY_EVENT } from "../../midnight/proof-histo
 import { blockTimestamp, verifyUrl } from "../../midnight/proof-verification";
 import { describeValidity, formatUntil, parseValidity, validityStatus } from "../../midnight/validity";
 import { TOKEN_BURNED_EVENT } from "../../midnight/token-events";
+import OrganizerLabel from "./OrganizerLabel";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -44,7 +45,7 @@ const truncateHex = (hex) => {
 // measuring/detaching exiting elements from layout flow. A plain function component can't receive
 // that ref — framer-motion silently can't measure it (console warning, and popLayout degrades to
 // default timing) unless the ref is forwarded down to the actual motion.div.
-const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, onCollapse = () => {} }, ref) => {
+const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, onCollapse = () => {}, issuerBlocked = false, issuerVerified = false }, ref) => {
   const { midnight } = useDrawer();
   const dispatch = useDrawerDispatch();
 
@@ -53,6 +54,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   // Burned from this card (burnToken.jsx) — shown right away instead of waiting for the page's next
   // indexer poll to bring poap.isBurned.
   const [burnedHere, setBurnedHere] = useState(false);
+  const [openPill, setOpenPill] = useState(null); // "proven" | "validity" | null, see iconPills
   useEffect(() => {
     const onBurned = ({ detail }) => {
       if (detail?.eventId === poap.firstEventId && detail?.tokenId === String(poap.tokenId)) setBurnedHere(true);
@@ -348,16 +350,42 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
         ? `Expired on ${formatUntil(validityState.untilMs, validity)}`
         : validityText;
 
+  // Tapping a pill (touch screens have no hover) opens its label in place without expanding the
+  // card; opening one closes the other, so only one label shows at a time. Mouse users still get
+  // the hover reveal (theme-dark-glass.css).
+  const pillProps = (key) => ({
+    role: "button",
+    tabIndex: 0,
+    "aria-expanded": openPill === key,
+    onClick: (event) => {
+      event.stopPropagation();
+      setOpenPill((current) => (current === key ? null : key));
+    },
+    onKeyDown: (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpenPill((current) => (current === key ? null : key));
+    },
+  });
   const iconPills = (lastProof || showValidity) && (
     <div className="d-flex align-items-center mr-auto" style={{ gap: "6px" }}>
       {lastProof && (
-        <span className="poap-proven-badge poap-card-icon-pill">
+        <span
+          className={`poap-proven-badge poap-card-icon-pill${openPill === "proven" ? " is-open" : ""}`}
+          aria-label={proofText}
+          {...pillProps("proven")}
+        >
           <ShieldCheck size={13} aria-hidden="true" />
           <span className="poap-card-icon-pill-label">{proofText}</span>
         </span>
       )}
       {showValidity && (
-        <span className={`poap-validity-badge poap-card-icon-pill${validityStateClass}`}>
+        <span
+          className={`poap-validity-badge poap-card-icon-pill${validityStateClass}${openPill === "validity" ? " is-open" : ""}`}
+          aria-label={validityText}
+          {...pillProps("validity")}
+        >
           <ValidityIcon size={13} aria-hidden="true" />
           <span className="poap-card-icon-pill-label">{validityText}</span>
         </span>
@@ -374,8 +402,14 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
   // "Active" said nothing about how you got this POAP — same category-aware verb the explore-events
   // grid uses once claimed (Followed/Attended/Subscribed, see getClaimActionLabel), since every card
   // on this page is by definition already-held (no "Claimable" state exists here).
-  const poapStatusBadgeClass = isBurned ? "badge bg-secondary" : "badge status-badge-held";
-  const poapStatusLabel = isBurned ? "Burned" : claimLabel.done;
+  // issuerBlocked (useBlockedIssuers): the admin blocked the organizer that issued this. The token
+  // is still the holder's (blocking burns nothing), but whoever checks it should know.
+  const poapStatusBadgeClass = isBurned
+    ? "badge bg-secondary"
+    : issuerBlocked
+    ? "badge bg-danger"
+    : "badge status-badge-held";
+  const poapStatusLabel = isBurned ? "Burned" : issuerBlocked ? "Issuer blocked" : claimLabel.done;
 
   return (
     <motion.div
@@ -427,6 +461,17 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                     vertically centered against the 140px thumb. */
                 <div className="poap-detail-category-badge-corner card-detail-top-row" style={textStyle}>
                   <CategoryBadge category={metadata?.category} />
+                </div>
+              )}
+              {isExpanded && (
+                /* Phones only (theme-dark-glass.css): type and status side by side in the card's
+                   top-left corner, level with the collapse button; the desktop corner badge above
+                   and the status badge over the name are hidden there. */
+                <div className="card-mobile-badge-row" style={textStyle}>
+                  <CategoryBadge category={metadata?.category} />
+                  <span className={`${poapStatusBadgeClass} text-capitalize card-mobile-status-badge`}>
+                    {poapStatusLabel}
+                  </span>
                 </div>
               )}
               {/* align-items-stretch (not center) so .card-media-content below actually stretches
@@ -481,7 +526,7 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                       <li className="d-flex align-items-center mb-1">
                         <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
                         <span className="text-muted small">
-                          Issuer: <span className="text-white">{metadata?.organization?.name || truncateHex(poap.issuerPkHex)}</span>
+                          Issuer: <OrganizerLabel name={metadata?.organization?.name} issuerPk={poap.issuerPkHex} verified={issuerVerified} />
                         </span>
                       </li>
                       <li className="d-flex align-items-center mb-1">
@@ -778,7 +823,12 @@ const PoapCard = forwardRef(({ poap, isExpanded = false, onExpand = () => {}, on
                             style={{ flexShrink: 0 }}
                           />
                           <span className="text-muted small text-truncate">
-                            {eventMetadata?.organization?.name || truncateHex(poap.issuerPkHex)}
+                            <OrganizerLabel
+                              name={eventMetadata?.organization?.name}
+                              issuerPk={poap.issuerPkHex}
+                              verified={issuerVerified}
+                              className=""
+                            />
                           </span>
                         </li>
                         {eventDetail && (

@@ -16,7 +16,10 @@ import type { ImpureCircuits } from './contract/managed/poap/contract/index.js';
 export type PoapCircuitId = keyof ImpureCircuits<unknown>;
 
 export const POAP_PRIVATE_STATE_KEY = 'poapPrivateState';
-export const POAP_ZK_CONFIG_BASE_PATH = '/midnight/poap';
+// Where the per-circuit zkir/prover/verifier files are served from. Connecting checks every local
+// verifier key against the deployed contract, so these must match the contract the app points at.
+// Overridable for a local devnet still running an older contract than the one in public/midnight/poap.
+export const POAP_ZK_CONFIG_BASE_PATH = process.env.REACT_APP_MIDNIGHT_ZK_CONFIG_PATH || '/midnight/poap';
 // 'undeployed' (local devnet, default) or 'preprod' — must match both the wallet extension's own
 // configured network and REACT_APP_MIDNIGHT_CONTRACT_ADDRESS (a contract address only resolves on
 // the network it was actually deployed to). See docs/environment.md in ../POAP-Midnight and

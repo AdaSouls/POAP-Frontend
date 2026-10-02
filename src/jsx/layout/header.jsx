@@ -110,7 +110,7 @@ const RoleDropdown = ({ role, onSelect, placeholderLabel }) => {
       <button
         type="button"
         ref={toggleRef}
-        className={`header-nav-dropdown-toggle header-nav-role-toggle${placeholderLabel ? "" : ` role-${role}`}`}
+        className={`header-nav-dropdown-toggle header-nav-role-toggle${placeholderLabel ? " is-placeholder" : ` role-${role}`}`}
         onClick={() => (open ? setOpen(false) : openMenu())}
         aria-expanded={open}
       >
@@ -210,7 +210,8 @@ const Header = () => {
           inner content lines up exactly with the page instead of running edge-to-edge. */}
       <div className="container">
         <div className="header-content">
-          <Link to="/app" className="brand-logo">
+          {/* The logo leads back to the launcher (landing page); "Go to App" there comes back in. */}
+          <Link to="/" className="brand-logo">
             <img src={logo} alt="" />
             <span>Velum</span>
           </Link>

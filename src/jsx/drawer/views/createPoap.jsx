@@ -8,6 +8,7 @@ import { useEventMetadata } from '../../hooks/useEventMetadata';
 import Tooltip from '../../components/Tooltip';
 import { getClaimActionLabel, getTaxonomyEntries } from '../../constants/eventCategories';
 import { txHashOf } from "../../../midnight/tx-result";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 // Claiming a POAP on Midnight is a single self-service call — claim(eventId, isSoulbound) mints a
 // brand-new token scoped to (holder, event); calling it again for the same event the same wallet
@@ -48,8 +49,11 @@ export default function CreatePoap() {
 
   const isExpired = (evt) => Boolean(evt.expiration && evt.expiration > 0 && evt.expiration * 1000 <= Date.now());
   const isFull = (evt) => Boolean(evt.maxSupply && evt.maxSupply > 0 && evt.minted >= evt.maxSupply);
+  // claim() reverts with "Organizer cannot claim their own event". Explore Events already hides
+  // the viewer's own events; this is the backstop for any other way into this popup.
+  const isOwnEvent = Boolean(selectedEvent && provider?.address && selectedEvent.issuerPk === provider.address);
   const mintable = selectedEvent
-    ? selectedEvent.isActive && !isExpired(selectedEvent) && !isFull(selectedEvent)
+    ? selectedEvent.isActive && !isExpired(selectedEvent) && !isFull(selectedEvent) && !isOwnEvent
     : false;
 
   const handleSubmit = async (e) => {
@@ -61,6 +65,10 @@ export default function CreatePoap() {
     }
     if (!selectedEvent) {
       errorFunction("Event Selection Required", "Please select an event first.", "");
+      return;
+    }
+    if (isOwnEvent) {
+      errorFunction("Cannot Claim", "You organize this event, so you can't claim it yourself.", "");
       return;
     }
     if (!mintable) {
@@ -79,14 +87,14 @@ export default function CreatePoap() {
       navigate("/app/my-subscriptions");
     } catch (error) {
       console.error("Error subscribing:", error);
-      errorFunction("Error", error.message || `Failed to ${claimLabel.action.toLowerCase()}. Please try again.`, "");
+      errorFunction("Error", friendlyErrorMessage(error, `Failed to ${claimLabel.action.toLowerCase()}. Please try again.`), "");
     } finally {
       setLoading(false);
     }
   };
 
   const eventStatusLabel = (evt) =>
-    mintable ? 'Claimable' : isExpired(evt) ? 'Expired' : isFull(evt) ? 'Full' : 'Inactive';
+    mintable ? 'Claimable' : isOwnEvent ? 'Your event' : isExpired(evt) ? 'Expired' : isFull(evt) ? 'Full' : 'Inactive';
 
   // Same card in both steps (step 2 is a confirmation, not a different event) — only the
   // thumbnail differs: step 1 shows the event's own listing image (square, rounded corners, same

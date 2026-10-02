@@ -7,16 +7,16 @@ const MySwal = withReactContent(Swal);
 
 // Shared across every alert below: centered on the page instead of a corner toast, sized up a
 // bit, and styled as the same liquid-glass surface as the wallet-connect popup
-// (.drawer.drawer-modal) via the swal2-glass-popup class (see theme-dark-glass.css) — including
-// that popup's own "no dimming" choice: backdrop: false, since the glass blur already separates
-// the popup from the page without needing to darken everything else too.
+// (.drawer.drawer-modal) via the swal2-glass-popup class (see theme-dark-glass.css), including the
+// same 30% dark-blue dim of the page behind it.
 const GLASS_ALERT_OPTIONS = {
   position: "center",
   width: "32em",
   showConfirmButton: false,
   timer: 5000,
   timerProgressBar: true,
-  backdrop: false,
+  // Same dim as every other popup (--popup-dim in theme-dark-glass.css).
+  backdrop: "rgba(6, 20, 27, 0.3)",
   customClass: { popup: "swal2-glass-popup" },
 };
 

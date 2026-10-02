@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import CreateEvent from '../../../jsx/drawer/views/createEvent';
 import { mockDrawerContext, renderWithProviders } from '../../../testUtils';
 import { uploadJSONToIPFS } from '../../../services/ipfs.service';
+import { getOrganizerProfile, saveOrganizerProfile } from '../../../midnight/organizer-profile';
 
 jest.mock('../../../services/ipfs.service', () => ({
   uploadImageToIPFS: jest.fn(),
@@ -26,6 +27,13 @@ const clickCreate = () => userEvent.click(screen.getByRole('button', { name: /^c
 // (Event/Subscription) — Credential skips it, since its tokens get their own per-recipient image later via push-mint, not a shared one set
 // here (see createEvent.jsx's steps useMemo). Every step after supply is fully optional, so this
 // just keeps clicking Next until Create appears instead of hardcoding a step count per category.
+// The POAP image switch starts on (Event/Subscription only); flows that don't test the image turn it
+// off so they can submit without picking one.
+async function useEventImageForPoap() {
+  const toggle = screen.queryByLabelText('Use a different image for the POAP');
+  if (toggle && toggle.checked) await userEvent.click(toggle);
+}
+
 async function fillThroughToSubmit({ categoryLabel, name, maxSupply, configureBeforeLastNext }) {
   await userEvent.click(screen.getByText(categoryLabel));
   await clickNext(); // step 0 -> details
@@ -51,6 +59,7 @@ async function fillThroughToSubmit({ categoryLabel, name, maxSupply, configureBe
   if (pendingConfigure && screen.queryByRole('button', { name: /add private field/i })) {
     await pendingConfigure();
   }
+  await useEventImageForPoap();
   await clickCreate(); // submit
 }
 
@@ -141,6 +150,7 @@ describe('CreateEvent drawer view', () => {
     await userEvent.click(screen.getByRole('option', { name: 'In-person' }));
     await clickNext(); // taxonomy -> org profile
     await clickNext(); // org profile -> POAP image (no private-fields step outside Credential)
+    await useEventImageForPoap();
     await clickCreate(); // submit
 
     await waitFor(() => expect(createEvent).toHaveBeenCalled());
@@ -294,6 +304,84 @@ describe('CreateEvent drawer view', () => {
     await fillThroughToSubmit({ categoryLabel: 'Subscription', name: 'Club', maxSupply: '0' });
     await waitFor(() => expect(createEvent).toHaveBeenCalled());
     expect(uploadJSONToIPFS).toHaveBeenCalledWith(expect.not.objectContaining({ validity: expect.anything() }));
+  });
+
+  it('starts with a separate POAP image switched on, and needs an image until it is switched off', async () => {
+    const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
+    renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
+
+    await userEvent.click(screen.getByText('Event'));
+    await clickNext();
+    await userEvent.type(screen.getByLabelText(/Name/i), 'DevCon');
+    await clickNext();
+    await clickNext();
+    while (screen.queryByRole('button', { name: /^next$/i })) {
+      await clickNext();
+    }
+
+    const toggle = screen.getByLabelText('Use a different image for the POAP');
+    expect(toggle).toBeChecked();
+    expect(screen.getByText('Different POAP Image')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create/i })).toBeDisabled();
+
+    await userEvent.click(toggle);
+    expect(screen.getByText('Same as Event Image')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create/i })).toBeEnabled();
+  });
+
+  describe('organizer profile', () => {
+    beforeEach(() => window.localStorage.clear());
+
+    const walkToOrgProfile = async () => {
+      await userEvent.click(screen.getByText('Event'));
+      await clickNext();
+      await userEvent.type(screen.getByLabelText(/Name/i), 'DevCon');
+      await clickNext();
+      await clickNext();
+      while (!screen.queryByLabelText('Organizer Name')) {
+        await clickNext();
+      }
+    };
+
+    it('prefills the organizer step from the saved profile', async () => {
+      saveOrganizerProfile('aa'.repeat(32), { name: 'Acme Labs', country: 'AR' });
+      renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(jest.fn()) });
+
+      await walkToOrgProfile();
+
+      expect(screen.getByLabelText('Organizer Name')).toHaveValue('Acme Labs');
+      expect(screen.getByLabelText(/save as my organizer profile/i)).toBeChecked();
+    });
+
+    it('saves what was used as the profile after a successful create', async () => {
+      const createEvent = jest.fn().mockResolvedValue({ txHash: '0xabc' });
+      renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
+
+      await walkToOrgProfile();
+      await userEvent.type(screen.getByLabelText('Organizer Name'), 'New Org');
+      while (screen.queryByRole('button', { name: /^next$/i })) await clickNext();
+      await useEventImageForPoap();
+      await clickCreate();
+
+      await waitFor(() => expect(createEvent).toHaveBeenCalled());
+      expect(getOrganizerProfile('aa'.repeat(32))).toEqual({ name: 'New Org' });
+    });
+
+    it('leaves the profile alone when the switch is off or the create fails', async () => {
+      saveOrganizerProfile('aa'.repeat(32), { name: 'Acme Labs' });
+      const createEvent = jest.fn().mockRejectedValue(new Error('failed assert: Contract is paused'));
+      renderWithProviders(<CreateEvent />, { drawerValue: buildDrawerValue(createEvent) });
+
+      await walkToOrgProfile();
+      await userEvent.clear(screen.getByLabelText('Organizer Name'));
+      await userEvent.type(screen.getByLabelText('Organizer Name'), 'Other');
+      while (screen.queryByRole('button', { name: /^next$/i })) await clickNext();
+      await useEventImageForPoap();
+      await clickCreate();
+
+      await waitFor(() => expect(createEvent).toHaveBeenCalled());
+      expect(getOrganizerProfile('aa'.repeat(32))).toEqual({ name: 'Acme Labs' });
+    });
   });
 
   it('does not ask for a shared POAP image on the Credential flow — tokens get their own image later via push-mint', async () => {

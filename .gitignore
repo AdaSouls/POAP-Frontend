@@ -37,3 +37,6 @@ yarn-error.log*
 
 # Deployment
 .vercel
+
+# Local-only copy of the ZK keys matching the older local devnet contract (see REACT_APP_MIDNIGHT_ZK_CONFIG_PATH)
+public/midnight/poap-devnet/

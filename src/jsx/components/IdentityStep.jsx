@@ -12,6 +12,9 @@ export default function IdentityStep({ request }) {
   const { mode, error } = request;
   const [restoring, setRestoring] = useState(mode === "locked");
   const [confirmStartOver, setConfirmStartOver] = useState(false);
+  // Welcome: "No, I'm new" first shows a warning, since the same wallet on another browser would
+  // otherwise end up as a second, separate identity (docs/organizer-profile-design.md).
+  const [confirmNew, setConfirmNew] = useState(false);
   const [source, setSource] = useState("cloud");
   const [file, setFile] = useState({ name: "", text: "" });
   const [code, setCode] = useState("");
@@ -54,20 +57,48 @@ export default function IdentityStep({ request }) {
       {!restoring ? (
         <>
           <p className="text-muted small mb-3">
-            First time using this wallet in this browser. Velum will create your identity and back it
-            up automatically — you'll get a recovery code to keep.
+            Your Velum identity lives in the browser where you created it, not in the wallet itself.
+            Have you used Velum with this wallet before, on this or another browser?
           </p>
-          <button type="button" className="btn btn-gradient w-100" onClick={continueAsNew} disabled={submitting}>
-            {submitting ? <span className="d-flex align-items-center justify-content-center">{spinner}Setting up</span> : "Continue"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-link btn-sm w-100 mt-1 password-step-switch"
-            onClick={() => setRestoring(true)}
-            disabled={submitting}
-          >
-            I used Velum before — restore with my recovery code
-          </button>
+          {!confirmNew ? (
+            <>
+              <button type="button" className="btn btn-gradient w-100" onClick={() => setRestoring(true)} disabled={submitting}>
+                Yes, restore it
+              </button>
+              <button
+                type="button"
+                className="btn btn-link btn-sm w-100 mt-1 password-step-switch"
+                onClick={() => setConfirmNew(true)}
+                disabled={submitting}
+              >
+                No, I'm new to Velum
+              </button>
+            </>
+          ) : (
+            <div className="alert alert-warning mb-0">
+              <p className="small mb-3">
+                If you used this wallet with Velum on another browser, continuing creates a separate
+                identity: your events and credentials from there won't show here. Restore instead with
+                your recovery code.
+              </p>
+              <div className="d-flex flex-wrap" style={{ gap: "8px" }}>
+                <button type="button" className="btn btn-card-detail-action btn-sm" onClick={continueAsNew} disabled={submitting}>
+                  {submitting ? <span className="d-flex align-items-center">{spinner}Setting up</span> : "Create a new identity"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-card-detail-action btn-sm"
+                  onClick={() => {
+                    setConfirmNew(false);
+                    setRestoring(true);
+                  }}
+                  disabled={submitting}
+                >
+                  Restore instead
+                </button>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <form onSubmit={onRestore} noValidate>

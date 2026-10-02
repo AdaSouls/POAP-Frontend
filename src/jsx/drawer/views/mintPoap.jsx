@@ -27,6 +27,7 @@ import {
 import { canonicalValue, fieldType } from "../../../midnight/attribute-types";
 import { parseValidity, validUntilIso } from "../../../midnight/validity";
 import SelectDropdown from "../../components/SelectDropdown";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -95,7 +96,23 @@ export default function MintPoap() {
   const [loading, setLoading] = useState(false);
 
   const recipient = parseHolderCode(recipientPkHex);
-  const isRecipientValid = () => Boolean(recipient);
+  // mintTo reverts with "Cannot mint to yourself" when the recipient is the caller's own key for
+  // this event's organizer (holder_pk(ev.organizer)) — that holds for an admin minting into
+  // someone else's event too, so compare against that, not just the organizer's own events.
+  const [ownHolderPkHex, setOwnHolderPkHex] = useState(null);
+  useEffect(() => {
+    const service = midnight?.provider?.service;
+    if (typeof service?.getHolderPkHex !== "function" || !mintEvent?.issuerPk) return undefined;
+    let cancelled = false;
+    Promise.resolve(service.getHolderPkHex(Uint8Array.from(Buffer.from(mintEvent.issuerPk, "hex"))))
+      .then((pk) => !cancelled && setOwnHolderPkHex(pk))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [midnight?.provider, mintEvent?.issuerPk]);
+  const isOwnKey = Boolean(recipient && ownHolderPkHex && recipient.holderPkHex === ownHolderPkHex);
+  const isRecipientValid = () => Boolean(recipient) && !isOwnKey;
   const isDocumentValid = () => Boolean(documentValues.imageFile);
   const isPrivateValid = () => credentialFields.every((f) => "value" in valueCheck(f, privateValues[f.fieldId]));
 
@@ -125,6 +142,11 @@ export default function MintPoap() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!midnight?.provider || !mintEvent) return;
+
+    if (isOwnKey) {
+      errorFunction("Cannot Mint to Yourself", "That key is your own. Paste the recipient's key instead.", "");
+      return;
+    }
 
     if (!isRecipientValid()) {
       errorFunction(
@@ -240,7 +262,7 @@ export default function MintPoap() {
       );
     } catch (error) {
       console.error("Error minting POAP:", error);
-      errorFunction("Error", error.message || "Failed to mint POAP. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "Failed to mint POAP. Please try again."), "");
     } finally {
       setLoading(false);
     }
@@ -346,6 +368,11 @@ export default function MintPoap() {
                     onChange={(event) => setRecipientPkHex(holderCodeFromInput(event.target.value))}
                     required
                   />
+                  {isOwnKey && (
+                    <small className="form-text text-danger d-block">
+                      That's your own key. You can't mint a POAP to yourself.
+                    </small>
+                  )}
                   <small className="form-text text-muted">
                     Not their wallet address — this has to be the key they generate specifically for
                     you. Send them your organizer public key ({truncateHex(mintEvent.issuerPk)}), have

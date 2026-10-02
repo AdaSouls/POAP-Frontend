@@ -16,6 +16,7 @@ import { publishRequestRule } from "../../../midnight/disclosure-sets";
 import { describeRule, expandRule, ruleSize } from "../../../midnight/attribute-types";
 import QuestionBuilder from "../../components/QuestionBuilder";
 import SelectDropdown from "../../components/SelectDropdown";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 const REQUEST_ID_POLL_ATTEMPTS = 10;
 const REQUEST_ID_POLL_DELAY_MS = 1500;
@@ -132,7 +133,7 @@ export default function PublishDisclosureRequest() {
       );
     } catch (error) {
       console.error("Error publishing disclosure request:", error);
-      errorFunction("Error", error.message || "Failed to publish the disclosure request. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "Failed to publish the disclosure request. Please try again."), "");
     } finally {
       setLoading(false);
     }

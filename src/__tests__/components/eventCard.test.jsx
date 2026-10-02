@@ -86,10 +86,12 @@ describe('EventCard Component', () => {
     await waitFor(() => expect(onExpand).toHaveBeenCalled());
   });
 
-  it('displays mint progress', () => {
-    renderWithProviders(<EventCard event={mockEvent} />);
-    expect(screen.getByText(/Minted:/i)).toBeInTheDocument();
-    expect(screen.getByText(/50\/100/i)).toBeInTheDocument();
+  it('displays mint progress, beside the image and in the phone row below it (CSS shows one)', () => {
+    const { container } = renderWithProviders(<EventCard event={mockEvent} />);
+    expect(screen.getAllByText(/Minted:/i)).toHaveLength(2);
+    expect(screen.getAllByText(/50\/100/i)).toHaveLength(2);
+    expect(container.querySelector('.card-event-footer-row-inline')).not.toBeNull();
+    expect(container.querySelector('.card-event-footer-row-below')).not.toBeNull();
   });
 
   it('shows expired status for expired events', () => {
@@ -487,7 +489,8 @@ describe('EventCard Component', () => {
 
       renderWithProviders(<EventCard event={eventWithMetadata} />);
 
-      expect(await screen.findByText('Event')).toBeInTheDocument();
+      // Beside the image and in the phone row below it (CSS shows one).
+      expect(await screen.findAllByText('Event')).toHaveLength(2);
     });
 
     it('does not render a category badge for legacy events without metadata.category', async () => {
@@ -512,9 +515,13 @@ describe('EventCard Component', () => {
       });
       const eventWithMetadata = { ...mockEvent, metadataURI: 'https://example.com/meta-category-expanded.json' };
 
-      renderWithProviders(<EventCard event={eventWithMetadata} isExpanded />);
+      const { container } = renderWithProviders(<EventCard event={eventWithMetadata} isExpanded />);
 
-      expect(await screen.findByText('Credential')).toBeInTheDocument();
+      // Once in the desktop header row and once in the phone-only badge row (CSS shows one).
+      expect(await screen.findAllByText('Credential')).toHaveLength(2);
+      const phoneRow = container.querySelector('.card-mobile-badge-row');
+      expect(phoneRow).toHaveTextContent('Credential');
+      expect(phoneRow.querySelector('.card-mobile-status-badge')).toHaveTextContent('Active');
     });
 
     it('shows channels and organization address in the expanded card when present', async () => {

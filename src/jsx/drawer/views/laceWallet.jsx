@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Check, ShieldCheck, ShieldAlert } from "lucide-react";
+import { X, Check, ShieldCheck, ShieldAlert, UserRound } from "lucide-react";
 import {
   useDrawer,
   useDrawerDispatch,
@@ -9,6 +9,7 @@ import { cancelPasswordRequest, subscribePasswordRequest } from "../../../midnig
 import loadingGif from "../../../images/loading.gif";
 import IdentityStep from "../../components/IdentityStep";
 import { useRecoveryCodeSaved } from "../../hooks/useRecoveryCodeSaved";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 // How long the button shows the green-fill "Connected" state before flipping to the actual
 // Disconnect button — the card's own reveal (bottom "Connected — 0x…" row + white border) is
@@ -141,6 +142,10 @@ export default function LaceWallet() {
     dispatch({ type: "SHOW_BACKUP" });
   };
 
+  const openProfile = () => {
+    dispatch({ type: "SHOW_ORGANIZER_PROFILE" });
+  };
+
   const errorToShow = waitingUnlock || passwordRequest ? null : localError ?? midnight?.error;
   const selectedWalletName = selectedWallet ? getWalletDisplayName(selectedWallet) : "Midnight";
   // "1am Wallet" already ends in "wallet" — avoid "Your 1am Wallet wallet is locked".
@@ -185,19 +190,32 @@ export default function LaceWallet() {
                   </div>
                 </div>
                 {phase === "connected" && (
-                  // Icon-only pill, vertically centered on the card's right edge; hovering reveals
-                  // its label.
-                  <button
-                    type="button"
-                    className={"btn wallet-backup-btn" + (codeSaved === false ? " is-attention" : "")}
-                    onClick={openBackup}
-                    aria-label={codeSaved === false ? "Save your recovery code" : "Backup & Restore"}
-                  >
-                    {codeSaved === false ? <ShieldAlert size={17} /> : <ShieldCheck size={17} />}
-                    <span className="wallet-backup-btn-label" aria-hidden="true">
-                      {codeSaved === false ? "Save your recovery code" : "Backup & Restore"}
-                    </span>
-                  </button>
+                  // Icon-only pills, vertically centered on the card's right edge; hovering one
+                  // reveals its label.
+                  <div className="d-flex align-items-center flex-shrink-0" style={{ gap: "8px", marginLeft: "auto" }}>
+                    <button
+                      type="button"
+                      className="btn wallet-backup-btn"
+                      onClick={openProfile}
+                      aria-label="Organizer profile"
+                    >
+                      <UserRound size={17} />
+                      <span className="wallet-backup-btn-label" aria-hidden="true">
+                        Organizer profile
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={"btn wallet-backup-btn" + (codeSaved === false ? " is-attention" : "")}
+                      onClick={openBackup}
+                      aria-label={codeSaved === false ? "Save your recovery code" : "Backup & Restore"}
+                    >
+                      {codeSaved === false ? <ShieldAlert size={17} /> : <ShieldCheck size={17} />}
+                      <span className="wallet-backup-btn-label" aria-hidden="true">
+                        {codeSaved === false ? "Save your recovery code" : "Backup & Restore"}
+                      </span>
+                    </button>
+                  </div>
                 )}
                 {midnight?.connecting && <img src={loadingGif} width="18" height="18" alt="" />}
               </div>
@@ -274,7 +292,7 @@ export default function LaceWallet() {
                       ? `Your ${selectedWalletNoun} is still locked (or set to a different network). Unlock it, check it's on the right network, then try connecting again.`
                       : errorToShow.name === "ConnectTimeoutError"
                         ? errorToShow.message
-                        : errorToShow.message ?? "Something went wrong connecting to your wallet."}
+                        : friendlyErrorMessage(errorToShow, "Something went wrong connecting to your wallet.")}
             </div>
           )}
         </div>

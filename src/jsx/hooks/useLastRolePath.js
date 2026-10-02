@@ -10,20 +10,34 @@ export const DEFAULT_ROLE_PATH = {
   [SITE_ROLES.SUBSCRIBER]: "/app/explore-events",
 };
 
-// "/app" itself (the role-selection hub, pages/appHome.jsx) is never a valid remembered page for
-// any role — header.jsx used to record it as one before a fix (a role whose only history was a
-// visit to /app became a dead self-link back to /app). Filtered out here too, defensively, so a
-// browser that already has that bad value saved from before the fix self-heals on next read
-// instead of requiring a manual localStorage clear.
+// The only pages a role can be remembered on: its own nav pages (header.jsx ROLE_NAV_ITEMS).
+// header.jsx records every route change under the active role, so without this a visit to any other
+// page (the /app hub, /app/verify, an old /app/Settings-profile, a mint link…) became that role's
+// "last page" and switching to the role landed there. Stored values are filtered on read too, so a
+// browser that already saved one of those self-heals without a manual localStorage clear.
+export const ROLE_PAGES = {
+  [SITE_ROLES.ORGANIZER]: ["/app/my-events"],
+  [SITE_ROLES.SUBSCRIBER]: ["/app/explore-events", "/app/my-subscriptions"],
+};
+
+const isRolePage = (role, path) => (ROLE_PAGES[role] ?? []).includes(path);
+
 function readStoredPaths() {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     const parsed = stored ? JSON.parse(stored) : {};
     if (!parsed || typeof parsed !== "object") return {};
-    return Object.fromEntries(Object.entries(parsed).filter(([, path]) => path !== "/app"));
+    return Object.fromEntries(Object.entries(parsed).filter(([role, path]) => isRolePage(role, path)));
   } catch {
     return {};
   }
+}
+
+// Where switching to `role` should land right now: its last remembered page, or its default.
+// Reads storage fresh, so a component that isn't the one recording (BottomNav.jsx) never acts on a
+// stale copy of the history.
+export function getRolePath(role) {
+  return readStoredPaths()[role] || DEFAULT_ROLE_PATH[role];
 }
 
 // Remembers the last /app/* page visited under each site role, so switching roles (or re-entering
@@ -35,6 +49,7 @@ export function useLastRolePath() {
   const [paths, setPaths] = useState(readStoredPaths);
 
   const recordPath = useCallback((role, path) => {
+    if (!isRolePage(role, path)) return;
     setPaths((prev) => {
       if (prev[role] === path) return prev;
       const next = { ...prev, [role]: path };

@@ -12,6 +12,7 @@ import {
   loadingFunction,
 } from "../../toasts/sweetAlerts";
 import { txHashOf } from "../../../midnight/tx-result";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 // registerIssuer(issuerPk) is admin-only on-chain (poap.compact: `assert is_admin()`) — there is no
 // self-service "become an organizer" flow on Midnight, unlike the old Paima-backed signup form.
@@ -51,7 +52,7 @@ export default function CreateIssuer() {
       closeDrawer();
     } catch (error) {
       console.error("Error registering issuer:", error);
-      errorFunction("Error", error.message || "Failed to register issuer. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "Failed to register issuer. Please try again."), "");
     } finally {
       setLoading(false);
     }

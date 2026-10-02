@@ -1,55 +1,49 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { PlusCircle, Award } from "lucide-react";
+import { PlusCircle, Compass, Award } from "lucide-react";
 import Layout from "../layout/layout";
 import { useSiteRole, SITE_ROLES } from "../hooks/useSiteRole";
-import { useLastRolePath, DEFAULT_ROLE_PATH } from "../hooks/useLastRolePath";
 
-// Central hub at /app — reached directly (bookmark, typed URL) or via the landing's "Get Started".
-// Deliberately does NOT auto-redirect to a remembered page (router.jsx used to do that): always
-// asks which role you're using right now, then commits to it. Each card's destination is still the
-// remembered last page for that role (or its default) — see useLastRolePath.js — so the "pick up
-// where I left off" behavior survives, it's just one explicit click away instead of automatic.
-//
-// Deliberately NOT the landing's .index-role-plain treatment (bare icon, no card, separate CTA
-// button below) — per explicit feedback this page read as a near-duplicate of the landing. Each
-// role is instead one whole clickable square card (app.card-outline-only's glass/border language,
-// same family as every other card in the app — poapCard.jsx/eventCard.jsx), icon+name+description
-// all inside it, no separate button.
+// Central hub at /app, reached directly (bookmark, typed URL) or from the launcher's "Go to App".
+// Deliberately does NOT auto-redirect to a remembered page: it asks which role you're using right
+// now. The text names both roles in their colors, and each page is an outline badge in its role's
+// color; clicking one sets the role and goes straight to that page.
+const ROLE_GROUPS = [
+  {
+    role: SITE_ROLES.ORGANIZER,
+    pages: [{ to: "/app/my-events", label: "My Events", icon: PlusCircle }],
+  },
+  {
+    role: SITE_ROLES.SUBSCRIBER,
+    pages: [
+      { to: "/app/explore-events", label: "Explore Events", icon: Compass },
+      { to: "/app/my-subscriptions", label: "My Subscriptions", icon: Award },
+    ],
+  },
+];
+
 const AppHome = () => {
   const [, setRole] = useSiteRole();
-  const [lastRolePath] = useLastRolePath();
-  const organizerTarget = lastRolePath[SITE_ROLES.ORGANIZER] || DEFAULT_ROLE_PATH[SITE_ROLES.ORGANIZER];
-  const subscriberTarget = lastRolePath[SITE_ROLES.SUBSCRIBER] || DEFAULT_ROLE_PATH[SITE_ROLES.SUBSCRIBER];
 
   return (
     <Layout>
       <div className="app-home-section">
-        <h4 className="app-home-title">Select Role</h4>
+        <h4 className="app-home-title">Select a role</h4>
+        <p className="text-muted app-home-subtitle">
+          As an <span className="app-home-role role-organizer">Organizer</span> you create events and
+          issue credentials. As a <span className="app-home-role role-subscriber">Subscriber</span>{" "}
+          you explore events and collect your credentials. You can switch any time from the menu.
+        </p>
 
-        <div className="app-role-card-grid">
-          <Link
-            to={organizerTarget}
-            className="app-role-card role-organizer"
-            onClick={() => setRole(SITE_ROLES.ORGANIZER)}
-          >
-            <PlusCircle size={56} className="app-role-card-icon" />
-            <h5 className="app-role-card-title">Organizer</h5>
-            <p className="text-muted small app-role-card-desc">
-              Create events, issue POAPs, and manage attendance.
-            </p>
-          </Link>
-          <Link
-            to={subscriberTarget}
-            className="app-role-card role-subscriber"
-            onClick={() => setRole(SITE_ROLES.SUBSCRIBER)}
-          >
-            <Award size={56} className="app-role-card-icon" />
-            <h5 className="app-role-card-title">Subscriber</h5>
-            <p className="text-muted small app-role-card-desc">
-              Discover events, claim POAPs, and build your collection.
-            </p>
-          </Link>
+        <div className="app-hub-badges">
+          {ROLE_GROUPS.flatMap(({ role, pages }) =>
+            pages.map(({ to, label, icon: Icon }) => (
+              <Link key={to} to={to} className={`app-hub-badge role-${role}`} onClick={() => setRole(role)}>
+                <Icon size={16} />
+                {label}
+              </Link>
+            )),
+          )}
         </div>
       </div>
     </Layout>

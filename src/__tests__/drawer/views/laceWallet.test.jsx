@@ -122,20 +122,34 @@ describe('LaceWallet drawer view', () => {
       return { getSubmission: () => submission };
     };
 
-    it('welcomes a wallet new to this browser with a single Continue', async () => {
+    it('asks a wallet new to this browser whether it used Velum before, and warns before creating a new identity', async () => {
       const { getSubmission } = await renderWithPrompt('welcome');
 
       expect(await screen.findByText(/welcome to velum/i)).toBeInTheDocument();
+      expect(screen.getByText(/have you used velum with this wallet before/i)).toBeInTheDocument();
       expect(screen.queryByLabelText(/recovery code/i)).not.toBeInTheDocument();
-      await userEvent.click(screen.getByRole('button', { name: /^continue$/i }));
+
+      await userEvent.click(screen.getByRole('button', { name: /no, i'm new/i }));
+      expect(screen.getByText(/creates a separate identity/i)).toBeInTheDocument();
+      expect(getSubmission()).toBeUndefined();
+      await userEvent.click(screen.getByRole('button', { name: /create a new identity/i }));
 
       await waitFor(() => expect(getSubmission()).toEqual({ kind: 'new' }));
     });
 
-    it('offers restoring with a recovery code instead', async () => {
+    it('sends "Restore instead" from the warning to the recovery code', async () => {
+      await renderWithPrompt('welcome');
+
+      await userEvent.click(await screen.findByRole('button', { name: /no, i'm new/i }));
+      await userEvent.click(screen.getByRole('button', { name: /restore instead/i }));
+
+      expect(screen.getByLabelText(/recovery code/i)).toBeInTheDocument();
+    });
+
+    it('restores with a recovery code when the wallet was used before', async () => {
       const { getSubmission } = await renderWithPrompt('welcome');
 
-      await userEvent.click(await screen.findByRole('button', { name: /restore with my recovery code/i }));
+      await userEvent.click(await screen.findByRole('button', { name: /yes, restore it/i }));
       await userEvent.type(screen.getByLabelText(/recovery code/i), 'ABCDE-FGHJK-MNPQR-STVWX-YZ012-34567');
       await userEvent.click(screen.getByRole('button', { name: /^restore$/i }));
 

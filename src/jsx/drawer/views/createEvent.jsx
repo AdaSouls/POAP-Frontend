@@ -32,6 +32,8 @@ import eventNormal from "../../../images/svg/event-normal.svg";
 import { txHashOf } from "../../../midnight/tx-result";
 import { VALID_UNTIL_FIELD, VALIDITY_UNITS, parseValidity } from "../../../midnight/validity";
 import SelectDropdown from "../../components/SelectDropdown";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
+import { getOrganizerProfile, saveOrganizerProfile } from "../../../midnight/organizer-profile";
 
 // NOTE: createEvent(eventId, maxSupply, expiration, isPublicMint, metadataURI) circuit — the
 // metadataURI is a pointer to off-chain JSON (name/description/image/category/…), not stored
@@ -80,10 +82,22 @@ export default function CreateEvent() {
   const [validityUnit, setValidityUnit] = useState("");
   const [channels, setChannels] = useState([]);
   const [taxonomyValues, setTaxonomyValues] = useState({});
-  const [organizationProfile, setOrganizationProfile] = useState({});
+  // Prefilled from this identity's saved organizer profile (organizer-profile.ts), and saved back
+  // after a successful create while saveAsProfile is on, so it's typed once, not per event.
+  const [organizationProfile, setOrganizationProfile] = useState(() => getOrganizerProfile(provider?.address) ?? {});
+  const [saveAsProfile, setSaveAsProfile] = useState(true);
+  useEffect(() => {
+    const saved = getOrganizerProfile(provider?.address);
+    if (!saved) return;
+    setOrganizationProfile((current) =>
+      Object.values(current).some((value) => String(value ?? "").trim()) ? current : saved,
+    );
+  }, [provider?.address]);
   // { fieldName, type, min, max, options, optionDraft }[] — Credential only: each credential's private fields.
   const [privateAttributes, setPrivateAttributes] = useState([]);
-  const [usePoapImage, setUsePoapImage] = useState(false);
+  // On by default: most organizers want a distinct POAP image; the switch turns it off to reuse the
+  // event's own image.
+  const [usePoapImage, setUsePoapImage] = useState(true);
   // Separate {imageFile, croppedAreaPixels} pair — EventImageField hardcodes those two field names
   // on whatever `values` object it's given, so this can't share `metadata` above without colliding
   // with the event's own image.
@@ -136,7 +150,10 @@ export default function CreateEvent() {
   const isDetailsValid = () => metadata.name.trim().length > 0;
   const validity = validityUnit ? parseValidity({ amount: validityAmount, unit: validityUnit }) : null;
   const isSupplyValid = () => Number(maxSupply) >= 0 && (!validityUnit || Boolean(validity));
-  const isPoapImageValid = () => !usePoapImage || Boolean(poapImageValues.imageFile);
+  // Only Event/Subscription have the POAP image step. The switch starts on, so without this check a
+  // Credential (no such step) would be blocked asking for an image it never offered.
+  const wantsPoapImage = usePoapImage && steps.includes(STEP_POAP_IMAGE);
+  const isPoapImageValid = () => !wantsPoapImage || Boolean(poapImageValues.imageFile);
   const isPrivateAttributesValid = () => privateAttributes.every((row) => !privateFieldRowError(row));
 
   const stepValidators = {
@@ -204,6 +221,20 @@ export default function CreateEvent() {
       return;
     }
 
+    // createEvent reverts with "Issuer is deactivated" once the admin has blocked this key (any
+    // key can be blocked, registered or not). Checked against the live ledger before the IPFS
+    // uploads, so a blocked organizer isn't left with orphaned pins and a failed transaction.
+    try {
+      const { ledger } = await provider.service.getState();
+      const callerPk = Uint8Array.from(Buffer.from(provider.address, "hex"));
+      if (ledger.issuers.member(callerPk) && !ledger.issuers.lookup(callerPk).isActive) {
+        errorFunction("Organizer Blocked", "An admin has blocked this wallet from creating events.", "");
+        return;
+      }
+    } catch (stateError) {
+      console.warn("Could not check issuer status before creating the event:", stateError);
+    }
+
     if (!categoryConfig) {
       errorFunction("Validation Error", "Choose what you're creating first.", "");
       return;
@@ -228,7 +259,7 @@ export default function CreateEvent() {
       }
 
       let poapImageUri;
-      if (usePoapImage && poapImageValues.imageFile) {
+      if (wantsPoapImage && poapImageValues.imageFile) {
         loadingFunction("Creating Event", "Uploading POAP image to IPFS…", "");
         const poapBlob = poapImageValues.croppedAreaPixels
           ? await getCroppedImageBlob(poapImageValues.imageFile, poapImageValues.croppedAreaPixels)
@@ -308,13 +339,16 @@ export default function CreateEvent() {
         ),
       );
 
+      // Only after the transaction succeeded: a failed create leaves the saved profile as it was.
+      if (saveAsProfile) saveOrganizerProfile(provider.address, organizationProfile);
+
       closeDrawer();
       succesfullBlockchainCreation("Event Created Successfully", `Transaction: ${txHash}`, "");
     } catch (error) {
       console.error("Error creating event:", error);
       errorFunction(
         "Error",
-        error.message || "An error occurred while creating the event. Please try again.",
+        friendlyErrorMessage(error, "An error occurred while creating the event. Please try again."),
         "",
       );
     } finally {
@@ -470,11 +504,31 @@ export default function CreateEvent() {
           )}
 
           {currentStepKey === STEP_ORG_PROFILE && (
-            <OrganizationProfileFields
-              values={organizationProfile}
-              onChange={setOrganizationProfile}
-              showAddress={showOrgAddress}
-            />
+            <>
+              <OrganizationProfileFields
+                values={organizationProfile}
+                onChange={setOrganizationProfile}
+                showAddress={showOrgAddress}
+              />
+              <div className="col-12 mt-2">
+                <div className="form-check form-switch mb-0 d-flex align-items-start" style={{ gap: "10px" }}>
+                  <input
+                    className="form-check-input flex-shrink-0"
+                    type="checkbox"
+                    id="saveAsProfile"
+                    checked={saveAsProfile}
+                    onChange={(event) => setSaveAsProfile(event.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="saveAsProfile">
+                    <span className="d-block">Save as my organizer profile</span>
+                    <small className="form-text text-muted d-block mt-1">
+                      These details are shown publicly on your events. Saved with your encrypted
+                      backup, so they're filled in next time.
+                    </small>
+                  </label>
+                </div>
+              </div>
+            </>
           )}
 
           {currentStepKey === STEP_PRIVATE_ATTRIBUTES && (

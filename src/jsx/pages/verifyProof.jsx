@@ -9,6 +9,7 @@ import { getEvent, getToken } from "../../midnight/indexer.service";
 import { fetchMetadata } from "../hooks/useEventMetadata";
 import { describeRule } from "../../midnight/attribute-types";
 import { explorerBlockUrl, explorerTxUrl } from "../../utils/midnightExplorer";
+import { friendlyErrorMessage } from "../../midnight/friendly-error";
 
 const truncateHex = (hex) => (hex ? `${hex.slice(0, 10)}…${hex.slice(-8)}` : "N/A");
 
@@ -105,7 +106,7 @@ export default function VerifyProof() {
         if (!cancelled) setContext(loaded);
       })
       .catch((lookupError) => {
-        if (!cancelled) setError(lookupError.message);
+        if (!cancelled) setError(friendlyErrorMessage(lookupError, "Could not look up this proof. Try again in a moment."));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

@@ -8,6 +8,7 @@ import { getStoredRecoveryCode, markRecoveryCodeSaved } from "../../../midnight/
 import { useRecoveryCodeSaved } from "../../hooks/useRecoveryCodeSaved";
 import RestoreFields from "../../components/RestoreFields";
 import loadingGif from "../../../images/loading.gif";
+import { friendlyErrorMessage } from "../../../midnight/friendly-error";
 
 const formatDate = (iso) =>
   new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -73,7 +74,7 @@ Keep it private. With it (and your wallet) you can restore your Velum identity i
         text: target === "cloud" ? "Backed up to the cloud." : "Encrypted backup file downloaded.",
       });
     } catch (error) {
-      setMessage({ kind: "error", text: error.message || "Backup failed." });
+      setMessage({ kind: "error", text: friendlyErrorMessage(error, "Backup failed.") });
     } finally {
       setBusy(null);
     }
@@ -92,7 +93,7 @@ Keep it private. With it (and your wallet) you can restore your Velum identity i
       dispatch({ type: "UPDATE_MIDNIGHT_WALLET", payload: null });
       setRestored(true);
     } catch (error) {
-      setMessage({ kind: "error", text: error.message || "Restore failed." });
+      setMessage({ kind: "error", text: friendlyErrorMessage(error, "Restore failed.") });
     } finally {
       setBusy(null);
     }

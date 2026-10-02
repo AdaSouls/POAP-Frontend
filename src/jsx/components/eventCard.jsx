@@ -16,6 +16,8 @@ import { errorFunction, loadingFunction, succesfullBlockchainCreation } from "..
 import CategoryBadge from "./CategoryBadge";
 import { explorerBlockUrl, explorerContractUrl, explorerTxUrl } from "../../utils/midnightExplorer";
 import { getClaimActionLabel, getSubscriberListLabel, getTaxonomyEntries } from "../constants/eventCategories";
+import { friendlyErrorMessage } from "../../midnight/friendly-error";
+import OrganizerLabel from "./OrganizerLabel";
 
 const truncateHex = (hex) => {
   if (!hex) return "N/A";
@@ -42,6 +44,8 @@ const EventCard = forwardRef(({
   onClaim = () => {},
   isSubscribed = false,
   subscriptionLoading = false,
+  issuerBlocked = false,
+  issuerVerified = false,
 }, ref) => {
   const status = getEventStatus(event);
   const { metadata, loading: metadataLoading } = useEventMetadata(event.metadataURI);
@@ -52,7 +56,12 @@ const EventCard = forwardRef(({
   // active/full state doesn't communicate on its own. isSubscribed comes from the calling page
   // (exploreEvents.jsx), computed once for the whole list rather than per-card.
   const alreadyHeld = variant === "explore" && isSubscribed;
-  const statusLabel = alreadyHeld
+  // issuerBlocked (useBlockedIssuers): the admin blocked this event's organizer, so the contract
+  // rejects every new claim/mint under it even though the event itself is still active on-chain.
+  // Explore Events hides these entirely; My Events keeps them, labeled, so the organizer can see why.
+  const statusLabel = issuerBlocked
+    ? "Organizer blocked"
+    : alreadyHeld
     ? claimLabel.done
     : getEventStatusLabel(status, variant === "explore" ? "subscriber" : "organizer");
   const taxonomyEntries = useMemo(
@@ -87,7 +96,10 @@ const EventCard = forwardRef(({
   // that flow, so the organizer-mint UI only offers this for the organizer's own private
   // (organizer-minted) events.
   const canMintForEvent =
-    variant !== "explore" && !event.isPublicMint && (isAdmin || provider?.address === event.issuerPk);
+    variant !== "explore" &&
+    !event.isPublicMint &&
+    !issuerBlocked &&
+    (isAdmin || provider?.address === event.issuerPk);
 
   const openMintDrawer = () => {
     dispatch({ type: "CREATE_MINT", payload: event });
@@ -212,13 +224,15 @@ const EventCard = forwardRef(({
       );
     } catch (error) {
       console.error("Error publishing ownership request:", error);
-      errorFunction("Error", error.message || "Failed to publish the request. Please try again.", "");
+      errorFunction("Error", friendlyErrorMessage(error, "Failed to publish the request. Please try again."), "");
     } finally {
       setPublishingOwnershipRequest(false);
     }
   };
 
-  const statusBadgeClass = alreadyHeld
+  const statusBadgeClass = issuerBlocked
+    ? "badge bg-danger"
+    : alreadyHeld
     ? "badge status-badge-held"
     : {
         active: "badge status-badge-active",
@@ -228,6 +242,22 @@ const EventCard = forwardRef(({
       }[status];
 
   const available = event.maxSupply > 0 ? Math.max(0, event.maxSupply - event.minted) : undefined;
+
+  // Collapsed tile's footer: minted/available on the left, the category badge pinned bottom-right.
+  // Actions (Subscribe/Mint POAP) live only in the expanded card — the collapsed tile is
+  // click-to-expand, not a place to act from, so this slot shows the category badge. The text may
+  // wrap inside its own box, never pushing the badge onto a line of its own.
+  const renderFooterRow = (placement) => (
+    <div className={`card-event-footer-row ${placement}`} style={textStyle}>
+      <small className="text-muted card-event-footer-minted" style={{ fontSize: "11px" }}>
+        Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
+        {available !== undefined && (
+          <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
+        )}
+      </small>
+      <CategoryBadge category={metadata?.category} />
+    </div>
+  );
   const progressPercentage = event.maxSupply > 0 ? Math.min((event.minted / event.maxSupply) * 100, 100) : 0;
 
   // Fetched only while expanded — getAllEvents() (the page's own poll, event.* here) doesn't
@@ -480,7 +510,7 @@ const EventCard = forwardRef(({
                         <li className="d-flex align-items-center mb-1">
                           <img className="mr-2" src={eventOwnerIcon} width="14" height="14" alt="" style={{ flexShrink: 0 }} />
                           <span className="text-muted small">
-                            Organizer: <span className="text-white">{metadata?.organization?.name || truncateHex(event.issuerPk)}</span>
+                            Organizer: <OrganizerLabel name={metadata?.organization?.name} issuerPk={event.issuerPk} verified={issuerVerified} />
                           </span>
                         </li>
                         <li className="d-flex align-items-center mb-1">
@@ -495,21 +525,17 @@ const EventCard = forwardRef(({
                         </li>
                       </ul>
 
-                      <div className="d-flex justify-content-between align-items-center mt-auto card-event-footer-row">
-                        <small className="text-muted" style={{ fontSize: "11px" }}>
-                          Minted: <strong className="text-white">{event.minted}/{event.maxSupply || "∞"}</strong>
-                          {available !== undefined && (
-                            <span className="ml-2">(Available: <strong className="text-white">{available}</strong>)</span>
-                          )}
-                        </small>
-                        {/* Actions (Subscribe/Mint POAP) live only in the expanded card now — the
-                            collapsed tile is click-to-expand, not a place to act from. This slot,
-                            previously the action button, instead shows the category badge. */}
-                        <CategoryBadge category={metadata?.category} />
-                      </div>
+                      {renderFooterRow("card-event-footer-row-inline")}
                     </div>
                   ) : (
                     <div style={{ flex: 1, minWidth: 0, ...textStyle }}>
+                      {/* Phones only (theme-dark-glass.css): type and status side by side in the
+                          card's top-left corner, level with the collapse button. The desktop row
+                          below is hidden there. */}
+                      <div className="card-mobile-badge-row">
+                        <CategoryBadge category={metadata?.category} />
+                        <span className={`${statusBadgeClass} card-mobile-status-badge`}>{statusLabel}</span>
+                      </div>
                       <div className="d-flex align-items-center justify-content-between card-detail-top-row">
                         <span
                           className={statusBadgeClass}
@@ -537,6 +563,10 @@ const EventCard = forwardRef(({
                   )}
                 </div>
 
+                {/* Phones: the same footer row moves below the image, across the card's full
+                    width (the inline one above is hidden there, see theme-dark-glass.css). */}
+                {!isExpanded && renderFooterRow("card-event-footer-row-below")}
+
                 {isExpanded && (
                   /* Quick facts (organizer/expiration/public-mint/minted-available) beside a
                      taxonomy breakdown column, then optional channels/organization block, then raw
@@ -553,7 +583,7 @@ const EventCard = forwardRef(({
                             <img src={eventOwnerIcon} width="14" height="14" alt="" />
                           </span>
                           <span className="text-muted small">
-                            Organizer:{" "}<span className="text-white">{metadata?.organization?.name || truncateHex(event.issuerPk)}</span>
+                            Organizer:{" "}<OrganizerLabel name={metadata?.organization?.name} issuerPk={event.issuerPk} verified={issuerVerified} />
                           </span>
                         </li>
                         <li className="d-flex align-items-center mb-2">
@@ -632,6 +662,13 @@ const EventCard = forwardRef(({
                         )}
                       </ul>
                     </>
+                  )}
+
+                  {issuerBlocked && (
+                    <p className="text-muted small mt-3 mb-0">
+                      An admin has blocked this organizer. Nobody can claim or be minted this event's
+                      POAP anymore, and credentials already issued stay with their holders.
+                    </p>
                   )}
 
                   {!event.isActive && event.deactivatedBlock && (
@@ -811,7 +848,7 @@ const EventCard = forwardRef(({
                           type="button"
                           className="btn btn-card-detail-action btn-card-detail-action-role btn-sm"
                           onClick={() => onClaim(event)}
-                          disabled={status !== "active" || isSubscribed || subscriptionLoading}
+                          disabled={status !== "active" || isSubscribed || subscriptionLoading || issuerBlocked}
                         >
                           {isSubscribed ? claimLabel.done : claimLabel.action}
                         </button>

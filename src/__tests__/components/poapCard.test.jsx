@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PoapCard from '../../jsx/components/poapCard';
 import { mockDrawerContext, renderWithProviders } from '../../testUtils';
@@ -446,7 +446,8 @@ describe('PoapCard Component', () => {
 
       act(() => notifyTokenBurned(mockPoap.firstEventId, 1));
 
-      expect(await screen.findByText(/^Burned$/i)).toBeInTheDocument();
+      // Desktop status badge plus the phone-only badge row (CSS shows one of them).
+      expect((await screen.findAllByText(/^Burned$/i)).length).toBeGreaterThan(0);
       expect(screen.queryByRole('button', { name: /^burn$/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /prove ownership/i })).not.toBeInTheDocument();
     });
@@ -490,6 +491,28 @@ describe('PoapCard Component', () => {
       renderWithProviders(<PoapCard poap={poapOf({ mintedBlock: 77 })} />);
       expect(await screen.findByText(/^Expired · 0?2\/01\/2020/)).toBeInTheDocument();
       expect(blockTimestamp).toHaveBeenCalledWith(77);
+    });
+
+    it('opens a pill on tap without expanding the card, and only one pill at a time', async () => {
+      withEventMetadata({ name: 'Club', category: 'subscription', validity: { amount: 30, unit: 'days' } });
+      addProofRecord('cc'.repeat(32), 1, { kind: 'proveEventAttendance', question: 'q', txHash: null, provenAt: new Date().toISOString() });
+      const onExpand = jest.fn();
+      renderWithProviders(<PoapCard poap={poapOf()} onExpand={onExpand} />);
+      const validity = await screen.findByRole('button', { name: /active until/i });
+      const proven = screen.getByRole('button', { name: /proven/i });
+
+      fireEvent.click(validity);
+      expect(validity).toHaveClass('is-open');
+      expect(validity).toHaveAttribute('aria-expanded', 'true');
+      expect(onExpand).not.toHaveBeenCalled();
+
+      fireEvent.click(proven);
+      expect(proven).toHaveClass('is-open');
+      expect(validity).not.toHaveClass('is-open');
+
+      fireEvent.click(proven);
+      expect(proven).not.toHaveClass('is-open');
+      expect(onExpand).not.toHaveBeenCalled();
     });
 
     it('shows nothing when the event has no validity', async () => {
